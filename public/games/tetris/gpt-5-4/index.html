@@ -242,6 +242,54 @@
       margin-bottom: 10px;
     }
 
+    .brand-card {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      background:
+        linear-gradient(180deg, rgba(8, 16, 30, 0.9), rgba(5, 10, 20, 0.82)),
+        radial-gradient(circle at top left, rgba(0, 204, 255, 0.1), transparent 42%);
+    }
+
+    .brand-card .brand {
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .brand-card .brand-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      flex: 0 0 auto;
+    }
+
+    .brand-card .eyebrow {
+      margin-bottom: 6px;
+      letter-spacing: 0.28em;
+    }
+
+    .brand-card .title {
+      font-size: clamp(24px, 2.2vw, 34px);
+      line-height: 0.9;
+      white-space: normal;
+    }
+
+    .brand-card .subtitle {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+    }
+
+    .brand-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .brand-status .pill {
+      padding: 7px 12px;
+      font-size: 10px;
+    }
+
     .preview-frame {
       position: relative;
       border-radius: 18px;
@@ -367,8 +415,10 @@
       display: flex;
       flex-direction: column;
       padding: clamp(12px, 2vw, 18px);
-      gap: 10px;
+      gap: 6px;
       min-height: 0;
+      height: 100%;
+      min-height: clamp(420px, 72vh, 860px);
     }
 
     .board-marquee {
@@ -376,18 +426,19 @@
       justify-content: space-between;
       gap: 10px;
       color: #9ec2d6;
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.28em;
-      padding: 4px 4px 0;
+      letter-spacing: 0.22em;
+      padding: 2px 2px 0;
     }
 
     .board-stage {
       position: relative;
       flex: 1;
       min-height: 0;
+      overflow: hidden;
       border-radius: 28px;
-      padding: clamp(10px, 1.8vw, 16px);
+      padding: clamp(8px, 1.2vw, 12px);
       background:
         linear-gradient(180deg, rgba(3, 8, 16, 0.84), rgba(4, 8, 16, 0.96)),
         radial-gradient(circle at top, rgba(0, 204, 255, 0.08), transparent 36%);
@@ -423,23 +474,25 @@
       height: 100%;
       display: grid;
       place-items: center;
+      overflow: hidden;
     }
 
     .board-canvas {
       display: block;
-      width: min(100%, calc((100vh - 180px) * 0.5));
-      max-width: 100%;
+      width: auto;
+      max-width: none;
       height: auto;
+      max-height: none;
       aspect-ratio: 1 / 2;
       border-radius: 18px;
       background: transparent;
     }
 
     .board-footer {
-      display: grid;
+      display: none;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      margin-top: 2px;
+      margin-top: 0;
     }
 
     .footer-chip {
@@ -470,6 +523,7 @@
     }
 
     .overlay.hidden {
+      display: none;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
@@ -612,6 +666,20 @@
         grid-template-columns: minmax(0, 1fr) minmax(260px, 1.24fr);
       }
 
+      .sidebar.left {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+      }
+
+      .sidebar.left > .brand-card {
+        grid-column: span 2;
+      }
+
+      .sidebar.left > .card:last-child {
+        grid-column: span 2;
+      }
+
       .sidebar.right {
         grid-column: span 2;
         display: grid;
@@ -703,11 +771,7 @@
       }
 
       .board-stage {
-        padding: 8px;
-      }
-
-      .board-canvas {
-        width: min(100%, calc((100vh - 132px) * 0.5));
+        padding: 6px;
       }
 
       .footer-chip {
@@ -725,6 +789,10 @@
         min-height: 100%;
       }
 
+      .board-panel {
+        min-height: 520px;
+      }
+
       .main-grid {
         grid-template-columns: 1fr;
       }
@@ -735,13 +803,10 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .sidebar.left > .brand-card,
       .sidebar.left > .card:last-child,
       .sidebar.right > .card:last-child {
         grid-column: span 2;
-      }
-
-      .board-canvas {
-        width: min(100%, 72vw, 420px);
       }
 
       .overlay-controls {
@@ -752,6 +817,10 @@
     @media (max-width: 640px) {
       .app {
         padding: 10px;
+      }
+
+      .board-panel {
+        min-height: 420px;
       }
 
       .topbar {
@@ -772,6 +841,10 @@
         grid-template-columns: 1fr;
       }
 
+      .sidebar.left > .brand-card {
+        grid-column: span 1;
+      }
+
       .sidebar.left > .card:last-child,
       .sidebar.right > .card:last-child,
       .sidebar.right > .card:nth-child(3) {
@@ -779,14 +852,11 @@
       }
 
       .board-stage {
-        padding: 10px;
-      }
-
-      .board-canvas {
-        width: min(100%, 86vw, 390px);
+        padding: 8px;
       }
 
       .board-footer {
+        display: grid;
         grid-template-columns: 1fr;
       }
 
@@ -802,23 +872,23 @@
 </head>
 <body>
   <div class="app">
-    <div class="topbar panel">
-      <div class="brand">
-        <div class="brand-badge">▣</div>
-        <div class="brand-copy">
-          <div class="eyebrow">BrainRot Arcade Protocol</div>
-          <div class="title">Neon Stack</div>
-          <div class="subtitle">GPT-5.4 // Tetris Arena</div>
-        </div>
-      </div>
-      <div class="status-group">
-        <div class="pill" id="state-pill">Standby</div>
-        <div class="pill live" id="tempo-pill">Level 1</div>
-      </div>
-    </div>
-
     <div class="main-grid">
       <div class="panel sidebar left">
+        <div class="card brand-card">
+          <div class="brand">
+            <div class="brand-badge">▣</div>
+            <div class="brand-copy">
+              <div class="eyebrow">BrainRot Arcade Protocol</div>
+              <div class="title">Neon Stack</div>
+              <div class="subtitle">GPT-5.4 // Tetris Arena</div>
+            </div>
+          </div>
+          <div class="brand-status">
+            <div class="pill" id="state-pill">Standby</div>
+            <div class="pill live" id="tempo-pill">Level 1</div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title">Hold Chamber</div>
           <div class="preview-frame"><canvas id="hold-canvas"></canvas></div>
@@ -1053,6 +1123,7 @@
       const nextCtx = nextCanvas.getContext("2d");
       const holdCanvas = document.getElementById("hold-canvas");
       const holdCtx = holdCanvas.getContext("2d");
+      const boardWrap = document.querySelector(".board-wrap");
 
       const scoreValue = document.getElementById("score-value");
       const linesValue = document.getElementById("lines-value");
@@ -1616,8 +1687,7 @@
       }
 
       function drawBoard() {
-        const width = boardCanvas.clientWidth;
-        const height = boardCanvas.clientHeight;
+        const { width, height } = getCanvasSize(boardCanvas, boardCtx);
         boardCtx.clearRect(0, 0, width, height);
 
         const cell = Math.min(width / COLS, height / ROWS);
@@ -1757,8 +1827,7 @@
       }
 
       function drawPreview(ctx, canvas, type) {
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
+        const { width, height } = getCanvasSize(canvas, ctx);
         ctx.clearRect(0, 0, width, height);
 
         const bg = ctx.createRadialGradient(width / 2, height / 2, width * 0.06, width / 2, height / 2, width * 0.56);
@@ -1800,6 +1869,16 @@
         eventLine.style.transform = `translateY(${eventTimer > 0 ? 0 : 2}px)`;
       }
 
+      function getCanvasSize(canvas, ctx) {
+        const transform = ctx.getTransform();
+        const scaleX = transform.a || 1;
+        const scaleY = transform.d || 1;
+        return {
+          width: canvas.width / scaleX,
+          height: canvas.height / scaleY,
+        };
+      }
+
       function fitCanvas(canvas, ctx) {
         const rect = canvas.getBoundingClientRect();
         const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -1809,8 +1888,24 @@
         ctx.imageSmoothingEnabled = true;
       }
 
+      function fitBoardCanvas() {
+        if (!boardWrap) return;
+
+        const rect = boardWrap.getBoundingClientRect();
+        const availableWidth = Math.max(0, rect.width - 4);
+        const availableHeight = Math.max(0, rect.height - 4);
+        if (!availableWidth || !availableHeight) return;
+
+        const targetWidth = Math.min(availableWidth, availableHeight / 2);
+        const targetHeight = targetWidth * 2;
+
+        boardCanvas.style.width = `${Math.floor(targetWidth)}px`;
+        boardCanvas.style.height = `${Math.floor(targetHeight)}px`;
+      }
+
       function resizeAll() {
         fitAppToViewport();
+        fitBoardCanvas();
         fitCanvas(boardCanvas, boardCtx);
         fitCanvas(nextCanvas, nextCtx);
         fitCanvas(holdCanvas, holdCtx);
@@ -1820,19 +1915,7 @@
       function fitAppToViewport() {
         const app = document.querySelector(".app");
         if (!app) return;
-
         app.style.transform = "none";
-
-        const rect = app.getBoundingClientRect();
-        const contentWidth = Math.max(rect.width, app.scrollWidth);
-        const contentHeight = Math.max(rect.height, app.scrollHeight);
-        const widthScale = window.innerWidth / Math.max(1, contentWidth);
-        const heightScale = window.innerHeight / Math.max(1, contentHeight);
-        const scale = Math.min(1, widthScale, heightScale);
-        const scaledWidth = contentWidth * scale;
-        const offsetX = Math.max(0, (window.innerWidth - scaledWidth) / 2);
-
-        app.style.transform = `translateX(${offsetX}px) scale(${scale})`;
       }
 
       function gameLoop(now) {
@@ -1920,7 +2003,7 @@
       document.addEventListener("keyup", handleKeyUp);
 
       const observer = new ResizeObserver(resizeAll);
-      observer.observe(boardCanvas);
+      if (boardWrap) observer.observe(boardWrap);
       observer.observe(nextCanvas);
       observer.observe(holdCanvas);
       window.addEventListener("resize", resizeAll);

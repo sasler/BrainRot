@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Minesweeper // GPT-5.4</title>
+  <style>
+    :root {
+      --bg: #050510;
+      --bg-soft: #0b0c1c;
+      --panel: rgba(12, 13, 30, 0.84);
+      --panel-strong: rgba(18, 20, 40, 0.94);
+      --accent: #ff3366;
+      --accent-soft: rgba(255, 51, 102, 0.26);
+      --accent-alt: #00e7ff;
+      --text: #f5f1ff;
+      --muted: #9ba0c8;
+      --line: rgba(255, 255, 255, 0.08);
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.42);
+      --cell-size: 28px;
+      --cell-gap: 4px;
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(255, 51, 102, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(0, 231, 255, 0.14), transparent 22%),
+        radial-gradient(circle at 50% 120%, rgba(125, 53, 255, 0.18), transparent 35%),
+        linear-gradient(180deg, #080914 0%, #050510 42%, #030309 100%);
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      user-select: none;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    body::before {
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, black 30%, transparent 88%);
+      opacity: 0.28;
+    }
+
+    body::after {
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.03) 0,
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+      opacity: 0.1;
+      mix-blend-mode: soft-light;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100%;
+      padding: clamp(14px, 2vw, 24px);
+      display: grid;
+      place-items: center;
+      overflow: auto;
+    }
+
+    .console {
+      position: relative;
+      width: min(1320px, 100%);
+      min-height: min(920px, calc(100vh - 28px));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+      gap: clamp(14px, 1.8vw, 22px);
+      z-index: 1;
+    }
+
+    .panel {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01)),
+        var(--panel);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 28%, transparent 72%, rgba(255, 255, 255, 0.04));
+      pointer-events: none;
+    }
+
+    .board-panel {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      padding: clamp(16px, 2vw, 24px);
+      min-height: 0;
+    }
+
+    .hero {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 51, 102, 0.3);
+      background: rgba(255, 51, 102, 0.08);
+      color: #ffd1dd;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      font-family: "Arial Black", "Trebuchet MS", sans-serif;
+      font-size: clamp(2rem, 3vw, 3.3rem);
+      letter-spacing: 0.06em;
+      line-height: 0.94;
+      text-transform: uppercase;
+    }
+
+    .headline-accent {
+      display: block;
+      color: var(--accent);
+      text-shadow: 0 0 24px rgba(255, 51, 102, 0.28);
+    }
+
+    .subtitle {
+      max-width: 58ch;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.98rem;
+    }
+
+    .status-cluster {
+      display: grid;
+      gap: 10px;
+      justify-items: end;
+      align-self: center;
+    }
+
+    .signal {
+      min-width: 170px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(0, 231, 255, 0.18);
+      background: rgba(0, 231, 255, 0.06);
+      text-align: right;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .signal-label {
+      color: rgba(224, 242, 255, 0.72);
+      font-size: 0.68rem;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+    }
+
+    .signal-value {
+      margin-top: 6px;
+      font-family: "Courier New", monospace;
+      font-size: 0.96rem;
+      color: #d5fbff;
+      text-shadow: 0 0 18px rgba(0, 231, 255, 0.28);
+      white-space: nowrap;
+    }
+
+    .hud {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      position: relative;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        radial-gradient(circle at top right, rgba(255, 51, 102, 0.12), transparent 35%),
+        rgba(8, 10, 24, 0.82);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -18px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card .label {
+      font-size: 0.72rem;
+      color: rgba(223, 228, 255, 0.62);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .stat-card .value {
+      margin-top: 8px;
+      font-size: clamp(1.3rem, 2vw, 2rem);
+      font-family: "Courier New", monospace;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-card.primary .value {
+      color: #ffd6e1;
+      text-shadow: 0 0 18px rgba(255, 51, 102, 0.26);
+    }
+
+    .stat-card.alt .value {
+      color: #d2fdff;
+      text-shadow: 0 0 18px rgba(0, 231, 255, 0.26);
+    }
+
+    .stat-card button {
+      width: 100%;
+      border: 0;
+      background: none;
+      padding: 0;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .face-button {
+      display: grid;
+      place-items: center;
+      min-height: 64px;
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+        linear-gradient(180deg, rgba(255, 51, 102, 0.15), rgba(255, 51, 102, 0.04));
+      box-shadow:
+        0 10px 24px rgba(255, 51, 102, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.18);
+      transition: transform 140ms ease, box-shadow 180ms ease;
+    }
+
+    .face-button:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 16px 32px rgba(255, 51, 102, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -12px 20px rgba(0, 0, 0, 0.18);
+    }
+
+    .face-button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .face-emoji {
+      font-size: 1.75rem;
+      filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.15));
+    }
+
+    .board-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      padding: clamp(12px, 1.6vw, 18px);
+      border-radius: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        radial-gradient(circle at top, rgba(255, 51, 102, 0.1), transparent 38%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+        var(--panel-strong);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -28px 40px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+    }
+
+    .board-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .board {
+      position: relative;
+      display: grid;
+      gap: var(--cell-gap);
+      align-content: center;
+      justify-content: center;
+      padding: clamp(8px, 1vw, 12px);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+        rgba(3, 4, 12, 0.82);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 22px 38px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      touch-action: manipulation;
+      transform-origin: center;
+      transition: transform 260ms ease, filter 260ms ease;
+    }
+
+    .board.won {
+      animation: pulse-win 1.8s ease-in-out infinite;
+    }
+
+    .board.lost {
+      animation: board-shake 420ms cubic-bezier(.36, .07, .19, .97) both;
+    }
+
+    .cell {
+      position: relative;
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border: 0;
+      padding: 0;
+      border-radius: clamp(7px, calc(var(--cell-size) * 0.22), 12px);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 22%, transparent 22%),
+        linear-gradient(180deg, #232740, #111425 58%, #0b0d1a);
+      color: #ffffff;
+      font-size: calc(var(--cell-size) * 0.55);
+      font-weight: 900;
+      text-align: center;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow:
+        0 12px 18px rgba(0, 0, 0, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -6px 10px rgba(0, 0, 0, 0.3);
+      transition:
+        transform 80ms ease,
+        filter 160ms ease,
+        box-shadow 160ms ease,
+        background 180ms ease;
+    }
+
+    .cell::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      pointer-events: none;
+    }
+
+    .cell:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+      box-shadow:
+        0 12px 20px rgba(0, 0, 0, 0.28),
+        0 0 18px rgba(255, 51, 102, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -6px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .cell:active {
+      transform: translateY(1px) scale(0.96);
+    }
+
+    .cell.revealed {
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 42%),
+        linear-gradient(180deg, rgba(0, 231, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        #14172a;
+      box-shadow:
+        inset 0 2px 8px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 4px 10px rgba(0, 0, 0, 0.14);
+      cursor: default;
+      transform: none;
+    }
+
+    .cell.revealed.zero {
+      color: transparent;
+    }
+
+    .cell.flagged {
+      background:
+        linear-gradient(180deg, rgba(255, 51, 102, 0.14), rgba(255, 51, 102, 0.04)),
+        linear-gradient(180deg, #232740, #111425 58%, #0b0d1a);
+    }
+
+    .cell.flagged::before,
+    .cell.mine::before,
+    .cell.wrong-flag::before {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--cell-size) * 0.62);
+      line-height: 1;
+      filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.16));
+    }
+
+    .cell.flagged::before {
+      content: "⚑";
+      color: #ff5e88;
+      text-shadow: 0 0 12px rgba(255, 51, 102, 0.45);
+    }
+
+    .cell.mine::before {
+      content: "✹";
+      color: #ffc0d1;
+      text-shadow: 0 0 16px rgba(255, 51, 102, 0.46);
+    }
+
+    .cell.mine.hit {
+      background:
+        radial-gradient(circle, rgba(255, 134, 162, 0.34), transparent 42%),
+        linear-gradient(180deg, rgba(255, 51, 102, 0.28), rgba(85, 8, 27, 0.82)),
+        #240812;
+      box-shadow:
+        0 0 26px rgba(255, 51, 102, 0.34),
+        inset 0 0 18px rgba(255, 255, 255, 0.08),
+        inset 0 -8px 14px rgba(0, 0, 0, 0.28);
+    }
+
+    .cell.wrong-flag::before {
+      content: "×";
+      color: #ffe48c;
+      font-size: calc(var(--cell-size) * 0.9);
+      text-shadow: 0 0 14px rgba(255, 228, 140, 0.35);
+    }
+
+    .cell.pop {
+      animation: reveal-pop 240ms ease;
+    }
+
+    .cell.flash {
+      animation: flash-cell 240ms ease;
+    }
+
+    .cell[data-value="1"] { color: #55b8ff; text-shadow: 0 0 14px rgba(85, 184, 255, 0.34); }
+    .cell[data-value="2"] { color: #5bf6ac; text-shadow: 0 0 14px rgba(91, 246, 172, 0.34); }
+    .cell[data-value="3"] { color: #ff6f8d; text-shadow: 0 0 14px rgba(255, 111, 141, 0.34); }
+    .cell[data-value="4"] { color: #9f83ff; text-shadow: 0 0 14px rgba(159, 131, 255, 0.34); }
+    .cell[data-value="5"] { color: #ffb761; text-shadow: 0 0 14px rgba(255, 183, 97, 0.34); }
+    .cell[data-value="6"] { color: #53f4f2; text-shadow: 0 0 14px rgba(83, 244, 242, 0.34); }
+    .cell[data-value="7"] { color: #f6f1ff; text-shadow: 0 0 14px rgba(246, 241, 255, 0.28); }
+    .cell[data-value="8"] { color: #ffd4f0; text-shadow: 0 0 14px rgba(255, 212, 240, 0.32); }
+
+    .sidebar {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      padding: clamp(16px, 2vw, 24px);
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 0.82rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .difficulty-grid,
+    .mode-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pill {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 13px 14px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+        rgba(7, 9, 21, 0.78);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    }
+
+    .pill:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 51, 102, 0.22);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .pill.active {
+      border-color: rgba(255, 51, 102, 0.32);
+      background:
+        linear-gradient(180deg, rgba(255, 51, 102, 0.18), rgba(255, 51, 102, 0.06)),
+        rgba(7, 9, 21, 0.9);
+      box-shadow:
+        0 0 0 1px rgba(255, 51, 102, 0.12),
+        0 16px 28px rgba(255, 51, 102, 0.16);
+    }
+
+    .pill strong {
+      display: block;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+    }
+
+    .pill span {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pill .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-family: "Courier New", monospace;
+      font-size: 0.76rem;
+      color: rgba(255, 255, 255, 0.82);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar-card {
+      padding: 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+        rgba(8, 10, 24, 0.8);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      padding: 10px 6px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .legend-digit {
+      font-family: "Courier New", monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .tip-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .tip-list li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .tip-list li::before {
+      content: "◈";
+      color: var(--accent);
+      text-shadow: 0 0 10px rgba(255, 51, 102, 0.3);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(4, 5, 14, 0.7);
+      backdrop-filter: blur(12px);
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .overlay.visible {
+      display: grid;
+    }
+
+    .overlay-card {
+      position: relative;
+      width: min(520px, 100%);
+      padding: 28px;
+      border-radius: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        radial-gradient(circle at top, rgba(255, 51, 102, 0.18), transparent 44%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+        rgba(11, 13, 29, 0.94);
+      box-shadow:
+        0 32px 70px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      text-align: center;
+    }
+
+    .overlay-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .overlay h2 {
+      margin: 16px 0 12px;
+      font-family: "Arial Black", "Trebuchet MS", sans-serif;
+      font-size: clamp(2rem, 4vw, 3.1rem);
+      line-height: 0.98;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .overlay p {
+      margin: 0 auto;
+      max-width: 34ch;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .overlay-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .overlay-stat {
+      padding: 12px 10px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .overlay-stat small {
+      display: block;
+      color: rgba(255, 255, 255, 0.56);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 0.65rem;
+    }
+
+    .overlay-stat strong {
+      display: block;
+      margin-top: 8px;
+      font-family: "Courier New", monospace;
+      font-size: 1.18rem;
+    }
+
+    .overlay-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      min-width: 150px;
+      padding: 13px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+        rgba(255, 255, 255, 0.04);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 140ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    }
+
+    .action-btn.primary {
+      border-color: rgba(255, 51, 102, 0.36);
+      background:
+        linear-gradient(180deg, rgba(255, 51, 102, 0.34), rgba(255, 51, 102, 0.12)),
+        rgba(255, 51, 102, 0.1);
+      box-shadow: 0 16px 30px rgba(255, 51, 102, 0.18);
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .celebration {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 11;
+    }
+
+    .particle {
+      position: absolute;
+      width: 10px;
+      height: 24px;
+      border-radius: 999px;
+      opacity: 0;
+      animation: confetti var(--duration) cubic-bezier(.12, .79, .24, 1) forwards;
+      animation-delay: var(--delay);
+      transform: translate3d(0, -18px, 0) rotate(0deg);
+      box-shadow: 0 0 18px currentColor;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(120%);
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(8, 10, 24, 0.9);
+      color: #f7e9ef;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+      transition: transform 240ms ease;
+      z-index: 12;
+    }
+
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes reveal-pop {
+      0% { transform: scale(0.78); filter: brightness(1.4); }
+      65% { transform: scale(1.06); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    @keyframes flash-cell {
+      0%, 100% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+      50% { box-shadow: 0 0 0 2px rgba(255, 90, 130, 0.3), 0 0 20px rgba(255, 51, 102, 0.16); }
+    }
+
+    @keyframes board-shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    @keyframes pulse-win {
+      0%, 100% { transform: scale(1); filter: saturate(1); }
+      50% { transform: scale(1.008); filter: saturate(1.16); }
+    }
+
+    @keyframes confetti {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, -18px, 0) rotate(0deg);
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .console {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .sidebar {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100%;
+      }
+
+      .hero,
+      .hud {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        display: grid;
+      }
+
+      .status-cluster {
+        justify-items: stretch;
+      }
+
+      .hud {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .overlay-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .board-panel,
+      .sidebar {
+        padding: 14px;
+      }
+
+      .stat-card {
+        padding: 14px;
+      }
+
+      .legend {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="console">
+      <section class="panel board-panel">
+        <div class="hero">
+          <div>
+            <div class="eyebrow">Competitive Build // GPT-5.4</div>
+            <h1><span class="headline-accent">Neon</span>Minesweeper</h1>
+            <p class="subtitle">
+              A retro-futurist bomb-defusal console with cascading reveals, precision flagging, and a dramatic dark-neon finish.
+              First click is always safe. Double-click revealed numbers to chord adjacent cells once your flags are correct.
+            </p>
+          </div>
+          <div class="status-cluster">
+            <div class="signal">
+              <div class="signal-label">Status</div>
+              <div class="signal-value" id="status-text">Awaiting first sweep</div>
+            </div>
+            <div class="signal">
+              <div class="signal-label">Safe Cells Left</div>
+              <div class="signal-value" id="safe-left">216</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud">
+          <div class="stat-card primary">
+            <div class="label">Mines</div>
+            <div class="value" id="mine-count">040</div>
+          </div>
+          <div class="stat-card alt">
+            <div class="label">Timer</div>
+            <div class="value" id="timer">000</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Flags</div>
+            <div class="value" id="flags-used">000</div>
+          </div>
+          <div class="stat-card">
+            <button id="restart-button" type="button" aria-label="Restart game">
+              <div class="face-button">
+                <div class="face-emoji" id="face-emoji">🙂</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="board-wrap" id="board-wrap">
+          <div class="board" id="board" aria-label="Minesweeper board"></div>
+        </div>
+      </section>
+
+      <aside class="panel sidebar">
+        <div class="sidebar-card">
+          <h2 class="section-title">Difficulty</h2>
+          <div class="difficulty-grid" id="difficulty-grid"></div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2 class="section-title">Input Mode</h2>
+          <div class="mode-grid" id="mode-grid">
+            <button class="pill active" type="button" data-mode="reveal">
+              <div>
+                <strong>Reveal</strong>
+                <span>Tap or click to sweep</span>
+              </div>
+              <div class="chip">LMB</div>
+            </button>
+            <button class="pill" type="button" data-mode="flag">
+              <div>
+                <strong>Flag</strong>
+                <span>Great for touch screens</span>
+              </div>
+              <div class="chip">⚑</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2 class="section-title">Legend</h2>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-digit" style="color:#55b8ff;">1</div><div>Cyan</div></div>
+            <div class="legend-item"><div class="legend-digit" style="color:#5bf6ac;">2</div><div>Mint</div></div>
+            <div class="legend-item"><div class="legend-digit" style="color:#ff6f8d;">3</div><div>Rose</div></div>
+            <div class="legend-item"><div class="legend-digit" style="color:#9f83ff;">4</div><div>Violet</div></div>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h2 class="section-title">Field Notes</h2>
+          <ul class="tip-list">
+            <li>Right click any hidden tile to plant or remove a flag.</li>
+            <li>Double click a revealed numbered tile to chord nearby cells when the flag count matches.</li>
+            <li>Press <strong>R</strong> to restart, or <strong>F</strong> to toggle touch-friendly flag mode.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-card">
+      <div class="overlay-kicker" id="overlay-kicker">Mission Update</div>
+      <h2 id="overlay-title">Sector Cleared</h2>
+      <p id="overlay-message">You scanned every safe tile and sealed every explosive pocket.</p>
+      <div class="overlay-stats">
+        <div class="overlay-stat">
+          <small>Difficulty</small>
+          <strong id="overlay-difficulty">Medium</strong>
+        </div>
+        <div class="overlay-stat">
+          <small>Time</small>
+          <strong id="overlay-time">000s</strong>
+        </div>
+        <div class="overlay-stat">
+          <small>Flags</small>
+          <strong id="overlay-flags">040</strong>
+        </div>
+      </div>
+      <div class="overlay-actions">
+        <button class="action-btn primary" id="overlay-restart" type="button">Restart</button>
+        <button class="action-btn" id="overlay-close" type="button">Review Board</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="celebration" id="celebration"></div>
+  <div class="toast" id="toast">Flag count must match the number to chord safely.</div>
+
+  <script>
+    const DIFFICULTIES = {
+      easy: { key: "easy", label: "Easy", rows: 9, cols: 9, mines: 10 },
+      medium: { key: "medium", label: "Medium", rows: 16, cols: 16, mines: 40 },
+      hard: { key: "hard", label: "Hard", rows: 16, cols: 30, mines: 99 }
+    };
+
+    const boardEl = document.getElementById("board");
+    const boardWrapEl = document.getElementById("board-wrap");
+    const mineCountEl = document.getElementById("mine-count");
+    const flagsUsedEl = document.getElementById("flags-used");
+    const timerEl = document.getElementById("timer");
+    const statusTextEl = document.getElementById("status-text");
+    const safeLeftEl = document.getElementById("safe-left");
+    const faceEmojiEl = document.getElementById("face-emoji");
+    const difficultyGridEl = document.getElementById("difficulty-grid");
+    const modeGridEl = document.getElementById("mode-grid");
+    const restartButtonEl = document.getElementById("restart-button");
+    const overlayEl = document.getElementById("overlay");
+    const overlayTitleEl = document.getElementById("overlay-title");
+    const overlayMessageEl = document.getElementById("overlay-message");
+    const overlayKickerEl = document.getElementById("overlay-kicker");
+    const overlayDifficultyEl = document.getElementById("overlay-difficulty");
+    const overlayTimeEl = document.getElementById("overlay-time");
+    const overlayFlagsEl = document.getElementById("overlay-flags");
+    const celebrationEl = document.getElementById("celebration");
+    const toastEl = document.getElementById("toast");
+
+    const state = {
+      difficulty: "medium",
+      rows: 16,
+      cols: 16,
+      mines: 40,
+      board: [],
+      firstMove: true,
+      started: false,
+      ended: false,
+      animating: false,
+      flags: 0,
+      revealed: 0,
+      timer: 0,
+      timerId: null,
+      inputMode: "reveal",
+      timeouts: [],
+      toastTimeout: null
+    };
+
+    function padNumber(value) {
+      return String(Math.max(0, value)).padStart(3, "0");
+    }
+
+    function clearScheduled() {
+      state.timeouts.forEach(clearTimeout);
+      state.timeouts = [];
+    }
+
+    function stopTimer() {
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+    }
+
+    function startTimer() {
+      if (state.timerId) return;
+      state.timerId = setInterval(() => {
+        state.timer += 1;
+        timerEl.textContent = padNumber(state.timer);
+      }, 1000);
+    }
+
+    function setStatus(text) {
+      statusTextEl.textContent = text;
+    }
+
+    function setFace(emoji) {
+      faceEmojiEl.textContent = emoji;
+    }
+
+    function updateHud() {
+      mineCountEl.textContent = padNumber(state.mines - state.flags);
+      flagsUsedEl.textContent = padNumber(state.flags);
+      timerEl.textContent = padNumber(state.timer);
+      safeLeftEl.textContent = String((state.rows * state.cols) - state.mines - state.revealed);
+      difficultyGridEl.querySelectorAll(".pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.dataset.difficulty === state.difficulty);
+      });
+      modeGridEl.querySelectorAll(".pill").forEach((pill) => {
+        pill.classList.toggle("active", pill.dataset.mode === state.inputMode);
+      });
+    }
+
+    function createDifficultyControls() {
+      difficultyGridEl.innerHTML = Object.values(DIFFICULTIES).map((difficulty) => `
+        <button class="pill${difficulty.key === state.difficulty ? " active" : ""}" type="button" data-difficulty="${difficulty.key}">
+          <div>
+            <strong>${difficulty.label}</strong>
+            <span>${difficulty.cols}×${difficulty.rows} grid</span>
+          </div>
+          <div class="chip">${difficulty.mines} mines</div>
+        </button>
+      `).join("");
+    }
+
+    function bindControls() {
+      difficultyGridEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-difficulty]");
+        if (!button) return;
+        startNewGame(button.dataset.difficulty);
+      });
+
+      modeGridEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-mode]");
+        if (!button) return;
+        state.inputMode = button.dataset.mode;
+        updateHud();
+      });
+
+      restartButtonEl.addEventListener("click", () => startNewGame(state.difficulty));
+      document.getElementById("overlay-restart").addEventListener("click", () => startNewGame(state.difficulty));
+      document.getElementById("overlay-close").addEventListener("click", () => overlayEl.classList.remove("visible"));
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key.toLowerCase() === "r") {
+          startNewGame(state.difficulty);
+        } else if (event.key.toLowerCase() === "f") {
+          state.inputMode = state.inputMode === "reveal" ? "flag" : "reveal";
+          updateHud();
+        } else if (event.key === "Escape") {
+          overlayEl.classList.remove("visible");
+        }
+      });
+
+      boardEl.addEventListener("click", (event) => {
+        const button = event.target.closest(".cell");
+        if (!button) return;
+        const cell = getCellFromElement(button);
+        if (!cell || state.ended || state.animating) return;
+        overlayEl.classList.remove("visible");
+        if (event.shiftKey || state.inputMode === "flag") {
+          toggleFlag(cell);
+          return;
+        }
+        if (cell.revealed) {
+          chordReveal(cell);
+          return;
+        }
+        revealCell(cell.x, cell.y);
+      });
+
+      boardEl.addEventListener("dblclick", (event) => {
+        const button = event.target.closest(".cell");
+        if (!button) return;
+        const cell = getCellFromElement(button);
+        if (!cell || state.ended || state.animating) return;
+        chordReveal(cell);
+      });
+
+      boardEl.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        const button = event.target.closest(".cell");
+        if (!button) return;
+        const cell = getCellFromElement(button);
+        if (!cell || state.ended || state.animating) return;
+        overlayEl.classList.remove("visible");
+        toggleFlag(cell);
+      });
+
+      const resizeObserver = new ResizeObserver(() => updateBoardMetrics());
+      resizeObserver.observe(boardWrapEl);
+      window.addEventListener("resize", updateBoardMetrics);
+    }
+
+    function getCellFromElement(element) {
+      const x = Number(element.dataset.x);
+      const y = Number(element.dataset.y);
+      return state.board[y]?.[x];
+    }
+
+    function createEmptyBoard() {
+      state.board = [];
+      for (let y = 0; y < state.rows; y += 1) {
+        const row = [];
+        for (let x = 0; x < state.cols; x += 1) {
+          row.push({
+            x,
+            y,
+            mine: false,
+            adjacent: 0,
+            revealed: false,
+            flagged: false,
+            element: null
+          });
+        }
+        state.board.push(row);
+      }
+    }
+
+    function renderBoard() {
+      boardEl.classList.remove("won", "lost");
+      boardEl.innerHTML = "";
+      boardEl.style.gridTemplateColumns = `repeat(${state.cols}, var(--cell-size))`;
+      boardEl.style.gridTemplateRows = `repeat(${state.rows}, var(--cell-size))`;
+      const fragment = document.createDocumentFragment();
+
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cell";
+          button.dataset.x = String(x);
+          button.dataset.y = String(y);
+          button.setAttribute("aria-label", `Tile ${x + 1}, ${y + 1}`);
+          state.board[y][x].element = button;
+          fragment.appendChild(button);
+        }
+      }
+
+      boardEl.appendChild(fragment);
+      updateBoardMetrics();
+    }
+
+    function updateBoardMetrics() {
+      const bounds = boardWrapEl.getBoundingClientRect();
+      const maxWidth = Math.max(220, bounds.width - 28);
+      const maxHeight = Math.max(220, bounds.height - 28);
+      const gap = window.innerWidth < 520 ? 3 : 4;
+      const availableWidth = maxWidth - (gap * Math.max(0, state.cols - 1));
+      const availableHeight = maxHeight - (gap * Math.max(0, state.rows - 1));
+      const size = Math.max(
+        16,
+        Math.floor(
+          Math.min(
+            availableWidth / state.cols,
+            availableHeight / state.rows,
+            window.innerWidth < 640 ? 34 : 40
+          )
+        )
+      );
+      boardEl.style.setProperty("--cell-size", `${size}px`);
+      boardEl.style.setProperty("--cell-gap", `${gap}px`);
+    }
+
+    function getNeighbors(x, y) {
+      const neighbors = [];
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < state.cols && ny >= 0 && ny < state.rows) {
+            neighbors.push(state.board[ny][nx]);
+          }
+        }
+      }
+      return neighbors;
+    }
+
+    function generateMines(safeX, safeY) {
+      const forbidden = new Set();
+      getNeighbors(safeX, safeY).forEach((cell) => forbidden.add(`${cell.x},${cell.y}`));
+      forbidden.add(`${safeX},${safeY}`);
+
+      const candidates = [];
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const key = `${x},${y}`;
+          if (!forbidden.has(key)) candidates.push({ x, y });
+        }
+      }
+
+      for (let i = candidates.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+
+      candidates.slice(0, state.mines).forEach(({ x, y }) => {
+        state.board[y][x].mine = true;
+      });
+
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const cell = state.board[y][x];
+          if (cell.mine) continue;
+          cell.adjacent = getNeighbors(x, y).filter((neighbor) => neighbor.mine).length;
+        }
+      }
+    }
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("visible");
+      clearTimeout(state.toastTimeout);
+      state.toastTimeout = setTimeout(() => toastEl.classList.remove("visible"), 1800);
+    }
+
+    function toggleFlag(cell) {
+      if (cell.revealed) return;
+      cell.flagged = !cell.flagged;
+      state.flags += cell.flagged ? 1 : -1;
+      cell.element.classList.toggle("flagged", cell.flagged);
+      if (cell.flagged) {
+        cell.element.textContent = "";
+        cell.element.removeAttribute("data-value");
+      }
+      setFace(cell.flagged ? "😎" : "🙂");
+      updateHud();
+    }
+
+    function collectRevealWave(startCell) {
+      const queue = [{ cell: startCell, depth: 0 }];
+      const seen = new Set([`${startCell.x},${startCell.y}`]);
+      const wave = [];
+
+      while (queue.length) {
+        const { cell, depth } = queue.shift();
+        if (cell.revealed || cell.flagged || cell.mine) continue;
+        cell.revealed = true;
+        state.revealed += 1;
+        wave.push({ cell, depth });
+
+        if (cell.adjacent === 0) {
+          getNeighbors(cell.x, cell.y).forEach((neighbor) => {
+            const key = `${neighbor.x},${neighbor.y}`;
+            if (!seen.has(key) && !neighbor.mine && !neighbor.flagged && !neighbor.revealed) {
+              seen.add(key);
+              queue.push({ cell: neighbor, depth: depth + 1 });
+            }
+          });
+        }
+      }
+
+      return wave;
+    }
+
+    function revealVisual(cell) {
+      const button = cell.element;
+      button.classList.add("revealed", "pop");
+      button.classList.remove("flagged", "wrong-flag");
+      button.classList.toggle("zero", cell.adjacent === 0);
+      if (cell.adjacent > 0) {
+        button.textContent = String(cell.adjacent);
+        button.dataset.value = String(cell.adjacent);
+      } else {
+        button.textContent = "";
+        button.removeAttribute("data-value");
+      }
+      const popTimeout = setTimeout(() => button.classList.remove("pop"), 240);
+      state.timeouts.push(popTimeout);
+    }
+
+    function scheduleRevealWave(wave) {
+      if (!wave.length) return;
+      state.animating = true;
+      let maxDelay = 0;
+
+      wave.forEach(({ cell, depth }, index) => {
+        const delay = Math.min(360, (depth * 28) + Math.min(index, 10) * 8);
+        maxDelay = Math.max(maxDelay, delay);
+        const timeout = setTimeout(() => revealVisual(cell), delay);
+        state.timeouts.push(timeout);
+      });
+
+      const unlockTimeout = setTimeout(() => {
+        state.animating = false;
+        updateHud();
+        checkWin();
+      }, maxDelay + 80);
+      state.timeouts.push(unlockTimeout);
+    }
+
+    function revealCell(x, y) {
+      const cell = state.board[y]?.[x];
+      if (!cell || cell.revealed || cell.flagged || state.ended) return;
+
+      if (state.firstMove) {
+        generateMines(x, y);
+        state.firstMove = false;
+        state.started = true;
+        startTimer();
+        setStatus("Scanning sector...");
+      }
+
+      if (cell.mine) {
+        triggerLoss(cell);
+        return;
+      }
+
+      setFace("😌");
+      scheduleRevealWave(collectRevealWave(cell));
+    }
+
+    function triggerLoss(hitCell) {
+      state.ended = true;
+      state.animating = true;
+      stopTimer();
+      setFace("💥");
+      setStatus("Detonation detected");
+      boardEl.classList.add("lost");
+
+      let maxDelay = 0;
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const cell = state.board[y][x];
+          if (!cell.mine && !cell.flagged) continue;
+          const delay = (Math.abs(hitCell.x - x) + Math.abs(hitCell.y - y)) * 22;
+          maxDelay = Math.max(maxDelay, delay);
+          const timeout = setTimeout(() => {
+            if (cell.mine) {
+              cell.element.classList.add("revealed", "mine");
+              cell.element.classList.toggle("hit", cell === hitCell);
+              cell.element.classList.remove("flagged");
+              cell.element.textContent = "";
+            } else if (cell.flagged && !cell.mine) {
+              cell.element.classList.add("revealed", "wrong-flag");
+              cell.element.classList.remove("flagged");
+              cell.element.textContent = "";
+            }
+          }, delay);
+          state.timeouts.push(timeout);
+        }
+      }
+
+      const finishTimeout = setTimeout(() => {
+        state.animating = false;
+        openOverlay({
+          kicker: "Mission Failed",
+          title: "Board Detonated",
+          message: "The minefield lit up before the sector was secured. Recalibrate, then run it back.",
+          won: false
+        });
+      }, maxDelay + 260);
+      state.timeouts.push(finishTimeout);
+    }
+
+    function chordReveal(cell) {
+      if (!cell.revealed || cell.adjacent === 0 || state.firstMove) return;
+      const neighbors = getNeighbors(cell.x, cell.y);
+      const flaggedCount = neighbors.filter((neighbor) => neighbor.flagged).length;
+
+      if (flaggedCount !== cell.adjacent) {
+        cell.element.classList.add("flash");
+        const flashTimeout = setTimeout(() => cell.element.classList.remove("flash"), 240);
+        state.timeouts.push(flashTimeout);
+        showToast("Flag count must match the number to chord safely.");
+        return;
+      }
+
+      const wave = [];
+      const seen = new Set();
+      for (const neighbor of neighbors) {
+        if (neighbor.flagged || neighbor.revealed) continue;
+        if (neighbor.mine) {
+          triggerLoss(neighbor);
+          return;
+        }
+        const revealSet = collectRevealWave(neighbor);
+        revealSet.forEach((entry) => {
+          const key = `${entry.cell.x},${entry.cell.y}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            wave.push(entry);
+          }
+        });
+      }
+
+      if (wave.length) {
+        scheduleRevealWave(wave);
+      }
+    }
+
+    function revealRemainingFlags() {
+      for (let y = 0; y < state.rows; y += 1) {
+        for (let x = 0; x < state.cols; x += 1) {
+          const cell = state.board[y][x];
+          if (cell.mine && !cell.flagged) {
+            cell.flagged = true;
+            state.flags += 1;
+            cell.element.classList.add("flagged");
+          }
+        }
+      }
+    }
+
+    function spawnCelebration() {
+      celebrationEl.innerHTML = "";
+      const colors = ["#ff3366", "#ff8eb1", "#00e7ff", "#8dfbff", "#ffd166", "#a78bfa"];
+      for (let i = 0; i < 44; i += 1) {
+        const particle = document.createElement("span");
+        particle.className = "particle";
+        particle.style.left = `${Math.random() * 100}%`;
+        particle.style.top = `${-5 - Math.random() * 18}%`;
+        particle.style.color = colors[i % colors.length];
+        particle.style.setProperty("--delay", `${Math.random() * 220}ms`);
+        particle.style.setProperty("--duration", `${1800 + Math.random() * 1100}ms`);
+        particle.style.setProperty("--drift", `${(Math.random() - 0.5) * 280}px`);
+        particle.style.setProperty("--spin", `${(Math.random() - 0.5) * 900}deg`);
+        celebrationEl.appendChild(particle);
+      }
+      const clearTimeoutId = setTimeout(() => {
+        celebrationEl.innerHTML = "";
+      }, 3400);
+      state.timeouts.push(clearTimeoutId);
+    }
+
+    function openOverlay({ kicker, title, message, won }) {
+      overlayKickerEl.textContent = kicker;
+      overlayTitleEl.textContent = title;
+      overlayMessageEl.textContent = message;
+      overlayDifficultyEl.textContent = DIFFICULTIES[state.difficulty].label;
+      overlayTimeEl.textContent = `${padNumber(state.timer)}s`;
+      overlayFlagsEl.textContent = padNumber(state.flags);
+      overlayEl.classList.add("visible");
+      if (won) spawnCelebration();
+    }
+
+    function checkWin() {
+      if (state.ended) return;
+      const totalSafe = (state.rows * state.cols) - state.mines;
+      if (state.revealed !== totalSafe) {
+        setStatus(state.firstMove ? "Awaiting first sweep" : "Scanning sector...");
+        return;
+      }
+
+      state.ended = true;
+      stopTimer();
+      revealRemainingFlags();
+      updateHud();
+      setFace("😈");
+      setStatus("Sector cleared");
+      boardEl.classList.add("won");
+      openOverlay({
+        kicker: "Mission Complete",
+        title: "Sector Cleared",
+        message: "Every safe tile is open, every bomb is contained, and the neon console is purring.",
+        won: true
+      });
+    }
+
+    function startNewGame(difficultyKey) {
+      const config = DIFFICULTIES[difficultyKey] || DIFFICULTIES.medium;
+      clearScheduled();
+      stopTimer();
+      overlayEl.classList.remove("visible");
+      celebrationEl.innerHTML = "";
+      boardEl.classList.remove("won", "lost");
+      Object.assign(state, {
+        difficulty: config.key,
+        rows: config.rows,
+        cols: config.cols,
+        mines: config.mines,
+        firstMove: true,
+        started: false,
+        ended: false,
+        animating: false,
+        flags: 0,
+        revealed: 0,
+        timer: 0
+      });
+      setFace("🙂");
+      setStatus("Awaiting first sweep");
+      createEmptyBoard();
+      renderBoard();
+      updateHud();
+    }
+
+    createDifficultyControls();
+    bindControls();
+    startNewGame("medium");
+  </script>
+</body>
+</html>

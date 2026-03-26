@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Neon Minesweeper</title>
+  <style>
+    :root {
+      --bg: #050510;
+      --panel: rgba(11, 12, 30, 0.86);
+      --panel-strong: rgba(16, 18, 44, 0.96);
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 51, 102, 0.45);
+      --text: #eef0ff;
+      --muted: #9aa0c8;
+      --primary: #ff3366;
+      --primary-soft: rgba(255, 51, 102, 0.18);
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+      --board-glow: 0 0 0 1px rgba(255, 51, 102, 0.22), 0 0 30px rgba(80, 120, 255, 0.12), 0 0 60px rgba(255, 51, 102, 0.08);
+      --cell-size: 28px;
+      --cell-gap: 4px;
+      --cols: 16;
+      --rows: 16;
+      --radius: 18px;
+      --ease-out: cubic-bezier(.16, 1, .3, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(255, 51, 102, 0.10), transparent 30%),
+        radial-gradient(circle at 20% 10%, rgba(76, 131, 255, 0.10), transparent 24%),
+        radial-gradient(circle at 80% 20%, rgba(0, 241, 255, 0.08), transparent 22%),
+        linear-gradient(180deg, #060611 0%, #04040b 55%, #030307 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at center, black 48%, transparent 100%);
+      opacity: 0.26;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(12px, 3vw, 24px);
+    }
+
+    .shell {
+      width: min(100%, 1120px);
+      height: min(100%, 940px);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .topbar,
+    .statusbar,
+    .footerbar {
+      background: linear-gradient(180deg, rgba(18, 18, 42, 0.90), rgba(10, 10, 24, 0.86));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+      backdrop-filter: blur(16px);
+      border-radius: var(--radius);
+    }
+
+    .topbar {
+      padding: 16px 18px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 220px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      line-height: 1;
+      text-shadow: 0 0 18px rgba(255, 51, 102, 0.35);
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .select-wrap,
+    .stat,
+    .button {
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      color: var(--muted);
+    }
+
+    select {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select option { background: #101224; color: #eef0ff; }
+
+    .button {
+      cursor: pointer;
+      color: var(--text);
+      padding: 12px 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+      user-select: none;
+    }
+
+    .button:hover,
+    .button:focus-visible,
+    .select-wrap:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 51, 102, 0.30);
+      box-shadow: 0 0 0 1px rgba(255, 51, 102, 0.18), 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .button.primary {
+      background: linear-gradient(180deg, rgba(255, 51, 102, 0.95), rgba(186, 24, 72, 0.96));
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px rgba(255, 51, 102, 0.24), inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+
+    .button.primary:hover,
+    .button.primary:focus-visible {
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 16px 42px rgba(255, 51, 102, 0.34);
+    }
+
+    .statusbar,
+    .footerbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      min-width: 108px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat label {
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat strong {
+      font-size: 1.2rem;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.03em;
+    }
+
+    .status-copy {
+      flex: 1;
+      min-width: 180px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .status-copy strong {
+      color: #fff;
+      text-shadow: 0 0 12px rgba(255, 51, 102, 0.3);
+    }
+
+    .board-area {
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: 10px 0 2px;
+    }
+
+    .board-shell {
+      position: relative;
+      display: inline-flex;
+      padding: 14px;
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)),
+        radial-gradient(circle at top, rgba(255, 51, 102, 0.15), transparent 55%),
+        rgba(8, 9, 22, 0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow), var(--board-glow);
+      max-width: 100%;
+      max-height: 100%;
+      overflow: hidden;
+    }
+
+    .board-shell::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 24px;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255,51,102,0.24), rgba(0,241,255,0.10), transparent 60%);
+      opacity: 0.28;
+      mix-blend-mode: screen;
+    }
+
+    #board {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cell-size));
+      grid-template-rows: repeat(var(--rows), var(--cell-size));
+      gap: var(--cell-gap);
+      touch-action: none;
+      user-select: none;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .cell {
+      position: relative;
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border: 0;
+      padding: 0;
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)),
+        linear-gradient(180deg, #1b203a, #121629);
+      color: var(--text);
+      font-weight: 900;
+      font-size: calc(var(--cell-size) * 0.54);
+      line-height: 1;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition:
+        transform 140ms var(--ease-out),
+        background 180ms var(--ease-out),
+        box-shadow 180ms var(--ease-out),
+        border-color 180ms var(--ease-out),
+        color 180ms var(--ease-out),
+        opacity 180ms var(--ease-out);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        inset 0 -1px 0 rgba(0,0,0,0.35),
+        0 3px 10px rgba(0, 0, 0, 0.26);
+      border: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+
+    .cell:hover:not(.revealed):not(.locked) {
+      transform: translateY(-1px) scale(1.02);
+      border-color: rgba(255, 51, 102, 0.25);
+      box-shadow: 0 0 0 1px rgba(255, 51, 102, 0.18), 0 8px 16px rgba(0, 0, 0, 0.34);
+    }
+
+    .cell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.18), transparent 48%);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .cell.revealed {
+      cursor: default;
+      transform: none;
+      background:
+        linear-gradient(180deg, rgba(7, 10, 22, 0.92), rgba(12, 14, 28, 0.92)),
+        linear-gradient(180deg, #0f1430, #0b0f20);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.03);
+      animation: cellPop 260ms var(--ease-out) both;
+    }
+
+    .cell.reveal-pop {
+      animation: revealPop 280ms var(--ease-out) both;
+    }
+
+    .cell.flagged {
+      color: #ffd6de;
+      background:
+        linear-gradient(180deg, rgba(255, 51, 102, 0.18), rgba(255, 51, 102, 0.08)),
+        linear-gradient(180deg, #18142a, #101325);
+      box-shadow: 0 0 0 1px rgba(255, 51, 102, 0.16), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .cell.flagged::after,
+    .cell.mine.revealed::after,
+    .cell.wrong-flag::after {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--cell-size) * 0.58);
+      text-shadow: 0 0 12px currentColor;
+    }
+
+    .cell.flagged::after { content: "⚑"; color: #ff6c91; }
+    .cell.mine.revealed::after { content: "✹"; color: #ff4470; }
+    .cell.wrong-flag::after { content: "✕"; color: #ffb4c5; }
+
+    .cell.mine.revealed {
+      background:
+        radial-gradient(circle at 50% 40%, rgba(255, 76, 110, 0.30), transparent 60%),
+        linear-gradient(180deg, rgba(60, 8, 18, 0.96), rgba(23, 8, 12, 0.98));
+      border-color: rgba(255, 90, 126, 0.38);
+      box-shadow: 0 0 0 1px rgba(255, 51, 102, 0.20), 0 0 24px rgba(255, 51, 102, 0.28), inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+
+    .cell.exploded {
+      animation: explode 360ms var(--ease-out) both;
+    }
+
+    .cell.n1 { color: #00f0ff; text-shadow: 0 0 12px rgba(0,240,255,0.65); }
+    .cell.n2 { color: #6dff6d; text-shadow: 0 0 12px rgba(109,255,109,0.6); }
+    .cell.n3 { color: #ff5d8f; text-shadow: 0 0 12px rgba(255,93,143,0.62); }
+    .cell.n4 { color: #8b8fff; text-shadow: 0 0 12px rgba(139,143,255,0.62); }
+    .cell.n5 { color: #ff9b42; text-shadow: 0 0 12px rgba(255,155,66,0.62); }
+    .cell.n6 { color: #40ffd8; text-shadow: 0 0 12px rgba(64,255,216,0.62); }
+    .cell.n7 { color: #ffe95b; text-shadow: 0 0 12px rgba(255,233,91,0.62); }
+    .cell.n8 { color: #e17bff; text-shadow: 0 0 12px rgba(225,123,255,0.62); }
+
+    .cell.spark {
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 0 20px rgba(0, 240, 255, 0.12);
+    }
+
+    .cell.disabled {
+      pointer-events: none;
+    }
+
+    .cell:focus-visible {
+      outline: 2px solid rgba(255, 51, 102, 0.9);
+      outline-offset: 2px;
+    }
+
+    .notice {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      pointer-events: none;
+      text-align: center;
+      min-width: min(90vw, 420px);
+      padding: 18px 22px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(15, 16, 40, 0.90), rgba(8, 9, 22, 0.88));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(255, 51, 102, 0.12);
+      opacity: 0;
+      transform-origin: center;
+      transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+      backdrop-filter: blur(10px);
+    }
+
+    .notice.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .notice h2 {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 3vw, 2.4rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .notice p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .win {
+      color: #ff8fb0;
+      text-shadow: 0 0 20px rgba(255, 51, 102, 0.36);
+    }
+
+    .boom {
+      color: #ff5d86;
+      text-shadow: 0 0 20px rgba(255, 51, 102, 0.42);
+    }
+
+    .confetti-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 4;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 18px;
+      border-radius: 4px;
+      opacity: 0;
+      transform: translate3d(0,0,0) rotate(0deg);
+      animation: confettiFall 1400ms linear forwards;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .footerbar {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .footerbar strong {
+      color: #fff;
+    }
+
+    @keyframes revealPop {
+      0% { transform: scale(0.72); filter: brightness(1.4); }
+      65% { transform: scale(1.08); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    @keyframes cellPop {
+      0% { transform: scale(0.75); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes explode {
+      0% { transform: scale(0.9); }
+      40% { transform: scale(1.12); box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 0 36px rgba(255, 51, 102, 0.45); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes confettiFall {
+      0% { opacity: 0; transform: translate3d(var(--x, 0), -20px, 0) rotate(0deg) scale(0.8); }
+      12% { opacity: 1; }
+      100% { opacity: 0; transform: translate3d(calc(var(--x, 0) + var(--drift, 0px)), 110vh, 0) rotate(var(--rot, 540deg)) scale(1); }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        grid-template-rows: auto auto 1fr auto;
+        gap: 10px;
+      }
+
+      .topbar,
+      .statusbar,
+      .footerbar {
+        padding: 12px;
+      }
+
+      .controls {
+        justify-content: flex-start;
+      }
+
+      .select-wrap,
+      .button {
+        padding: 10px 12px;
+      }
+
+      .stat {
+        min-width: 96px;
+      }
+
+      .board-shell {
+        padding: 10px;
+        border-radius: 20px;
+      }
+
+      .notice {
+        min-width: calc(100vw - 28px);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .brand {
+        min-width: 0;
+      }
+
+      .brand p {
+        font-size: 0.84rem;
+      }
+
+      .statusbar {
+        gap: 10px;
+      }
+
+      .status-copy {
+        min-width: 100%;
+        order: 3;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <h1>Neon Minesweeper</h1>
+          <p>Left click to reveal, right click to flag, first click is always safe.</p>
+        </div>
+        <div class="controls">
+          <label class="select-wrap" aria-label="Difficulty selector">
+            <span>Difficulty</span>
+            <select id="difficulty">
+              <option value="beginner">Beginner · 9×9 · 10 mines</option>
+              <option value="intermediate" selected>Intermediate · 16×16 · 40 mines</option>
+              <option value="expert">Expert · 16×30 · 99 mines</option>
+            </select>
+          </label>
+          <button class="button primary" id="restartBtn" type="button">Restart</button>
+        </div>
+      </header>
+
+      <section class="statusbar" aria-live="polite">
+        <div class="stat"><label>Mines</label><strong id="mineCounter">40</strong></div>
+        <div class="stat"><label>Timer</label><strong id="timer">000</strong></div>
+        <div class="stat"><label>Status</label><strong id="status">Ready</strong></div>
+        <div class="status-copy" id="helpText">Reveal any square to start. The board is generated after your first click so the opening move can never hit a mine.</div>
+      </section>
+
+      <main class="board-area">
+        <div class="board-shell" id="boardShell">
+          <div id="board" role="grid" aria-label="Minesweeper board"></div>
+          <div class="confetti-layer" id="confettiLayer"></div>
+          <div class="notice" id="notice">
+            <h2 id="noticeTitle">Victory</h2>
+            <p id="noticeBody">All safe tiles are uncovered. The neon grid is yours.</p>
+          </div>
+        </div>
+      </main>
+
+      <footer class="footerbar">
+        <div><strong>Tip:</strong> Number colors map from cyan to magenta for instant scanability.</div>
+        <div id="progress">0 / 0 revealed</div>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const CONFIGS = {
+        beginner: { rows: 9, cols: 9, mines: 10, name: 'Beginner' },
+        intermediate: { rows: 16, cols: 16, mines: 40, name: 'Intermediate' },
+        expert: { rows: 16, cols: 30, mines: 99, name: 'Expert' }
+      };
+
+      const boardEl = document.getElementById('board');
+      const shellEl = document.getElementById('boardShell');
+      const difficultyEl = document.getElementById('difficulty');
+      const restartBtn = document.getElementById('restartBtn');
+      const mineCounterEl = document.getElementById('mineCounter');
+      const timerEl = document.getElementById('timer');
+      const statusEl = document.getElementById('status');
+      const progressEl = document.getElementById('progress');
+      const helpTextEl = document.getElementById('helpText');
+      const noticeEl = document.getElementById('notice');
+      const noticeTitleEl = document.getElementById('noticeTitle');
+      const noticeBodyEl = document.getElementById('noticeBody');
+      const confettiLayer = document.getElementById('confettiLayer');
+
+      let config = CONFIGS[difficultyEl.value];
+      let cells = [];
+      let board = [];
+      let firstClickPending = true;
+      let gameState = 'ready';
+      let timer = 0;
+      let timerHandle = null;
+      let revealQueueHandles = [];
+      let revealSerial = 0;
+      let revealedSafe = 0;
+      let flagsPlaced = 0;
+      let animateTokens = 0;
+      let viewportRaf = 0;
+
+      function createBoardState() {
+        board = Array.from({ length: config.rows }, (_, row) => Array.from({ length: config.cols }, (_, col) => ({
+          row,
+          col,
+          mine: false,
+          adjacent: 0,
+          revealed: false,
+          flagged: false,
+          element: null
+        })));
+      }
+
+      function buildBoard() {
+        boardEl.innerHTML = '';
+        boardEl.style.setProperty('--cols', config.cols);
+        boardEl.style.setProperty('--rows', config.rows);
+        cells = [];
+        createBoardState();
+        const fragment = document.createDocumentFragment();
+
+        for (let row = 0; row < config.rows; row++) {
+          for (let col = 0; col < config.cols; col++) {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'cell';
+            cell.dataset.row = String(row);
+            cell.dataset.col = String(col);
+            cell.setAttribute('aria-label', `Hidden cell row ${row + 1}, column ${col + 1}`);
+            cell.addEventListener('click', onCellClick);
+            cell.addEventListener('contextmenu', onCellRightClick);
+            fragment.appendChild(cell);
+            board[row][col].element = cell;
+            cells.push(cell);
+          }
+        }
+
+        boardEl.appendChild(fragment);
+        syncCounters();
+        syncProgress();
+        updateStatus('Ready');
+        hideNotice();
+        scheduleResize();
+      }
+
+      function resetTimers() {
+        if (timerHandle) {
+          clearInterval(timerHandle);
+          timerHandle = null;
+        }
+        revealQueueHandles.forEach(clearTimeout);
+        revealQueueHandles = [];
+      }
+
+      function startTimer() {
+        if (timerHandle) return;
+        timer = 0;
+        timerEl.textContent = formatTime(timer);
+        timerHandle = setInterval(() => {
+          timer += 1;
+          timerEl.textContent = formatTime(timer);
+        }, 1000);
+      }
+
+      function stopTimer() {
+        if (timerHandle) {
+          clearInterval(timerHandle);
+          timerHandle = null;
+        }
+      }
+
+      function formatTime(value) {
+        return String(value).padStart(3, '0');
+      }
+
+      function syncCounters() {
+        mineCounterEl.textContent = String(config.mines - flagsPlaced);
+      }
+
+      function syncProgress() {
+        const totalSafe = config.rows * config.cols - config.mines;
+        progressEl.textContent = `${revealedSafe} / ${totalSafe} revealed`;
+      }
+
+      function updateStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function setDifficulty(key) {
+        config = CONFIGS[key];
+        restartGame();
+      }
+
+      function restartGame() {
+        resetTimers();
+        revealSerial += 1;
+        firstClickPending = true;
+        gameState = 'ready';
+        timer = 0;
+        revealedSafe = 0;
+        flagsPlaced = 0;
+        timerEl.textContent = formatTime(0);
+        updateStatus('Ready');
+        difficultyEl.disabled = false;
+        hideNotice();
+        buildBoard();
+      }
+
+      function onCellClick(event) {
+        event.preventDefault();
+        const cell = event.currentTarget;
+        const row = Number(cell.dataset.row);
+        const col = Number(cell.dataset.col);
+        if (gameState !== 'ready' && gameState !== 'playing') return;
+        if (board[row][col].flagged || board[row][col].revealed) return;
+
+        if (firstClickPending) {
+          firstClickPending = false;
+          generateMines(row, col);
+          startTimer();
+          gameState = 'playing';
+          updateStatus('Playing');
+          helpTextEl.textContent = 'The board is live. Chaining empty spaces creates a smooth neon cascade.';
+        }
+
+        revealFrom(row, col);
+      }
+
+      function onCellRightClick(event) {
+        event.preventDefault();
+        const cell = event.currentTarget;
+        const row = Number(cell.dataset.row);
+        const col = Number(cell.dataset.col);
+        if (gameState === 'won' || gameState === 'lost') return;
+        if (board[row][col].revealed) return;
+
+        const tile = board[row][col];
+        tile.flagged = !tile.flagged;
+        cell.classList.toggle('flagged', tile.flagged);
+        cell.classList.remove('wrong-flag');
+        cell.setAttribute('aria-label', tile.flagged ? `Flagged cell row ${row + 1}, column ${col + 1}` : `Hidden cell row ${row + 1}, column ${col + 1}`);
+        flagsPlaced += tile.flagged ? 1 : -1;
+        syncCounters();
+      }
+
+      function generateMines(safeRow, safeCol) {
+        const forbidden = new Set();
+        for (let r = safeRow - 1; r <= safeRow + 1; r++) {
+          for (let c = safeCol - 1; c <= safeCol + 1; c++) {
+            if (r >= 0 && r < config.rows && c >= 0 && c < config.cols) {
+              forbidden.add(`${r},${c}`);
+            }
+          }
+        }
+
+        const positions = [];
+        for (let r = 0; r < config.rows; r++) {
+          for (let c = 0; c < config.cols; c++) {
+            if (!forbidden.has(`${r},${c}`)) positions.push([r, c]);
+          }
+        }
+
+        shuffle(positions);
+        positions.slice(0, config.mines).forEach(([r, c]) => {
+          board[r][c].mine = true;
+        });
+
+        for (let r = 0; r < config.rows; r++) {
+          for (let c = 0; c < config.cols; c++) {
+            board[r][c].adjacent = countAdjacentMines(r, c);
+          }
+        }
+      }
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+      }
+
+      function countAdjacentMines(row, col) {
+        let total = 0;
+        for (let r = row - 1; r <= row + 1; r++) {
+          for (let c = col - 1; c <= col + 1; c++) {
+            if (r === row && c === col) continue;
+            if (r >= 0 && r < config.rows && c >= 0 && c < config.cols && board[r][c].mine) total += 1;
+          }
+        }
+        return total;
+      }
+
+      function revealFrom(startRow, startCol) {
+        const tile = board[startRow][startCol];
+        if (tile.revealed || tile.flagged) return;
+
+        if (tile.mine) {
+          triggerLoss(startRow, startCol);
+          return;
+        }
+
+        const frontier = [{ row: startRow, col: startCol, depth: 0 }];
+        const seen = new Set();
+        const serial = ++revealSerial;
+        const revealOrder = [];
+
+        while (frontier.length) {
+          const current = frontier.shift();
+          const key = `${current.row},${current.col}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          const currentTile = board[current.row][current.col];
+          if (currentTile.revealed || currentTile.flagged) continue;
+          if (currentTile.mine) continue;
+
+          revealOrder.push(current);
+
+          if (currentTile.adjacent === 0) {
+            for (let r = current.row - 1; r <= current.row + 1; r++) {
+              for (let c = current.col - 1; c <= current.col + 1; c++) {
+                if (r === current.row && c === current.col) continue;
+                if (r < 0 || r >= config.rows || c < 0 || c >= config.cols) continue;
+                const neighbor = board[r][c];
+                if (!neighbor.revealed && !neighbor.flagged && !neighbor.mine) {
+                  frontier.push({ row: r, col: c, depth: current.depth + 1 });
+                }
+              }
+            }
+          }
+        }
+
+        revealOrder.forEach((item, index) => {
+          const handle = setTimeout(() => {
+            if (serial !== revealSerial) return;
+            showTile(item.row, item.col, item.depth);
+          }, index * 16 + item.depth * 10);
+          revealQueueHandles.push(handle);
+        });
+      }
+
+      function showTile(row, col, depth) {
+        const tile = board[row][col];
+        const el = tile.element;
+        if (!el || tile.revealed || tile.flagged) return;
+
+        tile.revealed = true;
+        revealedSafe += 1;
+        el.classList.add('revealed', 'reveal-pop');
+        el.style.setProperty('--delay', `${Math.min(depth * 12, 160)}ms`);
+        el.style.transitionDelay = `${Math.min(depth * 12, 160)}ms`;
+        if (tile.adjacent > 0) {
+          el.textContent = String(tile.adjacent);
+          el.classList.add(`n${tile.adjacent}`);
+          el.setAttribute('aria-label', `Revealed cell row ${row + 1}, column ${col + 1}, ${tile.adjacent} adjacent mines`);
+        } else {
+          el.textContent = '';
+          el.setAttribute('aria-label', `Revealed empty cell row ${row + 1}, column ${col + 1}`);
+          el.classList.add('spark');
+        }
+        syncProgress();
+        if (tile.adjacent === 0) {
+          pulseNeighbors(row, col);
+        }
+        checkWin();
+      }
+
+      function pulseNeighbors(row, col) {
+        for (let r = row - 1; r <= row + 1; r++) {
+          for (let c = col - 1; c <= col + 1; c++) {
+            if (r < 0 || r >= config.rows || c < 0 || c >= config.cols) continue;
+            const neighbor = board[r][c];
+            if (neighbor.element && !neighbor.revealed) {
+              neighbor.element.classList.add('reveal-pop');
+              setTimeout(() => neighbor.element.classList.remove('reveal-pop'), 280);
+            }
+          }
+        }
+      }
+
+      function checkWin() {
+        const totalSafe = config.rows * config.cols - config.mines;
+        if (gameState === 'playing' && revealedSafe >= totalSafe) {
+          triggerWin();
+        }
+      }
+
+      function triggerLoss(row, col) {
+        if (gameState === 'lost' || gameState === 'won') return;
+        gameState = 'lost';
+        stopTimer();
+        updateStatus('Boom');
+        showNotice('boom', 'Boom', 'A mine detonated. Every hidden mine is now revealed so you can study the pattern.');
+        revealAllMines(row, col);
+        disableDifficulty(true);
+        helpTextEl.textContent = 'Restart to try again. The first click remains safe on every fresh run.';
+      }
+
+      function revealAllMines(explodedRow, explodedCol) {
+        for (let r = 0; r < config.rows; r++) {
+          for (let c = 0; c < config.cols; c++) {
+            const tile = board[r][c];
+            const el = tile.element;
+            if (!el) continue;
+            el.classList.add('revealed', 'disabled');
+            el.classList.remove('flagged');
+            if (tile.mine) {
+              tile.revealed = true;
+              el.classList.add('mine');
+              el.textContent = '';
+              if (r === explodedRow && c === explodedCol) el.classList.add('exploded');
+            } else if (tile.flagged) {
+              el.classList.add('wrong-flag');
+            }
+          }
+        }
+      }
+
+      function triggerWin() {
+        if (gameState === 'won' || gameState === 'lost') return;
+        gameState = 'won';
+        stopTimer();
+        updateStatus('Victory');
+        showNotice('win', 'Victory', 'All safe cells are uncovered. Enjoy the neon fireworks.');
+        celebrate();
+        disableDifficulty(true);
+        helpTextEl.textContent = 'Hit Restart to launch another board with a fresh mine layout.';
+      }
+
+      function celebrate() {
+        animateTokens += 1;
+        const token = animateTokens;
+        const colors = ['#ff3366', '#ff7aa2', '#00f0ff', '#6dff6d', '#ffe95b', '#8b8fff'];
+        confettiLayer.innerHTML = '';
+        const rect = shellEl.getBoundingClientRect();
+        const count = Math.min(48, Math.max(30, Math.floor(rect.width / 18)));
+
+        for (let i = 0; i < count; i++) {
+          const piece = document.createElement('span');
+          piece.className = 'confetti';
+          piece.style.left = `${Math.random() * 100}%`;
+          piece.style.top = `${Math.random() * 20 + 10}%`;
+          piece.style.background = colors[i % colors.length];
+          piece.style.color = colors[(i + 2) % colors.length];
+          piece.style.setProperty('--x', `${Math.random() * 8 - 4}px`);
+          piece.style.setProperty('--drift', `${Math.random() * 120 - 60}px`);
+          piece.style.setProperty('--rot', `${360 + Math.random() * 540}deg`);
+          piece.style.animationDelay = `${Math.random() * 240}ms`;
+          confettiLayer.appendChild(piece);
+        }
+
+        setTimeout(() => {
+          if (token !== animateTokens) return;
+          if (gameState === 'won') {
+            confettiLayer.innerHTML = '';
+          }
+        }, 1800);
+      }
+
+      function showNotice(kind, title, body) {
+        noticeEl.classList.remove('win', 'boom', 'show');
+        noticeEl.classList.add(kind === 'win' ? 'win' : 'boom');
+        noticeTitleEl.textContent = title;
+        noticeBodyEl.textContent = body;
+        requestAnimationFrame(() => noticeEl.classList.add('show')); 
+      }
+
+      function hideNotice() {
+        noticeEl.classList.remove('show', 'win', 'boom');
+      }
+
+      function disableDifficulty(disabled) {
+        difficultyEl.disabled = disabled;
+      }
+
+      function scheduleResize() {
+        cancelAnimationFrame(viewportRaf);
+        viewportRaf = requestAnimationFrame(resizeBoard);
+      }
+
+      function resizeBoard() {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const shellStyles = getComputedStyle(shellEl);
+        const shellPadding = parseFloat(shellStyles.paddingLeft || '0') + parseFloat(shellStyles.paddingRight || '0');
+        const availableWidth = Math.max(280, viewportWidth - 32 - shellPadding);
+        const availableHeight = Math.max(280, viewportHeight - 260);
+        const boardWidthCap = Math.min(availableWidth, availableHeight);
+        const gap = Math.max(3, Math.min(6, Math.floor(boardWidthCap / 140)));
+        const cellSize = Math.max(18, Math.floor((boardWidthCap - (config.cols - 1) * gap - 28) / config.cols));
+        boardEl.style.setProperty('--cell-size', `${cellSize}px`);
+        boardEl.style.setProperty('--cell-gap', `${gap}px`);
+      }
+
+      function onViewportChange() {
+        scheduleResize();
+      }
+
+      restartBtn.addEventListener('click', restartGame);
+      difficultyEl.addEventListener('change', (event) => setDifficulty(event.target.value));
+      window.addEventListener('resize', onViewportChange, { passive: true });
+      window.addEventListener('orientationchange', onViewportChange, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && timerHandle) {
+          // Keep the timer running only while the game is visible to the player.
+        }
+      });
+
+      buildBoard();
+      updateStatus('Ready');
+      resizeBoard();
+      syncCounters();
+      syncProgress();
+      timerEl.textContent = '000';
+      helpTextEl.textContent = 'Reveal any square to start. The first click will always carve out a safe opening area.';
+    })();
+  </script>
+</body>
+</html>

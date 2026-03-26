@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reversi Neon Duel — BrainRot Games</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050510;
+      --panel: rgba(15, 15, 32, 0.82);
+      --panel-2: rgba(20, 20, 44, 0.9);
+      --line: rgba(170, 102, 255, 0.18);
+      --text: #eef0ff;
+      --muted: #8f90b6;
+      --purple: #aa66ff;
+      --purple-2: #6b4cff;
+      --cyan: #5ce1ff;
+      --black: #0c0d14;
+      --white: #f5f7ff;
+      --tile-a: #111325;
+      --tile-b: #0f1120;
+      --tile-c: #171a31;
+      --tile-d: #121526;
+      --good: #5effb2;
+      --warn: #ffd36a;
+      --bad: #ff6a98;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(170, 102, 255, 0.18), transparent 28%),
+        radial-gradient(circle at 85% 20%, rgba(92, 225, 255, 0.11), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(170, 102, 255, 0.08), transparent 34%),
+        linear-gradient(180deg, #050510 0%, #070814 55%, #04050d 100%);
+      color: var(--text);
+    }
+
+    .shell {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(12px, 1.8vw, 22px);
+      gap: clamp(10px, 1.5vw, 16px);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) auto auto auto auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 14px rgba(92, 225, 255, 0.25);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1;
+      letter-spacing: 0.04em;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .stats, .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip, .button, .select {
+      border: 1px solid rgba(170, 102, 255, 0.22);
+      background: linear-gradient(180deg, rgba(20, 20, 42, 0.92), rgba(12, 12, 28, 0.84));
+      color: var(--text);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) inset, 0 14px 30px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(16px);
+    }
+
+    .chip {
+      border-radius: 16px;
+      padding: 10px 12px;
+      min-width: 112px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chip .label {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .chip .value {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .chip.black .value { color: #d6ddff; }
+    .chip.white .value { color: #ffffff; }
+
+    .button, .select {
+      border-radius: 14px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      outline: none;
+      transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .button {
+      cursor: pointer;
+      color: #f0e8ff;
+    }
+
+    .button:hover, .button:focus-visible, .select:hover, .select:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(170, 102, 255, 0.6);
+      box-shadow: 0 0 0 1px rgba(170, 102, 255, 0.18) inset, 0 0 24px rgba(170, 102, 255, 0.15), 0 14px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .select {
+      appearance: none;
+      padding-right: 38px;
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(170, 102, 255, 0.95) 50%),
+        linear-gradient(135deg, rgba(170, 102, 255, 0.95) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% - 2px),
+        calc(100% - 13px) calc(50% - 2px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+    }
+
+    .main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 276px;
+      gap: clamp(12px, 1.5vw, 18px);
+    }
+
+    .board-panel {
+      position: relative;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 1.4vw, 16px);
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)),
+        radial-gradient(circle at 50% 20%, rgba(170, 102, 255, 0.14), transparent 50%),
+        linear-gradient(180deg, rgba(10, 10, 22, 0.96), rgba(7, 7, 18, 0.96));
+      border: 1px solid rgba(170, 102, 255, 0.22);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 24px 60px rgba(0, 0, 0, 0.44),
+        0 0 36px rgba(170, 102, 255, 0.08);
+    }
+
+    .board-shell {
+      position: relative;
+      width: min(100%, 84vh, 1000px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 22px;
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    .hud-pill {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(8, 9, 18, 0.66);
+      border: 1px solid rgba(170, 102, 255, 0.22);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 30px rgba(0,0,0,.28);
+      font-size: 13px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff, var(--purple));
+      box-shadow: 0 0 16px rgba(170, 102, 255, 0.85);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.82); opacity: 0.72; }
+      50% { transform: scale(1.12); opacity: 1; }
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .card {
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(24, 24, 48, 0.88), rgba(12, 12, 28, 0.88));
+      border: 1px solid rgba(170, 102, 255, 0.18);
+      box-shadow: 0 18px 40px rgba(0,0,0,.28);
+      padding: 16px;
+    }
+
+    .turn {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .turn-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .turn-title {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .status {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+
+    .status.black { color: #d9e1ff; }
+    .status.white { color: #ffffff; }
+    .status.thinking { color: var(--cyan); }
+    .status.win { color: var(--good); }
+    .status.lose { color: var(--bad); }
+    .status.draw { color: var(--warn); }
+
+    .message {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .instructions {
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .instructions strong { color: var(--text); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.black {
+      background: radial-gradient(circle at 30% 30%, #667, #05060b 72%);
+      box-shadow: 0 0 12px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.07);
+    }
+
+    .dot.white {
+      background: radial-gradient(circle at 30% 30%, #fff, #cfd4e6 68%, #b1b5c9 100%);
+      box-shadow: 0 0 12px rgba(255,255,255,.32), inset 0 0 0 1px rgba(0,0,0,.08);
+    }
+
+    .dot.move {
+      background: radial-gradient(circle at 30% 30%, #fff, var(--purple));
+      box-shadow: 0 0 12px rgba(170,102,255,.55);
+    }
+
+    .footer-note {
+      color: rgba(143, 144, 182, 0.8);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(4, 5, 13, 0.72);
+      backdrop-filter: blur(12px);
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s ease;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: min(92vw, 460px);
+      border-radius: 28px;
+      padding: 26px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(170, 102, 255, 0.14), transparent 44%),
+        linear-gradient(180deg, rgba(20, 20, 42, 0.96), rgba(10, 10, 24, 0.98));
+      border: 1px solid rgba(170, 102, 255, 0.24);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, 0 36px 80px rgba(0,0,0,.6);
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 5vw, 42px);
+      letter-spacing: 0.04em;
+    }
+
+    .modal p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .modal .result {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .modal .button {
+      width: 100%;
+      justify-content: center;
+      padding: 13px 16px;
+    }
+
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .shell { height: auto; min-height: 100vh; }
+      .topbar { grid-template-columns: 1fr; }
+      .stats, .controls { justify-content: flex-start; }
+      .main { grid-template-columns: 1fr; }
+      .side { order: 2; }
+      .board-shell { width: min(96vw, 72vh); }
+    }
+
+    @media (max-width: 640px) {
+      .chip { min-width: 96px; padding: 8px 10px; }
+      .chip .value { font-size: 18px; }
+      .card { padding: 14px; border-radius: 20px; }
+      .board-panel { padding: 8px; border-radius: 22px; }
+      .hud-pill { left: 10px; top: 10px; padding: 8px 11px; }
+      .modal { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="title-wrap">
+        <div class="eyebrow">BrainRot Games // Reversi</div>
+        <h1>Neon Duel</h1>
+        <div class="subtitle">Outflank the white swarm. Captures flip automatically with animated flair.</div>
+      </div>
+
+      <div class="stats">
+        <div class="chip black"><span class="label">Black</span><span class="value" id="scoreBlack">2</span></div>
+        <div class="chip white"><span class="label">White</span><span class="value" id="scoreWhite">2</span></div>
+      </div>
+
+      <div class="controls">
+        <select class="select" id="difficulty" aria-label="Difficulty">
+          <option value="pulse">Pulse — Depth 3</option>
+          <option value="neon" selected>Neon — Depth 4</option>
+          <option value="overclock">Overclock — Depth 4+</option>
+        </select>
+        <button class="button" id="newGameBtn">New Game</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="board-panel">
+        <div class="board-shell">
+          <canvas id="board" aria-label="Reversi board"></canvas>
+          <div class="hud-pill"><span class="pulse-dot"></span><span id="turnPill">Your turn</span></div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="card turn">
+          <div class="turn-head">
+            <div class="turn-title">Game State</div>
+            <div class="status black" id="statusText">Your turn</div>
+          </div>
+          <div class="message" id="messageText">Click any glowing cell to place a black disc. Corners matter most; keep your mobility high.</div>
+        </section>
+
+        <section class="card instructions">
+          <div><strong>How to play</strong></div>
+          <div>Place a disc on any highlighted tile to capture a straight line of enemy discs. Captured discs flip instantly, then settle with a smooth turn animation.</div>
+          <div class="legend">
+            <span><i class="dot black"></i> You</span>
+            <span><i class="dot white"></i> AI</span>
+            <span><i class="dot move"></i> Valid move</span>
+          </div>
+        </section>
+
+        <section class="card footer-note">
+          The AI uses minimax with alpha-beta pruning and a positional Othello heuristic that favors corners, mobility, and stability.
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal">
+      <h2 id="resultTitle">Game Over</h2>
+      <div class="result" id="resultLine">Black wins</div>
+      <p id="resultDetail">Final score: 34 — 30</p>
+      <button class="button" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const SIZE = 8;
+      const BLACK = 1;
+      const WHITE = -1;
+      const EMPTY = 0;
+      const DIRECTIONS = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1],           [0, 1],
+        [1, -1],  [1, 0],  [1, 1]
+      ];
+      const WEIGHTS = [
+        [120, -24, 20,  6,  6, 20, -24, 120],
+        [-24, -42, -6, -6, -6, -6, -42, -24],
+        [20,  -6, 15,  3,  3, 15,  -6,  20],
+        [6,   -6,  3,  2,  2,  3,  -6,   6],
+        [6,   -6,  3,  2,  2,  3,  -6,   6],
+        [20,  -6, 15,  3,  3, 15,  -6,  20],
+        [-24, -42, -6, -6, -6, -6, -42, -24],
+        [120, -24, 20,  6,  6, 20, -24, 120]
+      ];
+      const CORNERS = [[0,0],[0,7],[7,0],[7,7]];
+      const CORNER_KEYS = new Set(CORNERS.map(([r,c]) => `${r},${c}`));
+      const X_SQUARES = new Set(['1,1','1,6','6,1','6,6']);
+      const C_SQUARES = new Set(['0,1','1,0','0,6','1,7','6,0','7,1','6,7','7,6']);
+      const DIFFICULTIES = {
+        pulse: { label: 'Pulse', depth: 3, tempo: 1.0 },
+        neon: { label: 'Neon', depth: 4, tempo: 1.08 },
+        overclock: { label: 'Overclock', depth: 4, tempo: 1.18 }
+      };
+
+      const canvas = document.getElementById('board');
+      const ctx = canvas.getContext('2d');
+      const scoreBlack = document.getElementById('scoreBlack');
+      const scoreWhite = document.getElementById('scoreWhite');
+      const difficultyEl = document.getElementById('difficulty');
+      const newGameBtn = document.getElementById('newGameBtn');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+      const statusText = document.getElementById('statusText');
+      const messageText = document.getElementById('messageText');
+      const turnPill = document.getElementById('turnPill');
+      const overlay = document.getElementById('overlay');
+      const resultTitle = document.getElementById('resultTitle');
+      const resultLine = document.getElementById('resultLine');
+      const resultDetail = document.getElementById('resultDetail');
+
+      let board = [];
+      let currentPlayer = BLACK;
+      let gameOver = false;
+      let busy = false;
+      let hoverCell = null;
+      let boardSize = 0;
+      let devicePixelRatioValue = 1;
+      let boardGeom = { x: 0, y: 0, size: 0, cell: 0 };
+      let animationClock = performance.now();
+      let aiTimer = null;
+      const animations = new Map();
+
+      function createBoard() {
+        board = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
+        board[3][3] = WHITE;
+        board[3][4] = BLACK;
+        board[4][3] = BLACK;
+        board[4][4] = WHITE;
+        currentPlayer = BLACK;
+        gameOver = false;
+        busy = false;
+        hoverCell = null;
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        clearTimeout(aiTimer);
+        aiTimer = null;
+        animations.clear();
+        syncScores();
+        setMessage('Click any glowing cell to place a black disc. Corners matter most; keep your mobility high.');
+        updateTurnUI();
+      }
+
+      function cloneBoard(src) {
+        return src.map(row => row.slice());
+      }
+
+      function inBounds(r, c) {
+        return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+      }
+
+      function opponent(player) {
+        return -player;
+      }
+
+      function keyFor(r, c) {
+        return `${r},${c}`;
+      }
+
+      function findFlips(stateBoard, row, col, player) {
+        if (!inBounds(row, col) || stateBoard[row][col] !== EMPTY) return [];
+        const flips = [];
+        for (const [dr, dc] of DIRECTIONS) {
+          let r = row + dr;
+          let c = col + dc;
+          const ray = [];
+          while (inBounds(r, c) && stateBoard[r][c] === opponent(player)) {
+            ray.push([r, c]);
+            r += dr;
+            c += dc;
+          }
+          if (ray.length && inBounds(r, c) && stateBoard[r][c] === player) flips.push(...ray);
+        }
+        return flips;
+      }
+
+      function getValidMoves(stateBoard, player) {
+        const moves = [];
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            const flips = findFlips(stateBoard, r, c, player);
+            if (flips.length) moves.push({ r, c, flips });
+          }
+        }
+        return moves;
+      }
+
+      function applyMove(stateBoard, move, player) {
+        const next = cloneBoard(stateBoard);
+        next[move.r][move.c] = player;
+        for (const [r, c] of move.flips) next[r][c] = player;
+        return next;
+      }
+
+      function countPieces(stateBoard) {
+        let black = 0;
+        let white = 0;
+        let empty = 0;
+        for (const row of stateBoard) {
+          for (const cell of row) {
+            if (cell === BLACK) black++;
+            else if (cell === WHITE) white++;
+            else empty++;
+          }
+        }
+        return { black, white, empty };
+      }
+
+      function syncScores() {
+        const { black, white } = countPieces(board);
+        scoreBlack.textContent = black;
+        scoreWhite.textContent = white;
+      }
+
+      function setMessage(text) {
+        messageText.textContent = text;
+      }
+
+      function updateTurnUI() {
+        if (gameOver) return;
+        if (busy) {
+          statusText.textContent = 'AI thinking';
+          statusText.className = 'status thinking';
+          turnPill.textContent = 'AI thinking';
+          return;
+        }
+        if (currentPlayer === BLACK) {
+          statusText.textContent = 'Your turn';
+          statusText.className = 'status black';
+          turnPill.textContent = 'Your turn';
+        } else {
+          statusText.textContent = 'White turn';
+          statusText.className = 'status white';
+          turnPill.textContent = 'AI turn';
+        }
+      }
+
+      function updateGameOverUI(text, title, detail) {
+        statusText.textContent = text;
+        statusText.className = `status ${title === 'Draw' ? 'draw' : title === 'Black wins' ? 'win' : 'lose'}`;
+        resultTitle.textContent = 'Game Over';
+        resultLine.textContent = title;
+        resultDetail.textContent = detail;
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+      }
+
+      function isTerminal(stateBoard) {
+        return !getValidMoves(stateBoard, BLACK).length && !getValidMoves(stateBoard, WHITE).length;
+      }
+
+      function endGame() {
+        gameOver = true;
+        busy = false;
+        clearTimeout(aiTimer);
+        aiTimer = null;
+        const { black, white } = countPieces(board);
+        let title = 'Draw';
+        let status = 'draw';
+        if (black > white) {
+          title = 'Black wins';
+          status = 'win';
+        } else if (white > black) {
+          title = 'White wins';
+          status = 'lose';
+        }
+        statusText.textContent = title;
+        statusText.className = `status ${status}`;
+        const detail = black === white ? `Final score: ${black} — ${white}` : `Final score: ${black} — ${white}`;
+        updateGameOverUI(title, title, detail);
+        setMessage('The board is sealed. Start a new duel to strike back.');
+      }
+
+      function resolveTurnAfterMove() {
+        syncScores();
+        if (isTerminal(board)) {
+          endGame();
+          return;
+        }
+        const humanMoves = getValidMoves(board, BLACK);
+        const aiMoves = getValidMoves(board, WHITE);
+        if (currentPlayer === WHITE && !aiMoves.length) {
+          currentPlayer = BLACK;
+          busy = false;
+          setMessage('White has no legal move and passes the turn back to you.');
+          updateTurnUI();
+          if (isTerminal(board)) endGame();
+          return;
+        }
+        if (currentPlayer === BLACK && !humanMoves.length) {
+          setMessage('No legal move available. You must pass.');
+          currentPlayer = WHITE;
+          busy = true;
+          updateTurnUI();
+          scheduleAiMove(true);
+          return;
+        }
+        if (currentPlayer === WHITE) {
+          busy = true;
+          updateTurnUI();
+          scheduleAiMove(false);
+        } else {
+          busy = false;
+          updateTurnUI();
+        }
+      }
+
+      function scheduleAiMove(fromPass) {
+        clearTimeout(aiTimer);
+        const tempo = DIFFICULTIES[difficultyEl.value].tempo;
+        aiTimer = setTimeout(() => {
+          aiTimer = null;
+          if (gameOver || currentPlayer !== WHITE) return;
+          makeAiMove();
+        }, fromPass ? 260 : Math.round(420 / tempo));
+      }
+
+      function makeHumanMove(row, col) {
+        if (gameOver || busy || currentPlayer !== BLACK) return;
+        const moves = getValidMoves(board, BLACK);
+        const move = moves.find(m => m.r === row && m.c === col);
+        if (!move) return;
+        busy = true;
+        const next = applyMove(board, move, BLACK);
+        triggerAnimations(board, next, move, BLACK);
+        board = next;
+        currentPlayer = WHITE;
+        setMessage(move.flips.length > 6 ? 'Massive capture! The white line shatters.' : 'Disc placed. The AI is recalculating the battlefield...');
+        syncScores();
+        updateTurnUI();
+        setTimeout(() => {
+          if (!gameOver) resolveTurnAfterMove();
+        }, 220);
+      }
+
+      function makeAiMove() {
+        if (gameOver || currentPlayer !== WHITE) return;
+        const diff = DIFFICULTIES[difficultyEl.value];
+        const best = findBestMove(board, WHITE, diff.depth);
+        if (!best.move) {
+          setMessage('White has no legal move and passes.');
+          currentPlayer = BLACK;
+          busy = false;
+          updateTurnUI();
+          if (isTerminal(board)) endGame();
+          return;
+        }
+        const prev = cloneBoard(board);
+        board = applyMove(board, best.move, WHITE);
+        triggerAnimations(prev, board, best.move, WHITE);
+        setMessage(best.move.flips.length > 5 ? 'White lands a sharp counter and flips the line.' : 'White responds with a calculated strike.');
+        syncScores();
+        currentPlayer = BLACK;
+        busy = false;
+        updateTurnUI();
+        setTimeout(() => {
+          if (!gameOver) resolveTurnAfterMove();
+        }, 230);
+      }
+
+      function triggerAnimations(before, after, move, player) {
+        const now = performance.now();
+        const changed = [];
+        changed.push([move.r, move.c, EMPTY, player, true]);
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            if (before[r][c] !== after[r][c] && !(r === move.r && c === move.c)) {
+              changed.push([r, c, before[r][c], after[r][c], false]);
+            }
+          }
+        }
+        for (const [r, c, from, to, place] of changed) {
+          animations.set(keyFor(r, c), {
+            from,
+            to,
+            start: now,
+            duration: place ? 240 : 280,
+            place
+          });
+        }
+      }
+
+      function weightedMoveScore(move, player) {
+        let score = WEIGHTS[move.r][move.c];
+        if (CORNER_KEYS.has(keyFor(move.r, move.c))) score += 1000;
+        if (X_SQUARES.has(keyFor(move.r, move.c))) score -= 260;
+        if (C_SQUARES.has(keyFor(move.r, move.c))) score -= 120;
+        score += move.flips.length * 10;
+        if (player === WHITE) score += 0;
+        return score;
+      }
+
+      function findBestMove(stateBoard, player, depth) {
+        const legal = getValidMoves(stateBoard, player);
+        if (!legal.length) return { move: null, score: evaluateBoard(stateBoard, player) };
+        const ordered = legal.slice().sort((a, b) => weightedMoveScore(b, player) - weightedMoveScore(a, player));
+        let bestMove = ordered[0];
+        let bestScore = -Infinity;
+        let alpha = -Infinity;
+        const beta = Infinity;
+        for (const move of ordered) {
+          const next = applyMove(stateBoard, move, player);
+          const score = -negamax(next, opponent(player), depth - 1, -beta, -alpha, player);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+          }
+          if (score > alpha) alpha = score;
+          if (alpha >= beta) break;
+        }
+        return { move: bestMove, score: bestScore };
+      }
+
+      function negamax(stateBoard, player, depth, alpha, beta, rootPlayer) {
+        const moves = getValidMoves(stateBoard, player);
+        const enemyMoves = getValidMoves(stateBoard, opponent(player));
+        if (depth <= 0 || (!moves.length && !enemyMoves.length)) return evaluateBoard(stateBoard, rootPlayer);
+        if (!moves.length) return -negamax(stateBoard, opponent(player), depth - 1, -beta, -alpha, rootPlayer);
+        const ordered = moves.slice().sort((a, b) => weightedMoveScore(b, player) - weightedMoveScore(a, player));
+        let best = -Infinity;
+        for (const move of ordered) {
+          const next = applyMove(stateBoard, move, player);
+          const score = -negamax(next, opponent(player), depth - 1, -beta, -alpha, rootPlayer);
+          if (score > best) best = score;
+          if (score > alpha) alpha = score;
+          if (alpha >= beta) break;
+        }
+        return best;
+      }
+
+      function evaluateBoard(stateBoard, rootPlayer) {
+        const counts = countPieces(stateBoard);
+        const myCount = rootPlayer === BLACK ? counts.black : counts.white;
+        const oppCount = rootPlayer === BLACK ? counts.white : counts.black;
+        const empties = counts.empty;
+        let positional = 0;
+        let frontierSelf = 0;
+        let frontierOpp = 0;
+        let myCorners = 0;
+        let oppCorners = 0;
+        let myEdges = 0;
+        let oppEdges = 0;
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            const cell = stateBoard[r][c];
+            if (!cell) continue;
+            const sign = cell === rootPlayer ? 1 : -1;
+            positional += WEIGHTS[r][c] * sign;
+            if (r === 0 || r === SIZE - 1 || c === 0 || c === SIZE - 1) {
+              if (cell === rootPlayer) myEdges++; else oppEdges++;
+            }
+            if (CORNER_KEYS.has(keyFor(r, c))) {
+              if (cell === rootPlayer) myCorners++; else oppCorners++;
+            }
+            if (isFrontier(stateBoard, r, c)) {
+              if (cell === rootPlayer) frontierSelf++; else frontierOpp++;
+            }
+          }
+        }
+        const mobilitySelf = getValidMoves(stateBoard, rootPlayer).length;
+        const mobilityOpp = getValidMoves(stateBoard, opponent(rootPlayer)).length;
+        const phase = 1 - empties / 64;
+        const pieceWeight = phase < 0.65 ? 6 : 14;
+        const mobilityWeight = phase < 0.4 ? 14 : 8;
+        const frontierWeight = 4;
+        const cornerWeight = 160;
+        const edgeWeight = 5;
+        const parityWeight = empties <= 12 ? 20 : 0;
+        return (
+          positional +
+          (myCount - oppCount) * pieceWeight +
+          (mobilitySelf - mobilityOpp) * mobilityWeight +
+          (myCorners - oppCorners) * cornerWeight +
+          (myEdges - oppEdges) * edgeWeight -
+          (frontierSelf - frontierOpp) * frontierWeight +
+          (empties <= 12 ? (myCount - oppCount) * parityWeight : 0)
+        );
+      }
+
+      function isFrontier(stateBoard, row, col) {
+        for (const [dr, dc] of DIRECTIONS) {
+          const r = row + dr;
+          const c = col + dc;
+          if (inBounds(r, c) && stateBoard[r][c] === EMPTY) return true;
+        }
+        return false;
+      }
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        boardSize = Math.floor(Math.min(rect.width, rect.height));
+        devicePixelRatioValue = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const px = Math.max(1, Math.floor(boardSize * devicePixelRatioValue));
+        canvas.width = px;
+        canvas.height = px;
+        canvas.style.width = boardSize + 'px';
+        canvas.style.height = boardSize + 'px';
+        ctx.setTransform(devicePixelRatioValue, 0, 0, devicePixelRatioValue, 0, 0);
+        boardGeom = { x: 0, y: 0, size: boardSize, cell: boardSize / SIZE };
+      }
+
+      function cellFromPointer(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const x = evt.clientX - rect.left;
+        const y = evt.clientY - rect.top;
+        if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+        const cell = rect.width / SIZE;
+        const c = Math.floor(x / cell);
+        const r = Math.floor(y / cell);
+        if (!inBounds(r, c)) return null;
+        return { r, c };
+      }
+
+      function boardMovesForHuman() {
+        return getValidMoves(board, BLACK);
+      }
+
+      function renderBackground(w, h) {
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, '#050510');
+        bg.addColorStop(0.5, '#090a16');
+        bg.addColorStop(1, '#03040b');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+        const orbs = [
+          [w * 0.12, h * 0.12, 140, 'rgba(170,102,255,0.10)'],
+          [w * 0.86, h * 0.18, 120, 'rgba(92,225,255,0.07)'],
+          [w * 0.52, h * 0.96, 180, 'rgba(170,102,255,0.06)']
+        ];
+        for (const [x, y, r, color] of orbs) {
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, color);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawBoardFrame(x, y, size) {
+        const frame = ctx.createLinearGradient(x, y, x + size, y + size);
+        frame.addColorStop(0, 'rgba(170,102,255,0.28)');
+        frame.addColorStop(0.5, 'rgba(255,255,255,0.08)');
+        frame.addColorStop(1, 'rgba(92,225,255,0.18)');
+        ctx.save();
+        ctx.shadowColor = 'rgba(170,102,255,0.25)';
+        ctx.shadowBlur = 26;
+        roundRect(x - 8, y - 8, size + 16, size + 16, 22, frame, 'rgba(0,0,0,0.18)');
+        ctx.restore();
+      }
+
+      function roundRect(x, y, w, h, r, fill, stroke) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      function drawTile(x, y, s, row, col) {
+        const base = (row + col) % 2 === 0 ? '#121526' : '#0f1120';
+        const grad = ctx.createLinearGradient(x, y, x + s, y + s);
+        grad.addColorStop(0, base);
+        grad.addColorStop(1, row % 2 === 0 ? '#161935' : '#111428');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, s, s);
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+      }
+
+      function drawGrid(x, y, s) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(170,102,255,0.15)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= SIZE; i++) {
+          const pos = x + i * s;
+          ctx.beginPath();
+          ctx.moveTo(pos, y);
+          ctx.lineTo(pos, y + SIZE * s);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, pos);
+          ctx.lineTo(x + SIZE * s, pos);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCoordinates(x, y, s) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(183, 185, 231, 0.55)';
+        ctx.font = '11px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let c = 0; c < SIZE; c++) {
+          const letter = String.fromCharCode(65 + c);
+          ctx.fillText(letter, x + c * s + s / 2, y - 12);
+          ctx.fillText(letter, x + c * s + s / 2, y + SIZE * s + 12);
+        }
+        for (let r = 0; r < SIZE; r++) {
+          const num = String(r + 1);
+          ctx.fillText(num, x - 12, y + r * s + s / 2);
+          ctx.fillText(num, x + SIZE * s + 12, y + r * s + s / 2);
+        }
+        ctx.restore();
+      }
+
+      function pieceColor(player) {
+        return player === BLACK
+          ? { base: '#0b0c12', mid: '#15182b', edge: '#2f3457', glow: 'rgba(85, 95, 160, 0.5)' }
+          : { base: '#ffffff', mid: '#eceff7', edge: '#c2c7da', glow: 'rgba(255, 255, 255, 0.46)' };
+      }
+
+      function drawPiece(cx, cy, radius, player, scale, phase, halo) {
+        const c = pieceColor(player);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, 1);
+        if (halo) {
+          const g = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius * 1.85);
+          g.addColorStop(0, halo);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius * 1.85, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.shadowColor = c.glow;
+        ctx.shadowBlur = 18;
+        const grad = ctx.createRadialGradient(-radius * 0.35, -radius * 0.35, radius * 0.16, 0, 0, radius);
+        grad.addColorStop(0, player === BLACK ? '#2a2e49' : '#ffffff');
+        grad.addColorStop(0.42, c.mid);
+        grad.addColorStop(1, c.base);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = Math.max(1.3, radius * 0.08);
+        ctx.strokeStyle = c.edge;
+        ctx.stroke();
+        const shine = ctx.createRadialGradient(-radius * 0.33, -radius * 0.4, 0, 0, 0, radius * 1.2);
+        shine.addColorStop(0, player === WHITE ? 'rgba(255,255,255,0.68)' : 'rgba(255,255,255,0.08)');
+        shine.addColorStop(0.3, 'rgba(255,255,255,0.18)');
+        shine.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = shine;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.98, 0, Math.PI * 2);
+        ctx.fill();
+        if (phase !== undefined) {
+          const barW = radius * 1.1;
+          const barH = Math.max(2, radius * 0.18);
+          ctx.save();
+          ctx.rotate(-0.5);
+          ctx.fillStyle = player === BLACK ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)';
+          ctx.fillRect(-barW / 2, -barH / 2, barW, barH);
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      function renderPieces(x, y, cell) {
+        const now = performance.now();
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            const piece = board[r][c];
+            if (piece === EMPTY) continue;
+            const anim = animations.get(keyFor(r, c));
+            const cx = x + c * cell + cell / 2;
+            const cy = y + r * cell + cell / 2;
+            const radius = cell * 0.34;
+            if (anim) {
+              const progress = Math.min(1, (now - anim.start) / anim.duration);
+              if (progress >= 1) {
+                animations.delete(keyFor(r, c));
+                drawPiece(cx, cy, radius, piece, 1, 1, null);
+              } else {
+                const flipped = progress < 0.5 ? anim.from : anim.to;
+                const flipPhase = progress < 0.5 ? progress * 2 : (progress - 0.5) * 2;
+                const scaleX = Math.max(0.05, Math.cos(progress * Math.PI));
+                const overshoot = anim.place ? 0.12 * Math.sin(progress * Math.PI) : 0;
+                const scale = anim.place ? (0.82 + progress * 0.24 + overshoot) : Math.abs(scaleX);
+                drawPiece(cx, cy, radius, flipped, scale, flipPhase, progress < 0.5 ? 'rgba(170,102,255,0.16)' : 'rgba(92,225,255,0.14)');
+                if (anim.place) {
+                  ctx.save();
+                  ctx.globalAlpha = 1 - progress;
+                  ctx.strokeStyle = 'rgba(170,102,255,0.3)';
+                  ctx.lineWidth = 2;
+                  ctx.beginPath();
+                  ctx.arc(cx, cy, radius * (1.22 - progress * 0.25), 0, Math.PI * 2);
+                  ctx.stroke();
+                  ctx.restore();
+                }
+              }
+            } else {
+              drawPiece(cx, cy, radius, piece, 1, 1, null);
+            }
+          }
+        }
+      }
+
+      function renderValidMoves(x, y, cell, validMoves) {
+        const now = performance.now();
+        const pulse = 0.58 + Math.sin(now / 280) * 0.09;
+        ctx.save();
+        for (const move of validMoves) {
+          const cx = x + move.c * cell + cell / 2;
+          const cy = y + move.r * cell + cell / 2;
+          const hovering = hoverCell && hoverCell.r === move.r && hoverCell.c === move.c;
+          const radius = cell * (hovering ? 0.17 : 0.13);
+          const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cell * 0.46);
+          glow.addColorStop(0, `rgba(170,102,255,${0.35 * pulse})`);
+          glow.addColorStop(0.4, `rgba(170,102,255,${0.16 * pulse})`);
+          glow.addColorStop(1, 'rgba(170,102,255,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cell * 0.46, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = hovering ? 'rgba(255,255,255,0.92)' : `rgba(170,102,255,${0.72 * pulse})`;
+          ctx.shadowColor = 'rgba(170,102,255,0.8)';
+          ctx.shadowBlur = hovering ? 20 : 14;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          ctx.beginPath();
+          ctx.arc(cx - radius * 0.3, cy - radius * 0.28, radius * 0.34, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function renderHover(x, y, cell) {
+        if (!hoverCell || currentPlayer !== BLACK || busy || gameOver) return;
+        const move = getValidMoves(board, BLACK).find(m => m.r === hoverCell.r && m.c === hoverCell.c);
+        if (!move) return;
+        const cx = x + hoverCell.c * cell + cell / 2;
+        const cy = y + hoverCell.r * cell + cell / 2;
+        const pulse = 0.5 + Math.sin(performance.now() / 180) * 0.08;
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,255,255,${0.32 * pulse})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 7]);
+        ctx.shadowColor = 'rgba(170,102,255,0.3)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy, cell * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function render() {
+        if (!boardSize) return;
+        const w = boardSize;
+        const h = boardSize;
+        renderBackground(w, h);
+        const cell = boardGeom.cell;
+        const x = boardGeom.x;
+        const y = boardGeom.y;
+        drawBoardFrame(x, y, SIZE * cell);
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            drawTile(x + c * cell, y + r * cell, cell, r, c);
+          }
+        }
+        drawGrid(x, y, cell);
+        const validMoves = currentPlayer === BLACK && !busy && !gameOver ? boardMovesForHuman() : [];
+        renderValidMoves(x, y, cell, validMoves);
+        renderPieces(x, y, cell);
+        renderHover(x, y, cell);
+        drawCoordinates(x, y, cell);
+        requestAnimationFrame(render);
+      }
+
+      function evaluateClick(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const pos = cellFromPointer(evt);
+        if (!pos) {
+          hoverCell = null;
+          return;
+        }
+        hoverCell = pos;
+        if (evt.type === 'pointerdown') makeHumanMove(pos.r, pos.c);
+      }
+
+      canvas.addEventListener('pointermove', evaluateClick);
+      canvas.addEventListener('pointerleave', () => { hoverCell = null; });
+      canvas.addEventListener('pointerdown', (evt) => {
+        canvas.setPointerCapture?.(evt.pointerId);
+        evaluateClick(evt);
+      });
+
+      difficultyEl.addEventListener('change', () => {
+        if (!gameOver) {
+          const preset = DIFFICULTIES[difficultyEl.value];
+          setMessage(`Difficulty set to ${preset.label}. The AI now thinks at depth ${preset.depth}.`);
+        }
+      });
+
+      function startNewGame() {
+        createBoard();
+        resizeCanvas();
+      }
+
+      newGameBtn.addEventListener('click', startNewGame);
+      playAgainBtn.addEventListener('click', startNewGame);
+      window.addEventListener('resize', resizeCanvas);
+
+      createBoard();
+      resizeCanvas();
+      requestAnimationFrame(render);
+    })();
+  </script>
+</body>
+</html>

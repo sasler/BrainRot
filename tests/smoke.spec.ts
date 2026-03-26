@@ -41,7 +41,7 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     );
   });
 
-  test("game detail page loads for each game", async ({ page }) => {
+  test("game detail page loads for each game with versions", async ({ page }) => {
     const games = ["snake", "minesweeper", "tetris", "reversi"];
 
     for (const game of games) {
@@ -50,8 +50,13 @@ test.describe("BrainRot Games — Smoke Tests", () => {
       // Breadcrumb
       await expect(page.getByRole("main").getByRole("link", { name: "Home" })).toBeVisible();
 
-      // Empty state (no versions yet)
-      await expect(page.getByText("No AI Versions Yet")).toBeVisible();
+      // AI implementations section (games have versions now)
+      await expect(page.getByText("AI IMPLEMENTATIONS")).toBeVisible();
+
+      // Should show version cards for all 3 models
+      await expect(page.getByText("Claude Sonnet 4.6")).toBeVisible();
+      await expect(page.getByText("GPT 5.4", { exact: true })).toBeVisible();
+      await expect(page.getByText("GPT 5.4 Mini")).toBeVisible();
     }
   });
 

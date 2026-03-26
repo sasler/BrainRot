@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REVERSI — BrainRot Games</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#050510;
+  --surface:#0d0d1f;
+  --surface2:#141428;
+  --surface3:#1a1a35;
+  --purple:#aa66ff;
+  --purple2:#cc88ff;
+  --purple-dim:#7744cc;
+  --purple-glow:rgba(170,102,255,0.35);
+  --pink:#ff66bb;
+  --cyan:#44ddff;
+  --board-bg:#071a07;
+  --board-line:rgba(0,160,60,0.13);
+  --text:#e0e0ff;
+  --text-dim:#7777aa;
+  --green:#00dd66;
+}
+
+html,body{
+  width:100%;min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  overflow-x:hidden;
+}
+
+body{
+  display:flex;flex-direction:column;align-items:center;
+  padding:16px 12px 24px;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%,rgba(100,0,200,0.12) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 30% at 80% 100%,rgba(0,100,200,0.06) 0%,transparent 60%),
+    var(--bg);
+}
+
+.container{
+  position:relative;z-index:1;
+  width:100%;max-width:640px;
+  display:flex;flex-direction:column;align-items:center;
+  gap:14px;
+}
+
+/* ─── HEADER ─── */
+.header{text-align:center;padding:4px 0}
+
+.title{
+  font-size:clamp(30px,7vw,52px);
+  font-weight:900;letter-spacing:.22em;
+  background:linear-gradient(135deg,#cc88ff 0%,#aa66ff 35%,#ff66bb 70%,#66aaff 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;
+  filter:drop-shadow(0 0 24px rgba(170,102,255,.55));
+  position:relative;
+}
+
+.title::after{
+  content:'REVERSI';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,#cc88ff,#aa66ff,#ff66bb,#66aaff);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:blur(12px);opacity:.4;
+  z-index:-1;
+}
+
+.subtitle{
+  font-size:10px;letter-spacing:.35em;
+  color:var(--text-dim);text-transform:uppercase;margin-top:3px;
+}
+
+/* ─── DIFFICULTY ─── */
+.diff-row{
+  display:flex;gap:6px;
+  background:var(--surface);border-radius:14px;
+  padding:5px;border:1px solid rgba(170,102,255,.12);
+}
+
+.diff-btn{
+  padding:7px 18px;border:none;border-radius:10px;
+  cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.06em;
+  transition:all .2s ease;color:var(--text-dim);background:transparent;
+}
+.diff-btn:hover{color:var(--text);background:rgba(170,102,255,.1)}
+.diff-btn.active{
+  background:linear-gradient(135deg,#5511bb,#aa44ff);color:#fff;
+  box-shadow:0 0 16px rgba(170,102,255,.3);
+}
+
+/* ─── SCOREBOARD ─── */
+.scoreboard{
+  width:100%;background:var(--surface);border-radius:18px;
+  padding:14px 20px 12px;
+  border:1px solid rgba(170,102,255,.14);
+  box-shadow:0 4px 28px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+.scores-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;
+}
+
+.score-side{
+  display:flex;align-items:center;gap:10px;flex:1;
+}
+.score-side.right{flex-direction:row-reverse;text-align:right}
+
+.score-disc{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  transition:box-shadow .3s ease,transform .3s ease;
+}
+.score-disc.dk{
+  background:radial-gradient(circle at 33% 28%,#9999ee,#1c1c3a 45%,#06060f);
+  box-shadow:0 3px 10px rgba(0,0,0,.8),inset 0 1px 2px rgba(255,255,255,.09);
+}
+.score-disc.lt{
+  background:radial-gradient(circle at 33% 28%,#ffffff,#d5d5f0 48%,#9090b8);
+  box-shadow:0 3px 10px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.6);
+}
+
+.score-side.active .score-disc{
+  transform:scale(1.1);
+  box-shadow:0 0 18px var(--purple-glow),0 3px 10px rgba(0,0,0,.7);
+}
+
+.score-meta{display:flex;flex-direction:column}
+
+.score-label{
+  font-size:10px;color:var(--text-dim);
+  letter-spacing:.1em;text-transform:uppercase;
+}
+
+.score-num{
+  font-size:30px;font-weight:900;line-height:1;
+  color:var(--text);
+  transition:color .3s,text-shadow .3s;
+  font-variant-numeric:tabular-nums;
+}
+
+.score-side.active .score-num{
+  color:var(--purple2);
+  text-shadow:0 0 20px var(--purple-glow);
+}
+
+.score-vs{
+  font-size:13px;color:var(--text-dim);font-weight:700;
+  padding:0 16px;
+}
+
+.score-track{
+  height:5px;background:var(--surface2);border-radius:3px;
+  overflow:hidden;position:relative;
+}
+
+.score-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,#2211aa,#aa66ff,#ffaa66);
+  transition:width .55s cubic-bezier(.4,0,.2,1);
+  width:50%;
+  position:relative;
+}
+
+.score-fill::after{
+  content:'';position:absolute;right:0;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,.5);border-radius:3px;
+  box-shadow:0 0 8px rgba(255,255,255,.4);
+}
+
+/* ─── BOARD WRAPPER ─── */
+.board-wrap{
+  position:relative;width:100%;
+}
+
+.board-aspect{
+  position:relative;width:100%;padding-bottom:100%;
+}
+
+.board{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 50% 50%,#0d2a0d,#071607 70%),
+    linear-gradient(135deg,#061506,#0a1e0a);
+  border-radius:18px;
+  border:1.5px solid rgba(0,160,60,.18);
+  box-shadow:
+    0 0 60px rgba(0,80,20,.18),
+    0 12px 40px rgba(0,0,0,.65),
+    inset 0 0 40px rgba(0,0,0,.5),
+    inset 0 0 0 1px rgba(0,255,80,.04);
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(8,1fr);
+  padding:10px;gap:0;overflow:hidden;
+}
+
+/* ─── CELL ─── */
+.cell{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  border:1px solid var(--board-line);
+  transition:background .15s;
+}
+
+.cell:hover{background:rgba(0,140,50,.06)}
+
+/* Classic Othello dots */
+.cell.dot::before{
+  content:'';position:absolute;
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(0,180,60,.35);
+  z-index:1;pointer-events:none;
+}
+
+/* ─── VALID MOVE HINT ─── */
+.hint{
+  position:absolute;
+  width:28%;height:28%;border-radius:50%;
+  background:radial-gradient(circle,rgba(170,102,255,.35),rgba(170,102,255,.1));
+  border:1.5px solid rgba(170,102,255,.55);
+  pointer-events:none;
+  animation:hintPulse 1.6s ease-in-out infinite;
+  z-index:2;
+}
+
+@keyframes hintPulse{
+  0%,100%{transform:scale(1);opacity:.7;box-shadow:0 0 0 rgba(170,102,255,0)}
+  50%{transform:scale(1.25);opacity:1;box-shadow:0 0 14px rgba(170,102,255,.5)}
+}
+
+/* ─── PIECE ─── */
+.piece{
+  position:absolute;
+  width:82%;height:82%;
+  border-radius:50%;
+  z-index:3;
+  transition:box-shadow .2s;
+  will-change:transform;
+}
+
+.piece.dk{
+  background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,.85),
+    0 1px 3px rgba(0,0,0,.9),
+    inset 0 -2px 5px rgba(0,0,0,.6),
+    inset 0 2px 5px rgba(255,255,255,.07);
+}
+
+.piece.lt{
+  background:radial-gradient(circle at 33% 27%,#ffffff,#dcdcf5 46%,#9a9ab8);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,.7),
+    0 1px 3px rgba(0,0,0,.8),
+    inset 0 -2px 5px rgba(80,80,100,.25),
+    inset 0 2px 6px rgba(255,255,255,.75);
+}
+
+/* ── Placement drop ── */
+@keyframes dropIn{
+  0%{transform:scale(0) translateY(-30%);opacity:0;filter:brightness(1.5)}
+  60%{transform:scale(1.14) translateY(0);opacity:1;filter:brightness(1.2)}
+  80%{transform:scale(.95)}
+  100%{transform:scale(1);filter:brightness(1)}
+}
+.piece.placing{animation:dropIn .32s cubic-bezier(.175,.885,.32,1.275) forwards}
+
+/* ── Flip dark→light ── */
+@keyframes flipDL{
+  0%{
+    transform:scaleX(1) scaleY(1);
+    background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+    box-shadow:0 4px 14px rgba(0,0,0,.85),inset 0 2px 5px rgba(255,255,255,.07);
+    filter:brightness(1);
+  }
+  30%{transform:scaleX(.5) scaleY(1.06);filter:brightness(.7)}
+  49%{
+    transform:scaleX(.03) scaleY(1.04);filter:brightness(.3);
+    background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+  }
+  51%{
+    transform:scaleX(.03) scaleY(1.04);filter:brightness(.3);
+    background:radial-gradient(circle at 33% 27%,#ffffff,#dcdcf5 46%,#9a9ab8);
+  }
+  70%{transform:scaleX(.55) scaleY(1.06);filter:brightness(1.15)}
+  100%{
+    transform:scaleX(1) scaleY(1);filter:brightness(1);
+    background:radial-gradient(circle at 33% 27%,#ffffff,#dcdcf5 46%,#9a9ab8);
+    box-shadow:0 4px 14px rgba(0,0,0,.7),inset 0 2px 6px rgba(255,255,255,.75);
+  }
+}
+
+/* ── Flip light→dark ── */
+@keyframes flipLD{
+  0%{
+    transform:scaleX(1) scaleY(1);
+    background:radial-gradient(circle at 33% 27%,#ffffff,#dcdcf5 46%,#9a9ab8);
+    box-shadow:0 4px 14px rgba(0,0,0,.7),inset 0 2px 6px rgba(255,255,255,.75);
+    filter:brightness(1);
+  }
+  30%{transform:scaleX(.5) scaleY(1.06);filter:brightness(.7)}
+  49%{
+    transform:scaleX(.03) scaleY(1.04);filter:brightness(.3);
+    background:radial-gradient(circle at 33% 27%,#ffffff,#dcdcf5 46%,#9a9ab8);
+  }
+  51%{
+    transform:scaleX(.03) scaleY(1.04);filter:brightness(.3);
+    background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+  }
+  70%{transform:scaleX(.55) scaleY(1.06);filter:brightness(1.1)}
+  100%{
+    transform:scaleX(1) scaleY(1);filter:brightness(1);
+    background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+    box-shadow:0 4px 14px rgba(0,0,0,.85),inset 0 2px 5px rgba(255,255,255,.07);
+  }
+}
+
+.piece.flip-to-lt{animation:flipDL .48s ease-in-out forwards}
+.piece.flip-to-dk{animation:flipLD .48s ease-in-out forwards}
+
+/* Corner flash */
+@keyframes cornerFlash{
+  0%{box-shadow:0 0 0 0 rgba(170,102,255,.8)}
+  50%{box-shadow:0 0 0 8px rgba(170,102,255,0)}
+  100%{box-shadow:0 0 0 0 rgba(170,102,255,0)}
+}
+.cell.corner-cap .piece{animation:cornerFlash .6s ease-out .3s}
+
+/* ─── STATUS BAR ─── */
+.status-bar{
+  width:100%;display:flex;align-items:center;
+  gap:10px;
+}
+
+.turn-pill{
+  flex:1;display:flex;align-items:center;gap:10px;
+  background:var(--surface);border-radius:12px;padding:9px 14px;
+  border:1px solid rgba(170,102,255,.1);
+  min-height:42px;
+}
+
+.turn-disc{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  transition:all .3s ease;
+}
+.turn-disc.dk{
+  background:radial-gradient(circle at 33% 28%,#9999ee,#1c1c3a,#050510);
+  box-shadow:0 2px 6px rgba(0,0,0,.8);
+}
+.turn-disc.lt{
+  background:radial-gradient(circle at 33% 28%,#ffffff,#d5d5f0,#9090b8);
+  box-shadow:0 2px 6px rgba(0,0,0,.6);
+}
+
+.turn-text{font-size:13px;font-weight:600;color:var(--text)}
+
+.dots{display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle}
+.dots i{
+  display:inline-block;width:4px;height:4px;
+  background:var(--purple);border-radius:50%;
+  animation:dotBounce 1s ease-in-out infinite;
+}
+.dots i:nth-child(2){animation-delay:.18s}
+.dots i:nth-child(3){animation-delay:.36s}
+@keyframes dotBounce{
+  0%,80%,100%{transform:scale(.7);opacity:.4}
+  40%{transform:scale(1.2);opacity:1}
+}
+
+.new-btn{
+  padding:10px 22px;
+  background:linear-gradient(135deg,#4411aa,#9933ee);
+  border:none;border-radius:12px;color:#fff;
+  font-size:12px;font-weight:700;letter-spacing:.06em;
+  cursor:pointer;
+  transition:all .2s ease;
+  box-shadow:0 3px 14px rgba(140,60,255,.2);
+  white-space:nowrap;
+}
+.new-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(140,60,255,.36)}
+.new-btn:active{transform:translateY(0)}
+
+/* ─── OVERLAY ─── */
+.overlay{
+  position:absolute;inset:0;
+  border-radius:18px;
+  background:rgba(5,5,16,.91);
+  backdrop-filter:blur(10px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:18px;z-index:100;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.overlay.show{opacity:1;pointer-events:all}
+
+.ov-title{
+  font-size:clamp(22px,5vw,38px);font-weight:900;
+  letter-spacing:.12em;
+  background:linear-gradient(135deg,#cc88ff,#ff66bb);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 20px rgba(170,102,255,.6));
+}
+
+.ov-pieces{display:flex;gap:28px;align-items:center}
+
+.ov-item{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+
+.ov-disc{
+  width:52px;height:52px;border-radius:50%;
+  animation:ovFloat 3s ease-in-out infinite;
+}
+.ov-disc.dk{
+  background:radial-gradient(circle at 33% 27%,#aaaaee,#1e1e40 42%,#07070f);
+  box-shadow:0 6px 18px rgba(0,0,0,.8);
+  animation-delay:.3s;
+}
+.ov-disc.lt{
+  background:radial-gradient(circle at 33% 27%,#fff,#dcdcf5 46%,#9a9ab8);
+  box-shadow:0 6px 18px rgba(0,0,0,.6);
+}
+
+@keyframes ovFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+
+.ov-num{font-size:36px;font-weight:900;color:var(--text)}
+.ov-lbl{font-size:10px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase}
+.ov-sep{font-size:22px;color:var(--text-dim)}
+
+.ov-winner{
+  font-size:17px;font-weight:700;
+  color:var(--purple);text-shadow:0 0 18px var(--purple-glow);
+  text-align:center;padding:0 20px;
+}
+
+.ov-btn{
+  padding:13px 38px;
+  background:linear-gradient(135deg,#5511bb,#aa44ff);
+  border:none;border-radius:14px;color:#fff;
+  font-size:15px;font-weight:700;letter-spacing:.1em;
+  cursor:pointer;
+  box-shadow:0 4px 22px rgba(170,102,255,.32);
+  transition:all .2s;
+}
+.ov-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(170,102,255,.48)}
+
+/* ─── PASS TOAST ─── */
+.toast{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(.8);
+  background:var(--surface3);
+  border:1px solid rgba(170,102,255,.5);
+  border-radius:12px;padding:11px 22px;
+  font-size:13px;font-weight:700;
+  color:var(--purple);
+  box-shadow:0 0 24px rgba(170,102,255,.25);
+  z-index:50;pointer-events:none;
+  opacity:0;white-space:nowrap;
+  transition:transform .28s cubic-bezier(.175,.885,.32,1.275),opacity .28s;
+}
+.toast.show{transform:translate(-50%,-50%) scale(1);opacity:1}
+
+/* ─── PARTICLES ─── */
+.particle{
+  position:absolute;border-radius:50%;
+  pointer-events:none;z-index:10;
+  animation:particleFly var(--dur,.8s) ease-out forwards;
+}
+@keyframes particleFly{
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--tx,0),var(--ty,-40px)) scale(0);opacity:0}
+}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:480px){
+  body{padding:10px 8px 16px}
+  .container{gap:10px}
+  .scoreboard{padding:11px 14px 10px}
+  .board{padding:6px}
+  .title{letter-spacing:.15em}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="title">REVERSI</div>
+    <div class="subtitle">BrainRot Games &nbsp;·&nbsp; Classic Strategy</div>
+  </header>
+
+  <div class="diff-row">
+    <button class="diff-btn" onclick="setDiff(this,2)">Easy</button>
+    <button class="diff-btn active" onclick="setDiff(this,4)">Medium</button>
+    <button class="diff-btn" onclick="setDiff(this,6)">Hard</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="scores-row">
+      <div class="score-side" id="sideBlack">
+        <div class="score-disc dk"></div>
+        <div class="score-meta">
+          <div class="score-label">You · Black</div>
+          <div class="score-num" id="numBlack">2</div>
+        </div>
+      </div>
+      <div class="score-vs">VS</div>
+      <div class="score-side right" id="sideWhite">
+        <div class="score-meta">
+          <div class="score-label">AI · White</div>
+          <div class="score-num" id="numWhite">2</div>
+        </div>
+        <div class="score-disc lt"></div>
+      </div>
+    </div>
+    <div class="score-track">
+      <div class="score-fill" id="scoreFill"></div>
+    </div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board-aspect">
+      <div class="board" id="board"></div>
+
+      <div class="overlay" id="overlay">
+        <div class="ov-title" id="ovTitle">Game Over</div>
+        <div class="ov-pieces">
+          <div class="ov-item">
+            <div class="ov-disc dk"></div>
+            <div class="ov-num" id="ovBlack">0</div>
+            <div class="ov-lbl">Black</div>
+          </div>
+          <div class="ov-sep">—</div>
+          <div class="ov-item">
+            <div class="ov-disc lt"></div>
+            <div class="ov-num" id="ovWhite">0</div>
+            <div class="ov-lbl">White</div>
+          </div>
+        </div>
+        <div class="ov-winner" id="ovWinner"></div>
+        <button class="ov-btn" onclick="newGame()">Play Again</button>
+      </div>
+
+      <div class="toast" id="toast">No moves — passing turn</div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="turn-pill">
+      <div class="turn-disc" id="turnDisc"></div>
+      <div class="turn-text" id="turnText">Your turn</div>
+    </div>
+    <button class="new-btn" onclick="newGame()">New Game</button>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════
+const E=0,B=1,W=2;
+
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+// Classic Othello position weights – corners are king
+const POS_W=[
+  [120,-20,20, 5, 5,20,-20,120],
+  [-20,-40,-5,-5,-5,-5,-40,-20],
+  [ 20, -5,15, 3, 3,15, -5, 20],
+  [  5, -5, 3, 3, 3, 3, -5,  5],
+  [  5, -5, 3, 3, 3, 3, -5,  5],
+  [ 20, -5,15, 3, 3,15, -5, 20],
+  [-20,-40,-5,-5,-5,-5,-40,-20],
+  [120,-20,20, 5, 5,20,-20,120]
+];
+
+const CORNERS=[[0,0],[0,7],[7,0],[7,7]];
+const DOTS=new Set(['2,2','2,5','5,2','5,5']);
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let board=[], cur=B, depth=4;
+let aiThinking=false, busy=false, dead=false;
+let cells=[];
+
+// ═══════════════════════════════════════════
+//  BOARD LOGIC
+// ═══════════════════════════════════════════
+function initBoard(){
+  board=Array.from({length:8},()=>new Array(8).fill(E));
+  board[3][3]=W; board[3][4]=B;
+  board[4][3]=B; board[4][4]=W;
+}
+
+function flipsFor(b,r,c,p){
+  if(b[r][c]!==E)return[];
+  const opp=p===B?W:B, res=[];
+  for(const[dr,dc]of DIRS){
+    const line=[];
+    let nr=r+dr,nc=c+dc;
+    while(nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===opp){
+      line.push([nr,nc]);nr+=dr;nc+=dc;
+    }
+    if(line.length&&nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===p)
+      res.push(...line);
+  }
+  return res;
+}
+
+function validMoves(b,p){
+  const mv=[];
+  for(let r=0;r<8;r++)
+    for(let c=0;c<8;c++)
+      if(flipsFor(b,r,c,p).length>0)mv.push([r,c]);
+  return mv;
+}
+
+function applyMove(b,r,c,p){
+  const fl=flipsFor(b,r,c,p);
+  if(!fl.length)return null;
+  const nb=b.map(row=>[...row]);
+  nb[r][c]=p;
+  for(const[fr,fc]of fl)nb[fr][fc]=p;
+  return nb;
+}
+
+function countPieces(b){
+  let bk=0,wt=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(b[r][c]===B)bk++;
+    else if(b[r][c]===W)wt++;
+  }
+  return{bk,wt};
+}
+
+// ═══════════════════════════════════════════
+//  AI – MINIMAX + ALPHA-BETA
+// ═══════════════════════════════════════════
+function evaluate(b,p){
+  const opp=p===B?W:B;
+  const{bk,wt}=countPieces(b);
+  const total=bk+wt;
+  const phase=total/64; // 0=early, 1=late
+
+  // Endgame: pure piece count
+  if(phase>.9){
+    return p===B?(bk-wt)*200:(wt-bk)*200;
+  }
+
+  let sc=0;
+
+  // Position weights
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(b[r][c]===p)sc+=POS_W[r][c];
+    else if(b[r][c]===opp)sc-=POS_W[r][c];
+  }
+
+  // Mobility (# moves available)
+  const meMv=validMoves(b,p).length;
+  const oppMv=validMoves(b,opp).length;
+  const mobW=phase<.6?12:5;
+  if(meMv+oppMv>0)sc+=(meMv-oppMv)/(meMv+oppMv)*100*mobW/12;
+
+  // Corner stability
+  for(const[cr,cc]of CORNERS){
+    if(b[cr][cc]===p)sc+=55;
+    else if(b[cr][cc]===opp)sc-=55;
+  }
+
+  // Frontier penalty (adjacent to empties = vulnerable)
+  let myFront=0,oppFront=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(b[r][c]===E)continue;
+    let frontier=false;
+    for(const[dr,dc]of DIRS){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<8&&nc>=0&&nc<8&&b[nr][nc]===E){frontier=true;break;}
+    }
+    if(frontier){
+      if(b[r][c]===p)myFront++;else oppFront++;
+    }
+  }
+  if(myFront+oppFront>0)sc-=(myFront-oppFront)/(myFront+oppFront)*50*(1-phase);
+
+  return sc;
+}
+
+function minimax(b,d,alpha,beta,maxing,ai){
+  const human=ai===W?B:W;
+  const p=maxing?ai:human;
+  const mvs=validMoves(b,p);
+
+  if(d===0){return evaluate(b,ai);}
+
+  if(!mvs.length){
+    // Check if opponent also has no moves
+    const oMvs=validMoves(b,p===ai?human:ai);
+    if(!oMvs.length){
+      const{bk,wt}=countPieces(b);
+      const diff=ai===W?wt-bk:bk-wt;
+      return diff>0?10000+diff:diff<0?-10000+diff:0;
+    }
+    // Pass turn – same depth
+    return minimax(b,d,alpha,beta,!maxing,ai);
+  }
+
+  if(maxing){
+    let mx=-Infinity;
+    for(const[r,c]of mvs){
+      const nb=applyMove(b,r,c,p);
+      const v=minimax(nb,d-1,alpha,beta,false,ai);
+      if(v>mx)mx=v;
+      if(v>alpha)alpha=v;
+      if(beta<=alpha)break;
+    }
+    return mx;
+  }else{
+    let mn=Infinity;
+    for(const[r,c]of mvs){
+      const nb=applyMove(b,r,c,p);
+      const v=minimax(nb,d-1,alpha,beta,true,ai);
+      if(v<mn)mn=v;
+      if(v<beta)beta=v;
+      if(beta<=alpha)break;
+    }
+    return mn;
+  }
+}
+
+function bestMove(b,p,d){
+  const mvs=validMoves(b,p);
+  if(!mvs.length)return null;
+
+  // Move ordering: corners first, then by position weight
+  mvs.sort((a,b)=>{
+    const wa=POS_W[a[0]][a[1]],wb=POS_W[b[0]][b[1]];
+    return wb-wa;
+  });
+
+  let best=-Infinity,bm=mvs[0];
+  for(const[r,c]of mvs){
+    const nb=applyMove(b,r,c,p);
+    const v=minimax(nb,d-1,-Infinity,Infinity,false,p);
+    if(v>best){best=v;bm=[r,c];}
+  }
+  return bm;
+}
+
+// ═══════════════════════════════════════════
+//  DOM SETUP
+// ═══════════════════════════════════════════
+function buildBoard(){
+  const el=document.getElementById('board');
+  el.innerHTML='';cells=[];
+  for(let r=0;r<8;r++){
+    cells[r]=[];
+    for(let c=0;c<8;c++){
+      const cell=document.createElement('div');
+      cell.className='cell'+(DOTS.has(r+','+c)?' dot':'');
+      cell.dataset.r=r;cell.dataset.c=c;
+      cell.addEventListener('click',()=>onCell(r,c));
+      el.appendChild(cell);
+      cells[r][c]=cell;
+    }
+  }
+}
+
+function makePiece(p){
+  const d=document.createElement('div');
+  d.className='piece '+(p===B?'dk':'lt');
+  return d;
+}
+
+// ═══════════════════════════════════════════
+//  RENDER (smart diff)
+// ═══════════════════════════════════════════
+function render(hints=[]){
+  const hset=new Set(hints.map(([r,c])=>r+','+c));
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const cell=cells[r][c];
+    const v=board[r][c];
+    const key=r+','+c;
+
+    // Hints
+    let hint=cell.querySelector('.hint');
+    if(v===E&&hset.has(key)){
+      if(!hint){hint=document.createElement('div');hint.className='hint';cell.appendChild(hint);}
+    }else if(hint)hint.remove();
+
+    // Pieces
+    let piece=cell.querySelector('.piece');
+    if(v===E){
+      if(piece&&!piece.classList.contains('placing'))piece.remove();
+    }else{
+      const want=v===B?'dk':'lt';
+      if(!piece){
+        piece=makePiece(v);cell.appendChild(piece);
+      }else if(!piece.classList.contains(want)&&
+               !piece.classList.contains('flip-to-lt')&&
+               !piece.classList.contains('flip-to-dk')&&
+               !piece.classList.contains('placing')){
+        piece.className='piece '+want;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  ANIMATIONS
+// ═══════════════════════════════════════════
+function spawnParticles(cell,color){
+  const rect=cell.getBoundingClientRect();
+  const wrap=document.querySelector('.board-aspect').getBoundingClientRect();
+  const cx=rect.left-wrap.left+rect.width/2;
+  const cy=rect.top-wrap.top+rect.height/2;
+  const count=8;
+  const parent=document.querySelector('.board-aspect');
+  for(let i=0;i<count;i++){
+    const ang=(i/count)*Math.PI*2;
+    const dist=28+Math.random()*22;
+    const p=document.createElement('div');
+    p.className='particle';
+    const sz=2+Math.random()*3;
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${cx}px;top:${cy}px;
+      background:${color};--tx:${Math.cos(ang)*dist}px;--ty:${Math.sin(ang)*dist}px;
+      --dur:${.6+Math.random()*.4}s`;
+    parent.appendChild(p);
+    setTimeout(()=>p.remove(),1100);
+  }
+}
+
+async function animatePlace(r,c,p,flips){
+  busy=true;
+
+  // Remove old hint
+  const hintEl=cells[r][c].querySelector('.hint');
+  if(hintEl)hintEl.remove();
+
+  // Drop new piece
+  const np=makePiece(p);
+  np.classList.add('placing');
+  cells[r][c].appendChild(np);
+
+  // Corner sparkle
+  if(CORNERS.some(([cr,cc])=>cr===r&&cc===c)){
+    cells[r][c].classList.add('corner-cap');
+    spawnParticles(cells[r][c],p===B?'#aa88ff':'#ffffff');
+    setTimeout(()=>cells[r][c].classList.remove('corner-cap'),800);
+  }
+
+  // Group flips by Chebyshev distance for cascade
+  const groups={};
+  for(const[fr,fc]of flips){
+    const d=Math.max(Math.abs(fr-r),Math.abs(fc-c));
+    (groups[d]||(groups[d]=[])).push([fr,fc]);
+  }
+
+  const dists=Object.keys(groups).map(Number).sort((a,b)=>a-b);
+  const flipCls=p===B?'flip-to-dk':'flip-to-lt';
+  const finalCls=p===B?'dk':'lt';
+
+  for(let i=0;i<dists.length;i++){
+    await sleep(i===0?120:100);
+    for(const[fr,fc]of groups[dists[i]]){
+      const fp=cells[fr][fc].querySelector('.piece');
+      if(!fp)continue;
+      fp.classList.add(flipCls);
+      fp.addEventListener('animationend',()=>{
+        fp.className='piece '+finalCls;
+      },{once:true});
+    }
+  }
+
+  const totalWait=dists.length*100+520;
+  await sleep(totalWait);
+  busy=false;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ═══════════════════════════════════════════
+//  SCORES + UI
+// ═══════════════════════════════════════════
+function updateScores(){
+  const{bk,wt}=countPieces(board);
+  document.getElementById('numBlack').textContent=bk;
+  document.getElementById('numWhite').textContent=wt;
+  const tot=bk+wt;
+  document.getElementById('scoreFill').style.width=(tot?bk/tot*100:50)+'%';
+  document.getElementById('sideBlack').classList.toggle('active',cur===B&&!dead);
+  document.getElementById('sideWhite').classList.toggle('active',cur===W&&!dead);
+}
+
+function updateTurn(thinking=false){
+  const disc=document.getElementById('turnDisc');
+  const txt=document.getElementById('turnText');
+  if(dead){disc.className='turn-disc';txt.innerHTML='Game Over';return;}
+  if(cur===B){
+    disc.className='turn-disc dk';
+    txt.innerHTML='Your turn';
+  }else{
+    disc.className='turn-disc lt';
+    txt.innerHTML=thinking
+      ?'AI thinking<span class="dots"><i></i><i></i><i></i></span>'
+      :'AI\'s turn';
+  }
+}
+
+function showToast(msg,dur=1500){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+function showOverlay(){
+  dead=true;
+  const{bk,wt}=countPieces(board);
+  document.getElementById('ovBlack').textContent=bk;
+  document.getElementById('ovWhite').textContent=wt;
+  let title,winner;
+  if(bk>wt){title='🏆 You Win!';winner=`Black wins by ${bk-wt}!`;}
+  else if(wt>bk){title='🤖 AI Wins!';winner=`White wins by ${wt-bk}!`;}
+  else{title="It's a Draw!";winner='Perfectly balanced — well played!';}
+  document.getElementById('ovTitle').textContent=title;
+  document.getElementById('ovWinner').textContent=winner;
+  setTimeout(()=>document.getElementById('overlay').classList.add('show'),700);
+  updateTurn();updateScores();
+}
+
+// ═══════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════
+async function onCell(r,c){
+  if(dead||busy||aiThinking||cur!==B)return;
+  const fl=flipsFor(board,r,c,B);
+  if(!fl.length)return;
+
+  board[r][c]=B;
+  for(const[fr,fc]of fl)board[fr][fc]=B;
+
+  await animatePlace(r,c,B,fl);
+  render();
+  cur=W;
+  updateScores();updateTurn();
+  await proceed();
+}
+
+async function proceed(){
+  const pMvs=validMoves(board,cur);
+  const other=cur===B?W:B;
+
+  if(!pMvs.length){
+    const oMvs=validMoves(board,other);
+    if(!oMvs.length){showOverlay();return;}
+    const msg=cur===B?'No moves — your turn passes':'AI has no moves — your turn!';
+    showToast(msg,1600);
+    await sleep(1300);
+    cur=other;
+    updateTurn();updateScores();
+    if(cur===W)await doAI();
+    else render(validMoves(board,B));
+    return;
+  }
+
+  if(cur===W)await doAI();
+  else render(validMoves(board,B));
+}
+
+async function doAI(){
+  aiThinking=true;busy=true;
+  updateTurn(true);
+
+  const thinkMs=350+Math.random()*350;
+
+  const mv=await new Promise(res=>{
+    setTimeout(()=>res(bestMove(board,W,depth)),thinkMs);
+  });
+
+  aiThinking=false;
+
+  if(!mv){busy=false;cur=B;updateTurn();await proceed();return;}
+
+  const[r,c]=mv;
+  const fl=flipsFor(board,r,c,W);
+  board[r][c]=W;
+  for(const[fr,fc]of fl)board[fr][fc]=W;
+
+  await animatePlace(r,c,W,fl);
+  busy=false;
+  cur=B;
+  render(validMoves(board,B));
+  updateScores();updateTurn();
+
+  const bMvs=validMoves(board,B);
+  if(!bMvs.length){
+    const wMvs=validMoves(board,W);
+    if(!wMvs.length){showOverlay();return;}
+    showToast('No moves — your turn passes',1600);
+    await sleep(1300);
+    cur=W;
+    updateTurn();updateScores();
+    await doAI();
+  }
+}
+
+// ═══════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════
+function newGame(){
+  dead=false;busy=false;aiThinking=false;cur=B;
+  document.getElementById('overlay').classList.remove('show');
+  initBoard();
+  render(validMoves(board,B));
+  updateScores();updateTurn();
+}
+
+function setDiff(btn,d){
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  depth=d;
+  newGame();
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+buildBoard();
+newGame();
+</script>
+</body>
+</html>

@@ -961,7 +961,7 @@
         spawnAmbientSparkles();
 
         if (state === "playing") {
-          accumulator += dt;
+          accumulator += dt * 1000;
           stepTimer += dt;
           const currentInterval = speedForScore(score);
           stepInterval = currentInterval;

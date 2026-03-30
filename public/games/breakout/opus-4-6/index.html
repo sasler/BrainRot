@@ -618,10 +618,13 @@ function activatePowerup(p) {
       activePowerups.push({ type: 'slow', startTime: performance.now(), duration: p.duration });
       break;
     case 'fire':
-      balls.forEach(b => b.fire = true);
+      balls.forEach(b => {
+        if (b.fireTimeout) clearTimeout(b.fireTimeout);
+        b.fire = true;
+        b.fireTimeout = setTimeout(() => { b.fire = false; }, p.duration);
+      });
       activePowerups = activePowerups.filter(ap => ap.type !== 'fire');
       activePowerups.push({ type: 'fire', startTime: performance.now(), duration: p.duration });
-      setTimeout(() => { balls.forEach(b => b.fire = false); }, p.duration);
       break;
     case 'extralife':
       lives = Math.min(lives + 1, 5);

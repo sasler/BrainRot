@@ -829,7 +829,7 @@ for (let i = 0; i < 50; i++) {
 }
 
 function drawTitleParticles() {
-  if (titleScreen.style.display === 'none') { requestAnimationFrame(drawTitleParticles); return; }
+  if (titleScreen.style.display === 'none') { return; }
   const w = window.innerWidth, h = window.innerHeight;
   tctx.clearRect(0, 0, w, h);
   for (const p of particles) {

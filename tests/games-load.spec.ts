@@ -26,8 +26,15 @@ test.describe("Game HTML Files — Load Tests", () => {
         const src = await iframe.getAttribute("src");
         expect(src).toContain(`/games/${game.id}/${model}/index.html`);
 
-        // Wait a moment for the game to initialize inside the iframe
-        await page.waitForTimeout(2000);
+        // Wait for the iframe to finish loading (sandboxed frames block contentFrame access)
+        await page.waitForFunction(
+          (sel) => {
+            const el = document.querySelector(sel) as HTMLIFrameElement | null;
+            return el?.src ? true : false;
+          },
+          "iframe",
+        );
+        await page.waitForTimeout(500);
 
         // Check no page-level errors occurred
         expect(errors).toEqual([]);

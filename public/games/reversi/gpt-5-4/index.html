@@ -317,6 +317,11 @@
       gap: 12px;
     }
 
+    .utility-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+
     .btn {
       position: relative;
       overflow: hidden;
@@ -353,6 +358,15 @@
 
     .btn:hover::before { transform: rotate(18deg) translateX(330%); }
     .btn.secondary { background: rgba(14, 16, 38, 0.95); }
+
+    .icon-btn {
+      width: 54px;
+      min-width: 54px;
+      padding: 12px;
+      font-size: 1.15rem;
+      line-height: 1;
+      letter-spacing: 0;
+    }
 
     .legend {
       margin-top: 16px;
@@ -745,6 +759,9 @@
             <button class="btn" id="newGameBtn">New Game</button>
             <button class="btn secondary" id="hintBtn">Show Best Move</button>
           </div>
+          <div class="utility-row">
+            <button class="btn secondary icon-btn" id="muteToggleBtn" type="button" aria-label="Mute sound effects" title="Mute sound effects">🔊</button>
+          </div>
         </div>
 
         <div class="legend">
@@ -815,6 +832,7 @@
     const whiteCard = document.getElementById('whiteCard');
     const thinkingIndicator = document.getElementById('thinkingIndicator');
     const toast = document.getElementById('toast');
+    const muteToggleBtn = document.getElementById('muteToggleBtn');
 
     const cells = [];
     let board = createInitialBoard();
@@ -825,6 +843,191 @@
     let gameOver = false;
     let hintMove = null;
     let toastTimer = null;
+    let isMuted = false;
+
+    const soundManager = {
+      audioContext: null,
+      masterGain: null,
+      initialized: false,
+
+      init() {
+        if (this.initialized) {
+          if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+          return this.audioContext;
+        }
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        this.audioContext = new AudioContextClass();
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.gain.value = 0.72;
+        this.masterGain.connect(this.audioContext.destination);
+        this.initialized = true;
+        if (this.audioContext.state === 'suspended') this.audioContext.resume();
+        return this.audioContext;
+      },
+
+      withContext(callback) {
+        if (isMuted) return;
+        const context = this.init();
+        if (!context || !this.masterGain) return;
+        const now = context.currentTime;
+        callback(context, now);
+      },
+
+      createTone(context, startTime, {
+        type = 'sine',
+        frequency = 440,
+        duration = 0.08,
+        volume = 0.16,
+        attack = 0.002,
+        release = 0.05,
+        endFrequency = null
+      }) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        if (endFrequency !== null) {
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), startTime + duration);
+        }
+        gain.gain.setValueAtTime(0.0001, startTime);
+        gain.gain.linearRampToValueAtTime(volume, startTime + attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.max(attack + 0.01, duration + release));
+        oscillator.connect(gain);
+        gain.connect(this.masterGain);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration + release);
+      },
+
+      playPlacePiece() {
+        this.withContext((context, now) => {
+          this.createTone(context, now, {
+            type: 'sine',
+            frequency: 600,
+            duration: 0.04,
+            volume: 0.18,
+            attack: 0.001,
+            release: 0.03,
+            endFrequency: 520
+          });
+        });
+      },
+
+      playFlipPieces(count) {
+        if (!count) return;
+        this.withContext((context, now) => {
+          for (let index = 0; index < count; index++) {
+            this.createTone(context, now + index * 0.032, {
+              type: 'sine',
+              frequency: 520 + (index % 6) * 55 + Math.min(index * 8, 70),
+              duration: 0.035,
+              volume: 0.08,
+              attack: 0.001,
+              release: 0.025,
+              endFrequency: 470 + (index % 5) * 42
+            });
+          }
+        });
+      },
+
+      playInvalidMove() {
+        this.withContext((context, now) => {
+          this.createTone(context, now, {
+            type: 'square',
+            frequency: 150,
+            duration: 0.1,
+            volume: 0.09,
+            attack: 0.002,
+            release: 0.06,
+            endFrequency: 130
+          });
+        });
+      },
+
+      playAiThinking() {
+        this.withContext((context, now) => {
+          this.createTone(context, now, {
+            type: 'triangle',
+            frequency: 1240,
+            duration: 0.045,
+            volume: 0.035,
+            attack: 0.001,
+            release: 0.035,
+            endFrequency: 1160
+          });
+        });
+      },
+
+      playGameWin() {
+        this.withContext((context, now) => {
+          [
+            [392, 494],
+            [494, 622],
+            [587, 740]
+          ].forEach((frequencies, step) => {
+            frequencies.forEach((frequency) => {
+              this.createTone(context, now + step * 0.12, {
+                type: 'sine',
+                frequency,
+                duration: 0.16,
+                volume: 0.11,
+                attack: 0.003,
+                release: 0.08
+              });
+            });
+          });
+        });
+      },
+
+      playGameLose() {
+        this.withContext((context, now) => {
+          this.createTone(context, now, {
+            type: 'triangle',
+            frequency: 360,
+            duration: 0.3,
+            volume: 0.11,
+            attack: 0.004,
+            release: 0.08,
+            endFrequency: 180
+          });
+        });
+      },
+
+      playPassTurn() {
+        this.withContext((context, now) => {
+          this.createTone(context, now, {
+            type: 'sine',
+            frequency: 660,
+            duration: 0.04,
+            volume: 0.08,
+            attack: 0.002,
+            release: 0.03
+          });
+          this.createTone(context, now + 0.05, {
+            type: 'sine',
+            frequency: 880,
+            duration: 0.05,
+            volume: 0.07,
+            attack: 0.002,
+            release: 0.03
+          });
+        });
+      }
+    };
+
+    function primeAudioContext() {
+      soundManager.init();
+    }
+
+    function updateMuteButton() {
+      muteToggleBtn.textContent = isMuted ? '🔇' : '🔊';
+      const label = isMuted ? 'Unmute sound effects' : 'Mute sound effects';
+      muteToggleBtn.setAttribute('aria-label', label);
+      muteToggleBtn.title = label;
+    }
+
+    document.addEventListener('click', primeAudioContext, { once: true, capture: true });
+    document.addEventListener('keydown', primeAudioContext, { once: true });
 
     function createBoardUI() {
       const fragment = document.createDocumentFragment();
@@ -1128,11 +1331,17 @@
     }
 
     function onCellClick(event) {
-      if (gameOver || aiThinking || currentPlayer !== BLACK || !playerCanAct) return;
+      if (gameOver || aiThinking || currentPlayer !== BLACK || !playerCanAct) {
+        soundManager.playInvalidMove();
+        return;
+      }
       const row = Number(event.currentTarget.dataset.row);
       const col = Number(event.currentTarget.dataset.col);
       const move = validMoves.get(moveKey(row, col));
-      if (!move) return;
+      if (!move) {
+        soundManager.playInvalidMove();
+        return;
+      }
       hintMove = null;
       playMove(move, BLACK);
     }
@@ -1142,6 +1351,8 @@
       board = applyMove(board, move, player);
       currentPlayer = -player;
       playerCanAct = false;
+      soundManager.playPlacePiece();
+      soundManager.playFlipPieces(move.flips.length);
       updateStatus(player === BLACK ? 'You strike through the center' : 'AI counters with precision');
       refresh(previousBoard, move.flips, move);
       window.setTimeout(() => resolveTurnFlow(), 680);
@@ -1163,6 +1374,7 @@
         validMoves = getValidMoves(board, currentPlayer);
         playerCanAct = currentPlayer === BLACK;
         refresh();
+        soundManager.playPassTurn();
         showToast(`${passedPlayer === BLACK ? 'Black' : 'White'} has no moves — pass`);
         updateStatus(passedPlayer === BLACK ? 'You must pass this turn' : 'AI is forced to pass');
         if (currentPlayer === WHITE) queueAiTurn();
@@ -1180,6 +1392,7 @@
       if (gameOver) return;
       aiThinking = true;
       playerCanAct = false;
+      soundManager.playAiThinking();
       refresh();
       const depth = Number(difficultySelect.value);
       window.setTimeout(() => {
@@ -1205,9 +1418,13 @@
       if (counts.black > counts.white) {
         title = 'You Win';
         text = `Black ${counts.black} · White ${counts.white}. Your corner control was immaculate.`;
+        soundManager.playGameWin();
       } else if (counts.white > counts.black) {
         title = 'AI Wins';
         text = `White ${counts.white} · Black ${counts.black}. The machine squeezed every edge.`;
+        soundManager.playGameLose();
+      } else {
+        soundManager.playPassTurn();
       }
       updateStatus(text);
       setOverlay(title, text, 'Play Again');
@@ -1228,6 +1445,10 @@
     overlayButton.addEventListener('click', startGame);
     newGameBtn.addEventListener('click', startGame);
     hintBtn.addEventListener('click', showHint);
+    muteToggleBtn.addEventListener('click', () => {
+      isMuted = !isMuted;
+      updateMuteButton();
+    });
     difficultySelect.addEventListener('change', () => {
       if (!aiThinking && !gameOver) {
         showToast(`Difficulty set to depth ${difficultySelect.value}`);
@@ -1252,6 +1473,7 @@
     window.addEventListener('resize', fitLayoutToViewport);
 
     createBoardUI();
+    updateMuteButton();
     refresh();
     fitLayoutToViewport();
   </script>

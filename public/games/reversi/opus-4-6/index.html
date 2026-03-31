@@ -233,9 +233,36 @@
     .fade-in {
       animation: fadeIn 0.6s ease forwards;
     }
+
+    #mute-btn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 30;
+      background: rgba(10, 10, 30, 0.6);
+      border: 1px solid #00f0ff30;
+      color: #00f0ff;
+      font-size: 20px;
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      line-height: 1;
+    }
+
+    #mute-btn:hover {
+      border-color: #00f0ff;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    }
   </style>
 </head>
 <body>
+
+  <button id="mute-btn" title="Toggle sound">🔊</button>
 
   <div id="ui-overlay">
     <div class="score-box score-player">
@@ -282,6 +309,141 @@
 
   <script>
   'use strict';
+
+  // ═══════════════════════════════════════════════
+  // SOUND MANAGER (Web Audio API)
+  // ═══════════════════════════════════════════════
+  const SoundManager = (() => {
+    let audioCtx = null;
+    let muted = false;
+
+    function ensureContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function isMuted() { return muted; }
+
+    function setMuted(m) {
+      muted = m;
+      document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
+    }
+
+    function toggleMute() { setMuted(!muted); }
+
+    function playTone(freq, duration, type, volume, startDelay) {
+      if (muted) return;
+      const ctx = ensureContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = volume !== undefined ? volume : 0.15;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime + (startDelay || 0);
+      osc.start(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      osc.stop(t + duration + 0.01);
+    }
+
+    // Short click/clack for placing a piece
+    function placePiece() {
+      if (muted) return;
+      const ctx = ensureContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 600;
+      gain.gain.value = 0.18;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime;
+      osc.start(t);
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      osc.stop(t + 0.05);
+    }
+
+    // Cascading flips — one short tone per flipped piece
+    function flipPieces(count) {
+      if (muted) return;
+      for (let i = 0; i < count; i++) {
+        const freq = 500 + (i % 2 === 0 ? 1 : -1) * (i * 40);
+        playTone(Math.max(300, Math.min(900, freq)), 0.05, 'sine', 0.10, 0.06 * i);
+      }
+    }
+
+    // Low buzz for invalid move
+    function invalidMove() {
+      if (muted) return;
+      const ctx = ensureContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 150;
+      gain.gain.value = 0.10;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime;
+      osc.start(t);
+      gain.gain.setValueAtTime(0.10, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+      osc.stop(t + 0.11);
+    }
+
+    // Soft high-pitched blip for AI thinking
+    function aiBlip() {
+      if (muted) return;
+      playTone(1200, 0.06, 'sine', 0.04);
+    }
+
+    // Victory fanfare — ascending chord
+    function gameOverWin() {
+      if (muted) return;
+      playTone(523, 0.40, 'sine', 0.12, 0);
+      playTone(659, 0.35, 'sine', 0.12, 0.08);
+      playTone(784, 0.30, 'sine', 0.12, 0.16);
+      playTone(1047, 0.25, 'sine', 0.14, 0.24);
+    }
+
+    // Sad descending tone for losing
+    function gameOverLose() {
+      if (muted) return;
+      playTone(440, 0.30, 'sine', 0.12, 0);
+      playTone(349, 0.30, 'sine', 0.12, 0.10);
+      playTone(262, 0.35, 'sine', 0.10, 0.20);
+    }
+
+    // Two-tone notification for pass turn
+    function passTurn() {
+      if (muted) return;
+      playTone(660, 0.05, 'sine', 0.10, 0);
+      playTone(550, 0.06, 'sine', 0.10, 0.05);
+    }
+
+    return {
+      ensureContext, isMuted, setMuted, toggleMute,
+      placePiece, flipPieces, invalidMove, aiBlip,
+      gameOverWin, gameOverLose, passTurn
+    };
+  })();
+
+  // Initialize AudioContext on first user interaction
+  document.addEventListener('click', () => SoundManager.ensureContext(), { once: true });
+  document.addEventListener('keydown', () => SoundManager.ensureContext(), { once: true });
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    SoundManager.toggleMute();
+  });
 
   // ═══════════════════════════════════════════════
   // CONSTANTS
@@ -974,14 +1136,17 @@
         winnerText = 'YOU WIN!';
         resultText = 'White dominates the board';
         document.getElementById('winner-text').style.color = COLORS.neonCyan;
+        SoundManager.gameOverWin();
       } else if (counts.black > counts.white) {
         winnerText = 'AI WINS';
         resultText = 'Black dominates the board';
         document.getElementById('winner-text').style.color = COLORS.neonMagenta;
+        SoundManager.gameOverLose();
       } else {
         winnerText = 'DRAW';
         resultText = 'An evenly matched game';
         document.getElementById('winner-text').style.color = '#e4e4ef';
+        SoundManager.passTurn();
       }
 
       document.getElementById('winner-text').textContent = winnerText;
@@ -1016,10 +1181,12 @@
       if (currentPlayer === WHITE) {
         passMessage = 'NO VALID MOVES — PASS';
         passMessageTimer = 1500;
+        SoundManager.passTurn();
         setTimeout(() => nextTurn(), 1200);
       } else {
         passMessage = 'AI HAS NO MOVES — PASS';
         passMessageTimer = 1500;
+        SoundManager.passTurn();
         setTimeout(() => nextTurn(), 1200);
       }
       return;
@@ -1029,6 +1196,7 @@
 
     if (currentPlayer === BLACK) {
       aiThinking = true;
+      SoundManager.aiBlip();
       updateTurnIndicator();
       // Small delay so UI updates before AI thinks
       setTimeout(() => {
@@ -1049,6 +1217,8 @@
 
     // Place animation
     animations.push(new PlaceAnimation(row, col, player));
+    SoundManager.placePiece();
+    SoundManager.flipPieces(flips.length);
 
     // Flip animations with staggered delays
     const fromColor = opponent(player);
@@ -1074,7 +1244,10 @@
 
   function handleClick(row, col) {
     if (!gameRunning || currentPlayer !== WHITE || aiThinking) return;
-    if (!validMoves.some(([r, c]) => r === row && c === col)) return;
+    if (!validMoves.some(([r, c]) => r === row && c === col)) {
+      SoundManager.invalidMove();
+      return;
+    }
 
     playerCanMove = false;
     executeMove(row, col, WHITE);

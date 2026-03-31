@@ -277,6 +277,40 @@
       color: rgba(232, 236, 255, 0.55);
     }
 
+    .audio-toggle {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 20;
+      width: 48px;
+      height: 48px;
+      border: 1px solid rgba(0, 255, 136, 0.22);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(10, 14, 30, 0.92), rgba(6, 8, 18, 0.82));
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 0 22px rgba(0, 255, 136, 0.18),
+        0 10px 24px rgba(0, 0, 0, 0.28);
+      transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+      pointer-events: auto;
+    }
+
+    .audio-toggle:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+      box-shadow:
+        0 0 28px rgba(0, 255, 136, 0.28),
+        0 12px 28px rgba(0, 0, 0, 0.32);
+    }
+
+    .audio-toggle:active {
+      transform: translateY(1px);
+    }
+
     .gameover-score {
       font-size: clamp(18px, 3vw, 26px);
       margin-bottom: 8px;
@@ -376,6 +410,8 @@
     </div>
   </div>
 
+  <button class="audio-toggle" id="muteBtn" type="button" aria-label="Mute sound" aria-pressed="false">🔊</button>
+
   <script>
     (() => {
       const canvas = document.getElementById("game");
@@ -394,6 +430,7 @@
       const practiceBtn = document.getElementById("practiceBtn");
       const restartBtn = document.getElementById("restartBtn");
       const backBtn = document.getElementById("backBtn");
+      const muteBtn = document.getElementById("muteBtn");
 
       const dirs = {
         ArrowUp: { x: 0, y: -1 },
@@ -440,6 +477,10 @@
       let stepInterval = 150;
       let lastTs = 0;
       let menuPulse = 0;
+      let lastSpeedTier = 0;
+      let muted = false;
+      let audioContext = null;
+      let masterGain = null;
 
       let snake = [];
       let prevSnake = [];
@@ -466,6 +507,148 @@
           b: bigint & 255
         };
       };
+
+      function getSpeedTier(points) {
+        if (points >= 20) return { label: "LUDICROUS", index: 3 };
+        if (points >= 12) return { label: "HYPER", index: 2 };
+        if (points >= 6) return { label: "FAST", index: 1 };
+        return { label: "NORMAL", index: 0 };
+      }
+
+      function updateMuteButton() {
+        muteBtn.textContent = muted ? "🔇" : "🔊";
+        muteBtn.setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
+        muteBtn.setAttribute("aria-pressed", String(muted));
+      }
+
+      function ensureAudioContext() {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return null;
+        if (!audioContext) {
+          audioContext = new AudioCtor();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = muted ? 0 : 0.35;
+          masterGain.connect(audioContext.destination);
+        }
+        if (audioContext.state === "suspended") {
+          audioContext.resume().catch(() => {});
+        }
+        return audioContext;
+      }
+
+      function unlockAudio() {
+        ensureAudioContext();
+      }
+
+      function setMasterGain(value, timeConstant = 0.02) {
+        if (!audioContext || !masterGain) return;
+        const now = audioContext.currentTime;
+        masterGain.gain.cancelScheduledValues(now);
+        masterGain.gain.setTargetAtTime(value, now, timeConstant);
+      }
+
+      function playOscillatorSound({
+        startFrequency,
+        endFrequency,
+        duration,
+        type = "sine",
+        gain = 0.08,
+        attack = 0.005,
+        release = 0.03,
+        detune = 0
+      }) {
+        const ctx = ensureAudioContext();
+        if (!ctx || muted || !masterGain) return;
+
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+
+        osc.type = type;
+        osc.detune.value = detune;
+        osc.frequency.setValueAtTime(Math.max(1, startFrequency), now);
+        if (typeof endFrequency === "number") {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + duration);
+        }
+
+        env.gain.setValueAtTime(0.0001, now);
+        env.gain.linearRampToValueAtTime(gain, now + Math.min(attack, duration * 0.5));
+        env.gain.exponentialRampToValueAtTime(0.0001, now + duration + release);
+
+        osc.connect(env);
+        env.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + duration + release + 0.02);
+      }
+
+      function playEatSound() {
+        playOscillatorSound({
+          startFrequency: 400,
+          endFrequency: 800,
+          duration: 0.05,
+          type: "sine",
+          gain: 0.09,
+          attack: 0.004,
+          release: 0.02
+        });
+      }
+
+      function playGameOverSound() {
+        playOscillatorSound({
+          startFrequency: 400,
+          endFrequency: 100,
+          duration: 0.3,
+          type: "triangle",
+          gain: 0.11,
+          attack: 0.01,
+          release: 0.06
+        });
+      }
+
+      function playDirectionTick() {
+        const ctx = ensureAudioContext();
+        if (!ctx || muted || !masterGain) return;
+
+        const now = ctx.currentTime;
+        const freqs = [1400, 1700, 2100];
+        freqs.forEach((freq, index) => {
+          const osc = ctx.createOscillator();
+          const env = ctx.createGain();
+          osc.type = "square";
+          osc.frequency.setValueAtTime(freq + rand(-90, 90), now);
+          osc.detune.value = rand(-15, 15);
+          env.gain.setValueAtTime(0.0001, now);
+          env.gain.linearRampToValueAtTime(0.02 - index * 0.004, now + 0.001);
+          env.gain.exponentialRampToValueAtTime(0.0001, now + 0.01);
+          osc.connect(env);
+          env.connect(masterGain);
+          osc.start(now);
+          osc.stop(now + 0.015);
+        });
+      }
+
+      function playLevelUpArpeggio() {
+        const ctx = ensureAudioContext();
+        if (!ctx || muted || !masterGain) return;
+
+        const now = ctx.currentTime;
+        const notes = [440, 554, 659, 880];
+        notes.forEach((freq, index) => {
+          const osc = ctx.createOscillator();
+          const env = ctx.createGain();
+          const startTime = now + index * 0.08;
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, startTime);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.25, startTime + 0.08);
+          env.gain.setValueAtTime(0.0001, startTime);
+          env.gain.linearRampToValueAtTime(0.05, startTime + 0.01);
+          env.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.11);
+          osc.connect(env);
+          env.connect(masterGain);
+          osc.start(startTime);
+          osc.stop(startTime + 0.14);
+        });
+      }
 
       function resize() {
         dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
@@ -600,9 +783,10 @@
         resetSnake();
         food = ensureFood();
         if (initialDirection && !(initialDirection.x === -direction.x && initialDirection.y === -direction.y)) {
-          queuedDirection = initialDirection;
+          setQueuedDirection(initialDirection);
         }
         if (!preserveScore) score = 0;
+        lastSpeedTier = getSpeedTier(score).index;
         stepInterval = 150;
         state = "playing";
         running = true;
@@ -620,6 +804,7 @@
         flash = 0;
         resetSnake();
         food = ensureFood();
+        lastSpeedTier = getSpeedTier(score).index;
         showStartOverlay();
         updateHUD();
       }
@@ -644,7 +829,9 @@
         const current = queuedDirection || direction;
         if (current.x === -next.x && current.y === -next.y) return;
         if (direction.x === -next.x && direction.y === -next.y) return;
+        if (current.x === next.x && current.y === next.y) return;
         queuedDirection = next;
+        playDirectionTick();
       }
 
       function endGame(reason) {
@@ -654,6 +841,7 @@
         finalScoreEl.textContent = score;
         gameoverMessageEl.textContent = reason;
         particleBurst((snake[0].x + 0.5) * cell + ox, (snake[0].y + 0.5) * cell + oy, palette.snake, palette.food, 28, 1.35);
+        playGameOverSound();
         shake = 18;
         flash = 1;
         showGameOverOverlay();
@@ -695,8 +883,14 @@
           flash = 1;
           shake = Math.min(shake + 3, 14);
           particleBurst((nextHead.x + 0.5) * cell + ox, (nextHead.y + 0.5) * cell + oy, palette.food, palette.food2, 20, 1);
+          playEatSound();
           food = ensureFood();
           stepInterval = speedForScore(score);
+          const tier = getSpeedTier(score).index;
+          if (tier > lastSpeedTier) {
+            playLevelUpArpeggio();
+          }
+          lastSpeedTier = tier;
           updateHUD();
         } else {
           snake.pop();
@@ -1014,6 +1208,7 @@
       }
 
       function focusGame() {
+        unlockAudio();
         canvas.focus({ preventScroll: true });
         document.body.focus?.({ preventScroll: true });
         document.documentElement.focus?.({ preventScroll: true });
@@ -1094,9 +1289,16 @@
       practiceBtn.addEventListener("click", () => activateGame());
       restartBtn.addEventListener("click", () => resetGame(false));
       backBtn.addEventListener("click", () => resetToTitle());
+      muteBtn.addEventListener("click", () => {
+        unlockAudio();
+        muted = !muted;
+        setMasterGain(muted ? 0 : 0.35);
+        updateMuteButton();
+      });
 
       window.addEventListener("resize", resize);
       resize();
+      updateMuteButton();
       resetToTitle();
       requestAnimationFrame(loop);
     })();

@@ -483,6 +483,21 @@ body{
   100%{transform:translate(var(--tx,0),var(--ty,-40px)) scale(0);opacity:0}
 }
 
+/* ─── MUTE BUTTON ─── */
+.mute-btn{
+  padding:10px 14px;
+  background:var(--surface);
+  border:1px solid rgba(170,102,255,.14);
+  border-radius:12px;
+  color:var(--text);
+  font-size:16px;line-height:1;
+  cursor:pointer;
+  transition:all .2s ease;
+  flex-shrink:0;
+}
+.mute-btn:hover{background:var(--surface2);border-color:rgba(170,102,255,.3)}
+.mute-btn:active{transform:scale(.93)}
+
 /* ─── RESPONSIVE ─── */
 @media(max-width:480px){
   body{padding:10px 8px 16px}
@@ -562,12 +577,106 @@ body{
       <div class="turn-disc" id="turnDisc"></div>
       <div class="turn-text" id="turnText">Your turn</div>
     </div>
+    <button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="Mute / Unmute">🔊</button>
     <button class="new-btn" onclick="newGame()">New Game</button>
   </div>
 
 </div>
 
 <script>
+// ═══════════════════════════════════════════
+//  AUDIO — Web Audio API sound manager
+// ═══════════════════════════════════════════
+let audioCtx = null;
+let muted = false;
+
+function initAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+}
+
+function _tone(ac, freq, type, startTime, duration, vol){
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.connect(gain); gain.connect(ac.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(vol, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration + 0.01);
+}
+
+const SFX = {
+  place(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    _tone(audioCtx, 600, 'sine', t, 0.04, 0.4);
+  },
+
+  flip(count){
+    if(muted||!audioCtx||!count) return;
+    const t = audioCtx.currentTime;
+    const pitches = [440,520,600,680,760,840,560,660];
+    for(let i=0;i<count;i++){
+      _tone(audioCtx, pitches[i%pitches.length], 'sine', t+i*0.055, 0.07, 0.16);
+    }
+  },
+
+  invalid(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    _tone(audioCtx, 150, 'square', t, 0.1, 0.2);
+  },
+
+  aiThink(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    _tone(audioCtx, 1200, 'sine', t, 0.08, 0.04);
+  },
+
+  win(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    [[523.25,0],[659.25,0.12],[783.99,0.24],[1046.5,0.36]].forEach(([f,d])=>{
+      _tone(audioCtx, f, 'sine', t+d, 0.4-d*0.3, 0.28);
+    });
+  },
+
+  lose(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(180, t+0.3);
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t+0.3);
+    osc.start(t); osc.stop(t+0.32);
+  },
+
+  pass(){
+    if(muted||!audioCtx) return;
+    const t = audioCtx.currentTime;
+    _tone(audioCtx, 880, 'sine', t,      0.1, 0.18);
+    _tone(audioCtx, 660, 'sine', t+0.12, 0.1, 0.14);
+  }
+};
+
+function toggleMute(){
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+}
+
+// Lazily initialise AudioContext on first user interaction
+['click','keydown'].forEach(ev=>
+  document.addEventListener(ev, initAudio, {once:true})
+);
+
 // ═══════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════
@@ -873,6 +982,8 @@ async function animatePlace(r,c,p,flips){
   const flipCls=p===B?'flip-to-dk':'flip-to-lt';
   const finalCls=p===B?'dk':'lt';
 
+  if(flips.length) SFX.flip(flips.length);
+
   for(let i=0;i<dists.length;i++){
     await sleep(i===0?120:100);
     for(const[fr,fc]of groups[dists[i]]){
@@ -937,7 +1048,12 @@ function showOverlay(){
   else{title="It's a Draw!";winner='Perfectly balanced — well played!';}
   document.getElementById('ovTitle').textContent=title;
   document.getElementById('ovWinner').textContent=winner;
-  setTimeout(()=>document.getElementById('overlay').classList.add('show'),700);
+  setTimeout(()=>{
+    document.getElementById('overlay').classList.add('show');
+    if(bk>wt) SFX.win();
+    else if(wt>bk) SFX.lose();
+    else SFX.pass();
+  },700);
   updateTurn();updateScores();
 }
 
@@ -947,10 +1063,11 @@ function showOverlay(){
 async function onCell(r,c){
   if(dead||busy||aiThinking||cur!==B)return;
   const fl=flipsFor(board,r,c,B);
-  if(!fl.length)return;
+  if(!fl.length){ SFX.invalid(); return; }
 
   board[r][c]=B;
   for(const[fr,fc]of fl)board[fr][fc]=B;
+  SFX.place();
 
   await animatePlace(r,c,B,fl);
   render();
@@ -967,6 +1084,7 @@ async function proceed(){
     const oMvs=validMoves(board,other);
     if(!oMvs.length){showOverlay();return;}
     const msg=cur===B?'No moves — your turn passes':'AI has no moves — your turn!';
+    SFX.pass();
     showToast(msg,1600);
     await sleep(1300);
     cur=other;
@@ -983,6 +1101,7 @@ async function proceed(){
 async function doAI(){
   aiThinking=true;busy=true;
   updateTurn(true);
+  SFX.aiThink();
 
   const thinkMs=350+Math.random()*350;
 
@@ -998,6 +1117,7 @@ async function doAI(){
   const fl=flipsFor(board,r,c,W);
   board[r][c]=W;
   for(const[fr,fc]of fl)board[fr][fc]=W;
+  SFX.place();
 
   await animatePlace(r,c,W,fl);
   busy=false;
@@ -1009,6 +1129,7 @@ async function doAI(){
   if(!bMvs.length){
     const wMvs=validMoves(board,W);
     if(!wMvs.length){showOverlay();return;}
+    SFX.pass();
     showToast('No moves — your turn passes',1600);
     await sleep(1300);
     cur=W;

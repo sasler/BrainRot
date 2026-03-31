@@ -1240,12 +1240,12 @@
       }
 
       if (k === 'arrowleft' || k === 'a') {
-        player.targetLane = Math.max(0, player.targetLane - 1);
+        player.targetLane = Math.min(2, player.targetLane + 1);
         player.wobble = 0.12;
         laneHitEffect();
         playSfx('lane');
       } else if (k === 'arrowright' || k === 'd') {
-        player.targetLane = Math.min(2, player.targetLane + 1);
+        player.targetLane = Math.max(0, player.targetLane - 1);
         player.wobble = 0.12;
         laneHitEffect();
         playSfx('lane');

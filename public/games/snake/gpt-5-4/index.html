@@ -569,7 +569,7 @@
   <canvas id="game" aria-label="Neon Viper snake game canvas"></canvas>
 
   <div class="hud" aria-hidden="true">
-    <button class="audio-toggle" id="audioToggle" type="button" aria-label="Mute sound" aria-pressed="true">🔊</button>
+    <button class="audio-toggle" id="audioToggle" type="button" aria-label="Mute sound" aria-pressed="false">🔊</button>
 
     <div class="hud-top">
       <div class="brand">
@@ -799,7 +799,7 @@
     function updateAudioToggle() {
       dom.audioToggle.textContent = isMuted ? "🔇" : "🔊";
       dom.audioToggle.setAttribute("aria-label", isMuted ? "Unmute sound" : "Mute sound");
-      dom.audioToggle.setAttribute("aria-pressed", String(!isMuted));
+      dom.audioToggle.setAttribute("aria-pressed", String(isMuted));
     }
 
     function ensureAudioReady() {

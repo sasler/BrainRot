@@ -177,12 +177,31 @@ let audioCtx = null;
 let isMuted = false;
 
 function initAudio() {
-  if (audioCtx) return;
-  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function () {});
+    }
+    return;
+  }
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function () {});
+    }
+  } catch (e) {
+    audioCtx = null;
+  }
 }
 
 function playTone(freq, duration, type, volume, freqEnd) {
-  if (isMuted || !audioCtx) return;
+  if (isMuted) return;
+  if (!audioCtx) {
+    initAudio();
+  }
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(function () {});
+  }
   const t = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();

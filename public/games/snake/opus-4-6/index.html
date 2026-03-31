@@ -27,8 +27,35 @@
   let lastLevel = 0;
 
   function initAudio() {
-    if (audioCtx) return;
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    // If we already have a context, ensure it is running.
+    if (audioCtx) {
+      if (audioCtx.state === 'suspended') {
+        try {
+          audioCtx.resume().catch(() => {});
+        } catch (e) {}
+      }
+      return;
+    }
+
+    // Create the audio context and, if needed, resume it on a user gesture
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      if (audioCtx && audioCtx.state === 'suspended') {
+        const resumeAudio = () => {
+          try {
+            audioCtx.resume().catch(() => {});
+          } catch (e) {}
+          window.removeEventListener('click', resumeAudio);
+          window.removeEventListener('pointerdown', resumeAudio);
+          window.removeEventListener('keydown', resumeAudio);
+        };
+
+        window.addEventListener('click', resumeAudio, { once: true });
+        window.addEventListener('pointerdown', resumeAudio, { once: true });
+        window.addEventListener('keydown', resumeAudio, { once: true });
+      }
+    } catch (e) {}
   }
 
   function playEatSound() {

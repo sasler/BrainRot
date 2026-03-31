@@ -8,13 +8,87 @@
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:100vw;height:100vh;overflow:hidden;background:#050510;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-tap-highlight-color:transparent}
   canvas{display:block;image-rendering:auto}
+  #muteBtn{position:fixed;top:12px;right:12px;z-index:10;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;width:40px;height:40px;font-size:20px;cursor:pointer;color:#fff;display:flex;align-items:center;justify-content:center;transition:background .2s}
+  #muteBtn:hover{background:rgba(255,255,255,0.15)}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="muteBtn" title="Toggle sound">🔊</button>
 <script>
 (() => {
   'use strict';
+
+  // ═══════════════════════════════════════════════════════
+  //  SOUND MANAGER (Web Audio API)
+  // ═══════════════════════════════════════════════════════
+  let audioCtx = null;
+  let isMuted = false;
+  let lastLevel = 0;
+
+  function initAudio() {
+    if (audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+
+  function playEatSound() {
+    if (isMuted || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    const t = audioCtx.currentTime;
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(800, t + 0.05);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc.start(t); osc.stop(t + 0.08);
+  }
+
+  function playGameOverSound() {
+    if (isMuted || !audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sawtooth';
+    const t = audioCtx.currentTime;
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.linearRampToValueAtTime(100, t + 0.3);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    osc.start(t); osc.stop(t + 0.4);
+  }
+
+  function playDirectionSound() {
+    if (isMuted || !audioCtx) return;
+    const len = audioCtx.sampleRate * 0.01 | 0;
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    src.buffer = buf; src.connect(gain); gain.connect(audioCtx.destination);
+    const t = audioCtx.currentTime;
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+    src.start(t);
+  }
+
+  function playLevelUpSound() {
+    if (isMuted || !audioCtx) return;
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      const t = audioCtx.currentTime + i * 0.07;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.start(t); osc.stop(t + 0.12);
+    });
+  }
 
   // ═══════════════════════════════════════════════════════
   //  CONSTANTS & CONFIGURATION
@@ -108,6 +182,8 @@
   let growthPending = 0;
 
   function init() {
+    initAudio();
+    lastLevel = 0;
     const mid = GRID >> 1;
     snake = [
       { x: mid, y: mid },
@@ -158,6 +234,8 @@
     if (food && nx === food.x && ny === food.y) {
       score += 10;
       tickRate = Math.max(MIN_TICK, BASE_TICK - score / 10 * SPEED_FACTOR);
+      const curLevel = Math.floor(score / 50);
+      if (curLevel > lastLevel) { lastLevel = curLevel; playLevelUpSound(); } else { playEatSound(); }
       eatFlash = 1;
       emitParticles(food.x, food.y, C.food, 24);
       emitParticles(food.x, food.y, C.accent, 12);
@@ -174,6 +252,7 @@
   }
 
   function die() {
+    playGameOverSound();
     state = 'gameover';
     if (score > highScore) highScore = score;
     shakeTime = 0.6;
@@ -264,7 +343,7 @@
       const d = DIRS[e.key];
       const ref = dirQueue.length ? dirQueue[dirQueue.length - 1] : dir;
       if (d.x !== -ref.x || d.y !== -ref.y) {
-        if (dirQueue.length < 2) dirQueue.push(d);
+        if (dirQueue.length < 2) { dirQueue.push(d); playDirectionSound(); }
       }
     }
   });
@@ -287,7 +366,7 @@
     let d;
     if (Math.abs(dx) > Math.abs(dy)) d = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
     else d = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
-    if (d.x !== -dir.x || d.y !== -dir.y) nextDir = d;
+    if (d.x !== -dir.x || d.y !== -dir.y) { nextDir = d; playDirectionSound(); }
   }, { passive: false });
 
   // ═══════════════════════════════════════════════════════
@@ -728,6 +807,15 @@
 
     if (state === 'gameover') drawGameOverScreen(now / 1000);
   }
+
+  // Mute toggle
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    initAudio();
+    isMuted = !isMuted;
+    muteBtn.textContent = isMuted ? '\u{1F507}' : '\u{1F50A}';
+  });
 
   requestAnimationFrame(frame);
 })();

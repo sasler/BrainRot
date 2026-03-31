@@ -12,6 +12,7 @@ html,body{width:100%;height:100%;background:#050510;overflow:hidden;font-family:
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="muteBtn" style="position:fixed;top:10px;right:10px;z-index:99;background:rgba(0,0,0,.55);border:1px solid rgba(0,255,136,.35);color:#00ff88;font-size:18px;width:36px;height:36px;border-radius:6px;cursor:pointer;padding:0;line-height:36px;text-align:center;" title="Toggle sound">🔊</button>
 <script>
 (function(){
 'use strict';
@@ -62,12 +63,14 @@ function mixHex(h1,h2,t){
 // AUDIO (Web Audio API, no external files)
 // ─────────────────────────────────────────────────
 let AC = null;
+let muted = false;
 function getAC(){
   if(!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
   if(AC.state==='suspended') AC.resume();
   return AC;
 }
 function tone(freq,freq2,dur,type='sine',vol=0.12){
+  if(muted) return;
   try{
     const a=getAC(), t=a.currentTime;
     const o=a.createOscillator(), g=a.createGain();
@@ -80,11 +83,27 @@ function tone(freq,freq2,dur,type='sine',vol=0.12){
     o.start(t); o.stop(t+dur+0.01);
   }catch(_){}
 }
+function noise(dur=0.01,vol=0.04){
+  if(muted) return;
+  try{
+    const a=getAC(),t=a.currentTime;
+    const buf=a.createBuffer(1,Math.ceil(a.sampleRate*dur),a.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+    const src=a.createBufferSource(),g=a.createGain();
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    src.buffer=buf; src.connect(g); g.connect(a.destination);
+    src.start(t); src.stop(t+dur+0.01);
+  }catch(_){}
+}
 const SFX = {
-  eat:   ()=> tone(440,880,0.1,'sine',0.1),
-  gold:  ()=>{ tone(880,1760,0.12,'sine',0.12); tone(660,1320,0.15,'triangle',0.07); },
-  die:   ()=>{ tone(220,60,0.5,'sawtooth',0.18); tone(330,80,0.38,'square',0.07); },
-  start: ()=>{ tone(440,880,0.08,'sine',0.1); setTimeout(()=>tone(660,1320,0.1,'sine',0.08),80); },
+  eat:     ()=> tone(400,800,0.05,'sine',0.1),
+  gold:    ()=>{ tone(880,1760,0.12,'sine',0.12); tone(660,1320,0.15,'triangle',0.07); },
+  die:     ()=>{ tone(400,100,0.3,'sawtooth',0.18); tone(330,80,0.38,'square',0.07); },
+  start:   ()=>{ tone(440,880,0.08,'sine',0.1); setTimeout(()=>tone(660,1320,0.1,'sine',0.08),80); },
+  turn:    ()=> noise(0.012,0.035),
+  levelup: ()=>{ [330,415,523,659,830].forEach((f,i)=>setTimeout(()=>tone(f,f*1.5,0.09,'sine',0.09),i*65)); },
 };
 
 // ─────────────────────────────────────────────────
@@ -197,6 +216,7 @@ let glowT=0;       // ambient glow oscillator
 let flashA=0;      // screen-flash alpha
 let comboPop=0;    // combo number pop scale
 let titleT=0;
+let lastSpeedTier=0;
 
 // ─────────────────────────────────────────────────
 // DRAW HELPERS
@@ -226,7 +246,7 @@ function initGame(){
   score=0; combo=1; cTimer=0;
   tickMs=TICK_START;
   PS.length=0; POPS.length=0;
-  flashA=0; shk=0;
+  flashA=0; shk=0; lastSpeedTier=0;
   spawnFood();
 }
 
@@ -293,6 +313,8 @@ function gameTick(){
     isGold?SFX.gold():SFX.eat();
 
     tickMs=Math.max(TICK_MIN,tickMs*TICK_DECAY);
+    const _tier=Math.floor((1-(tickMs-TICK_MIN)/(TICK_START-TICK_MIN))*4);
+    if(_tier>lastSpeedTier){ lastSpeedTier=_tier; SFX.levelup(); }
     spawnFood();
   } else {
     if(cTimer>0){ cTimer--; if(cTimer===0) combo=1; }
@@ -758,7 +780,7 @@ document.addEventListener('keydown', e=>{
     e.preventDefault();
     const last=dq.length?dq[dq.length-1]:dir;
     if((nd.x!==0||nd.y!==0)&&!(nd.x===-last.x&&nd.y===-last.y))
-      if(dq.length<2) dq.push(nd);
+      if(dq.length<2){ dq.push(nd); SFX.turn(); }
   }
 });
 
@@ -778,10 +800,21 @@ document.addEventListener('touchend', e=>{
   if(ax<12&&ay<12){ tStart=null; return; }
   const nd=ax>ay?(dx>0?{x:1,y:0}:{x:-1,y:0}):(dy>0?{x:0,y:1}:{x:0,y:-1});
   const last=dq.length?dq[dq.length-1]:dir;
-  if(!(nd.x===-last.x&&nd.y===-last.y)) if(dq.length<2) dq.push(nd);
+  if(!(nd.x===-last.x&&nd.y===-last.y)) if(dq.length<2){ dq.push(nd); SFX.turn(); }
   tStart=null;
   e.preventDefault();
 },{passive:false});
+
+// ─────────────────────────────────────────────────
+// MUTE BUTTON
+// ─────────────────────────────────────────────────
+const muteBtn=document.getElementById('muteBtn');
+muteBtn.addEventListener('click',e=>{
+  muted=!muted;
+  muteBtn.textContent=muted?'🔇':'🔊';
+  e.stopPropagation();
+  if(!muted) getAC();
+});
 
 // ─────────────────────────────────────────────────
 // LAUNCH

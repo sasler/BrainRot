@@ -105,6 +105,49 @@
       padding-bottom: 20px;
     }
 
+    .audio-toggle {
+      position: fixed;
+      top: 18px;
+      right: 20px;
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(126, 255, 212, 0.18);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(8, 16, 26, 0.94), rgba(7, 10, 18, 0.82));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 32px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(10px);
+      color: #ecfff7;
+      font: inherit;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 5;
+      transition:
+        transform 140ms ease,
+        border-color 140ms ease,
+        background 140ms ease,
+        box-shadow 140ms ease;
+    }
+
+    .audio-toggle:hover {
+      transform: translateY(-1px);
+      border-color: rgba(126, 255, 212, 0.34);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 40px rgba(0, 255, 136, 0.12);
+    }
+
+    .audio-toggle:focus-visible {
+      outline: 2px solid rgba(126, 255, 212, 0.7);
+      outline-offset: 3px;
+    }
+
     .brand,
     .stat-cluster,
     .hint-bar {
@@ -492,6 +535,11 @@
         padding: 14px;
       }
 
+      .audio-toggle {
+        top: 14px;
+        right: 14px;
+      }
+
       .stat-cluster {
         width: 100%;
       }
@@ -521,6 +569,8 @@
   <canvas id="game" aria-label="Neon Viper snake game canvas"></canvas>
 
   <div class="hud" aria-hidden="true">
+    <button class="audio-toggle" id="audioToggle" type="button" aria-label="Mute sound" aria-pressed="true">🔊</button>
+
     <div class="hud-top">
       <div class="brand">
         <div class="brand-badge">
@@ -671,7 +721,8 @@
       startButton: document.getElementById("startButton"),
       practiceButton: document.getElementById("practiceButton"),
       restartButton: document.getElementById("restartButton"),
-      menuButton: document.getElementById("menuButton")
+      menuButton: document.getElementById("menuButton"),
+      audioToggle: document.getElementById("audioToggle")
     };
 
     const DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -721,6 +772,14 @@
       pointerStart: null
     };
 
+    const sound = {
+      context: null,
+      masterGain: null,
+      noiseBuffer: null
+    };
+
+    let isMuted = false;
+
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
     }
@@ -735,6 +794,158 @@
 
     function pad(value) {
       return String(value).padStart(4, "0");
+    }
+
+    function updateAudioToggle() {
+      dom.audioToggle.textContent = isMuted ? "🔇" : "🔊";
+      dom.audioToggle.setAttribute("aria-label", isMuted ? "Unmute sound" : "Mute sound");
+      dom.audioToggle.setAttribute("aria-pressed", String(!isMuted));
+    }
+
+    function ensureAudioReady() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        return null;
+      }
+
+      if (!sound.context) {
+        sound.context = new AudioContextClass();
+        sound.masterGain = sound.context.createGain();
+        sound.masterGain.gain.value = 0.18;
+        sound.masterGain.connect(sound.context.destination);
+      }
+
+      if (sound.context.state === "suspended") {
+        sound.context.resume().catch(() => {});
+      }
+
+      return sound.context;
+    }
+
+    function createNoiseBuffer(audioContext) {
+      const length = Math.max(1, Math.floor(audioContext.sampleRate * 0.03));
+      const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+      const channel = buffer.getChannelData(0);
+
+      for (let index = 0; index < length; index += 1) {
+        channel[index] = Math.random() * 2 - 1;
+      }
+
+      return buffer;
+    }
+
+    function playSweep(options) {
+      if (isMuted) {
+        return;
+      }
+
+      const audioContext = ensureAudioReady();
+      if (!audioContext || !sound.masterGain) {
+        return;
+      }
+
+      const now = audioContext.currentTime;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = options.type || "triangle";
+      oscillator.frequency.setValueAtTime(options.from, now);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(options.to, 1), now + options.duration);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(options.gain, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + options.duration);
+
+      oscillator.connect(gain);
+      gain.connect(sound.masterGain);
+      oscillator.start(now);
+      oscillator.stop(now + options.duration + 0.02);
+    }
+
+    function playDirectionTick() {
+      if (isMuted) {
+        return;
+      }
+
+      const audioContext = ensureAudioReady();
+      if (!audioContext || !sound.masterGain) {
+        return;
+      }
+
+      if (!sound.noiseBuffer) {
+        sound.noiseBuffer = createNoiseBuffer(audioContext);
+      }
+
+      const now = audioContext.currentTime;
+      const source = audioContext.createBufferSource();
+      const filter = audioContext.createBiquadFilter();
+      const gain = audioContext.createGain();
+
+      source.buffer = sound.noiseBuffer;
+      filter.type = "highpass";
+      filter.frequency.setValueAtTime(1800, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.012, now + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.014);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(sound.masterGain);
+      source.start(now);
+      source.stop(now + 0.016);
+    }
+
+    function playSpeedRise() {
+      if (isMuted) {
+        return;
+      }
+
+      const audioContext = ensureAudioReady();
+      if (!audioContext || !sound.masterGain) {
+        return;
+      }
+
+      const notes = [520, 660, 820];
+      const now = audioContext.currentTime;
+
+      for (let index = 0; index < notes.length; index += 1) {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const start = now + index * 0.052;
+        const end = start + 0.07;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(notes[index], start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.022, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+        oscillator.connect(gain);
+        gain.connect(sound.masterGain);
+        oscillator.start(start);
+        oscillator.stop(end + 0.01);
+      }
+    }
+
+    function playEatSound() {
+      playSweep({
+        from: 400,
+        to: 800,
+        duration: 0.05,
+        gain: 0.05,
+        type: "triangle"
+      });
+    }
+
+    function playGameOverSound() {
+      playSweep({
+        from: 400,
+        to: 100,
+        duration: 0.3,
+        gain: 0.06,
+        type: "sawtooth"
+      });
     }
 
     function chooseGrid() {
@@ -910,6 +1121,7 @@
     }
 
     function endGame(reason) {
+      playGameOverSound();
       state.reason = reason;
       state.phase = "gameover";
       state.bestScore = Math.max(state.bestScore, state.score);
@@ -950,15 +1162,24 @@
 
       if (state.directionQueue.length < 2) {
         state.directionQueue.push(direction);
+        playDirectionTick();
       }
     }
 
     function eatFood(newHead) {
+      const previousStepDuration = getStepDuration();
+
       state.foods += 1;
       state.combo = state.comboTimer > 0 ? state.combo + 1 : 1;
       state.comboTimer = COMBO_WINDOW;
       state.multiplier = 1 + Math.floor((state.combo - 1) / 3);
       state.maxCombo = Math.max(state.maxCombo, state.multiplier);
+
+      const nextStepDuration = getStepDuration();
+      playEatSound();
+      if (previousStepDuration - nextStepDuration >= 0.006) {
+        playSpeedRise();
+      }
 
       const gained = 10 * state.multiplier;
       state.score += gained;
@@ -1413,6 +1634,7 @@
     }
 
     function onKeyDown(event) {
+      ensureAudioReady();
       const direction = directionMap[event.code];
       if (direction) {
         event.preventDefault();
@@ -1437,10 +1659,20 @@
     }
 
     function onPointerDown(event) {
+      if (event.target === dom.audioToggle) {
+        return;
+      }
+
+      ensureAudioReady();
       state.pointerStart = { x: event.clientX, y: event.clientY };
     }
 
     function onPointerUp(event) {
+      if (event.target === dom.audioToggle) {
+        return;
+      }
+
+      ensureAudioReady();
       if (!state.pointerStart) {
         return;
       }
@@ -1481,10 +1713,39 @@
       requestAnimationFrame(frame);
     }
 
-    dom.startButton.addEventListener("click", startGame);
-    dom.practiceButton.addEventListener("click", startGame);
-    dom.restartButton.addEventListener("click", startGame);
-    dom.menuButton.addEventListener("click", returnToTitle);
+    dom.audioToggle.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+      ensureAudioReady();
+    });
+
+    dom.audioToggle.addEventListener("pointerup", (event) => {
+      event.stopPropagation();
+    });
+
+    dom.audioToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      ensureAudioReady();
+      isMuted = !isMuted;
+      updateAudioToggle();
+    });
+
+    dom.startButton.addEventListener("click", () => {
+      ensureAudioReady();
+      startGame();
+    });
+    dom.practiceButton.addEventListener("click", () => {
+      ensureAudioReady();
+      startGame();
+    });
+    dom.restartButton.addEventListener("click", () => {
+      ensureAudioReady();
+      startGame();
+    });
+    dom.menuButton.addEventListener("click", () => {
+      ensureAudioReady();
+      returnToTitle();
+    });
 
     window.addEventListener("resize", resizeCanvas);
     window.addEventListener("keydown", onKeyDown, { passive: false });
@@ -1493,6 +1754,7 @@
 
     resetRun();
     setPhase("title");
+    updateAudioToggle();
     resizeCanvas();
     requestAnimationFrame(frame);
   </script>

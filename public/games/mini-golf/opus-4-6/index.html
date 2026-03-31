@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MINI GOLF 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#050510}
+body{font-family:'Courier New',Courier,monospace;color:#00ff66}
+canvas{display:block}
+#overlay{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#start-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,16,0.93);pointer-events:all;z-index:20}
+#start-screen h1{font-size:clamp(2rem,8vw,4rem);color:#00ff66;text-shadow:0 0 10px #00ff66,0 0 30px #00ff66,0 0 60px #00aa44;margin-bottom:0.6rem;letter-spacing:0.2em}
+#start-screen .sub{font-size:clamp(0.7rem,2vw,1rem);color:#88aa99;margin-bottom:2rem;text-align:center;padding:0 1.5rem;max-width:420px;line-height:1.6}
+.btn{pointer-events:all;cursor:pointer;background:transparent;border:2px solid #00ff66;color:#00ff66;padding:12px 36px;font-family:inherit;font-size:1rem;letter-spacing:0.15em;transition:all 0.2s;border-radius:4px;text-transform:uppercase}
+.btn:hover{background:#00ff66;color:#050510}
+.btn:active{transform:scale(0.95)}
+#hud{position:absolute;top:12px;left:12px;font-size:clamp(0.72rem,1.8vw,0.95rem);text-shadow:0 0 6px #00ff6688;line-height:1.7;display:none}
+#hud .hn{font-size:clamp(0.6rem,1.4vw,0.78rem);color:#55cc88;margin-bottom:2px;letter-spacing:0.1em}
+#hud .stroke-display{font-size:clamp(1rem,2.8vw,1.5rem);font-weight:bold;margin-top:4px;text-shadow:0 0 10px #00ff66,0 0 20px #00ff6644}
+#score-area{position:absolute;top:12px;right:12px;font-size:clamp(0.68rem,1.6vw,0.88rem);text-shadow:0 0 6px #00ff6688;text-align:right;display:none}
+#power-bar{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);width:clamp(100px,35vw,220px);height:18px;background:rgba(0,0,0,0.6);border:1px solid #00ff6644;border-radius:9px;overflow:hidden;display:none;pointer-events:none;box-shadow:0 0 8px rgba(0,255,102,0.2);transition:box-shadow 0.1s ease}
+#power-fill{height:100%;width:0%;border-radius:9px;background:linear-gradient(90deg,#00ff66,#aaff00,#ff8800,#ff2200);transition:width 0.05s ease-out}
+#aim-hint{position:absolute;bottom:56px;left:50%;transform:translateX(-50%);font-size:clamp(0.55rem,1.3vw,0.72rem);color:#55886688;text-align:center;display:none;white-space:nowrap;pointer-events:none;letter-spacing:0.08em}
+#hole-complete{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;display:none;pointer-events:all;background:rgba(5,5,16,0.92);padding:clamp(1.2rem,4vw,2.5rem) clamp(1.5rem,5vw,3rem);border:1px solid #00ff66;border-radius:8px;z-index:15}
+#hole-complete h2{font-size:clamp(1.1rem,4vw,2rem);text-shadow:0 0 10px #00ff66;margin-bottom:0.4rem}
+#hole-complete .st{font-size:clamp(0.8rem,2.5vw,1.2rem);color:#88ffaa;margin-bottom:0.2rem}
+#hole-complete .lb{font-size:clamp(0.9rem,3vw,1.4rem);color:#ffcc00;margin-bottom:1rem;text-shadow:0 0 8px #ffcc0066}
+#game-over{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;display:none;pointer-events:all;background:rgba(5,5,16,0.94);padding:clamp(1.2rem,4vw,2.5rem) clamp(1.5rem,5vw,3rem);border:1px solid #00ff66;border-radius:8px;max-width:92vw;z-index:15}
+#game-over h2{font-size:clamp(1.3rem,5vw,2.2rem);text-shadow:0 0 15px #00ff66;margin-bottom:0.8rem}
+#scorecard{margin:0 auto 1rem;font-size:clamp(0.6rem,1.4vw,0.8rem);border-collapse:collapse;width:100%}
+#scorecard th,#scorecard td{padding:4px 8px;border-bottom:1px solid #00ff6622;text-align:center}
+#scorecard th{color:#55cc88}
+#total-score{font-size:clamp(0.95rem,3vw,1.4rem);color:#ffcc00;margin-bottom:1rem;text-shadow:0 0 8px #ffcc0066}
+</style>
+</head>
+<body>
+<div id="overlay">
+  <div id="start-screen">
+    <h1>MINI GOLF 3D</h1>
+    <p class="sub">Click &amp; drag to aim — pull back like a slingshot.<br>Right-click or two-finger drag to orbit camera.<br>5 holes. Lowest score wins.</p>
+    <button class="btn" id="btn-start">&#9654; PLAY</button>
+  </div>
+  <div id="hud">
+    <div class="hn" id="hole-name">THE ROOKIE</div>
+    <div>HOLE <span id="hole-num">1</span> / 5</div>
+    <div>PAR <span id="par-num">2</span></div>
+    <div class="stroke-display">&#9971; <span id="stroke-num">0</span></div>
+  </div>
+  <div id="score-area">TOTAL <span id="total-display">0</span></div>
+  <div id="aim-hint">CLICK &amp; DRAG TO AIM</div>
+  <div id="power-bar"><div id="power-fill"></div></div>
+  <div id="hole-complete">
+    <h2 id="hc-title">HOLE COMPLETE!</h2>
+    <div class="st" id="hc-score"></div>
+    <div class="lb" id="hc-label"></div>
+    <button class="btn" id="btn-next">NEXT HOLE &#8594;</button>
+  </div>
+  <div id="game-over">
+    <h2>GAME COMPLETE</h2>
+    <table id="scorecard"><thead><tr><th>Hole</th><th>Par</th><th>Score</th><th>+/-</th></tr></thead><tbody id="scorecard-body"></tbody></table>
+    <div id="total-score"></div>
+    <button class="btn" id="btn-restart">&#9654; PLAY AGAIN</button>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ===================== CONSTANTS =====================
+const NEON = 0x00ff66;
+const NEON2 = 0x00cc55;
+const DARK_BG = 0x050510;
+const BALL_RADIUS = 0.1;
+const HOLE_RADIUS = 0.17;
+const WALL_H = 0.24;
+const FLOOR_THICK = 0.08;
+const FRICTION = 0.99;
+const RESTITUTION = 0.62;
+const BUMPER_RESTITUTION = 0.85;
+const MIN_SPEED = 0.004;
+const MAX_POWER = 30;
+const POWER_SCALE = 0.06;
+
+// ===================== COURSES =====================
+const COURSES = [
+  {
+    name: "THE ROOKIE", par: 2,
+    ballStart: { x: 0, z: 3.2 }, holePos: { x: 0, z: -3.2 },
+    outline: [[-1.5, 4], [1.5, 4], [1.5, -4], [-1.5, -4]],
+    innerWalls: [], bumpers: [], water: []
+  },
+  {
+    name: "THE DOGLEG", par: 3,
+    ballStart: { x: 0, z: 2.5 }, holePos: { x: 4, z: -5 },
+    outline: [[-1.5, 3.5], [1.5, 3.5], [1.5, -3.5], [5.5, -3.5], [5.5, -6.5], [-1.5, -6.5]],
+    innerWalls: [], bumpers: [], water: []
+  },
+  {
+    name: "THE SLALOM", par: 3,
+    ballStart: { x: 0, z: 5 }, holePos: { x: 0, z: -5 },
+    outline: [[-2.2, 6], [2.2, 6], [2.2, -6], [-2.2, -6]],
+    innerWalls: [
+      [-2.2, 3, 0.8, 3],
+      [-0.8, 0, 2.2, 0],
+      [-2.2, -3, 0.8, -3]
+    ],
+    bumpers: [], water: []
+  },
+  {
+    name: "PINBALL ALLEY", par: 3,
+    ballStart: { x: 0, z: 4.5 }, holePos: { x: 0, z: -4.5 },
+    outline: [[-2.5, 5.5], [2.5, 5.5], [2.5, -5.5], [-2.5, -5.5]],
+    innerWalls: [],
+    bumpers: [
+      { x: -1, z: 2.5, r: 0.38 },
+      { x: 1.3, z: 0.8, r: 0.32 },
+      { x: -0.6, z: -1, r: 0.35 },
+      { x: 1.1, z: -2.8, r: 0.38 },
+      { x: -1.4, z: -3.5, r: 0.28 }
+    ],
+    water: []
+  },
+  {
+    name: "THE GAUNTLET", par: 4,
+    ballStart: { x: 0, z: 6 }, holePos: { x: 0, z: -6 },
+    outline: [[-2.5, 7], [2.5, 7], [2.5, -7], [-2.5, -7]],
+    innerWalls: [
+      [-2.5, 4, 1, 4],
+      [-1, 1, 2.5, 1],
+      [-2.5, -2, 1, -2],
+      [-1, -5, 2.5, -5]
+    ],
+    bumpers: [
+      { x: 1.8, z: 5.5, r: 0.3 },
+      { x: -1.6, z: -0.5, r: 0.32 }
+    ],
+    water: [
+      { cx: -1.8, cz: 2.5, w: 1.2, l: 2 },
+      { cx: 1.8, cz: -3.5, w: 1.2, l: 2 }
+    ]
+  }
+];
+
+// ===================== STATE =====================
+const state = {
+  phase: 'start',
+  currentHole: 0,
+  strokes: 0,
+  totalStrokes: 0,
+  scores: [],
+  ballX: 0, ballZ: 0,
+  vx: 0, vz: 0,
+  preShotX: 0, preShotZ: 0,
+  aimScreenStart: null,
+  aimScreenCurrent: null,
+  dropping: false,
+  dropT: 0,
+  dropFrom: null,
+  splashing: false,
+  splashT: 0,
+  time: 0
+};
+
+// ===================== THREE.JS GLOBALS =====================
+let scene, camera, renderer, composer, controls;
+let ballMesh, ballGlow, courseGroup, aimGroup;
+let holeCupPos = new THREE.Vector3();
+let flagPole, flagCloth;
+let clock = new THREE.Clock();
+let particleSystem;
+let trailPoints = [];
+let trailLine;
+let cameraTransition = null;
+const raycaster = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+// ===================== DOM REFS =====================
+const $startScreen = document.getElementById('start-screen');
+const $hud = document.getElementById('hud');
+const $scoreArea = document.getElementById('score-area');
+const $holeName = document.getElementById('hole-name');
+const $holeNum = document.getElementById('hole-num');
+const $parNum = document.getElementById('par-num');
+const $strokeNum = document.getElementById('stroke-num');
+const $totalDisplay = document.getElementById('total-display');
+const $aimHint = document.getElementById('aim-hint');
+const $powerBar = document.getElementById('power-bar');
+const $powerFill = document.getElementById('power-fill');
+const $holeComplete = document.getElementById('hole-complete');
+const $hcTitle = document.getElementById('hc-title');
+const $hcScore = document.getElementById('hc-score');
+const $hcLabel = document.getElementById('hc-label');
+const $btnNext = document.getElementById('btn-next');
+const $gameOver = document.getElementById('game-over');
+const $scorecardBody = document.getElementById('scorecard-body');
+const $totalScore = document.getElementById('total-score');
+
+// ===================== INIT =====================
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(DARK_BG);
+  scene.fog = new THREE.FogExp2(DARK_BG, 0.018);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 8, 10);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  // Post-processing
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    1.2, 0.5, 0.3
+  );
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+
+  // Controls
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 3;
+  controls.maxDistance = 25;
+  controls.maxPolarAngle = Math.PI / 2.15;
+  controls.minPolarAngle = 0.2;
+  controls.mouseButtons = { LEFT: undefined, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.touches = { ONE: undefined, TWO: THREE.TOUCH.DOLLY_ROTATE };
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x222233, 0.6);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5, 15, 5);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far = 50;
+  dirLight.shadow.camera.left = -15;
+  dirLight.shadow.camera.right = 15;
+  dirLight.shadow.camera.top = 15;
+  dirLight.shadow.camera.bottom = -15;
+  scene.add(dirLight);
+  const pointLight = new THREE.PointLight(NEON, 0.3, 30);
+  pointLight.position.set(0, 5, 0);
+  scene.add(pointLight);
+
+  // Ball
+  createBall();
+
+  // Aim indicator
+  createAimIndicator();
+
+  // Particles
+  particleSystem = new ParticleSystem();
+
+  // Trail
+  const trailGeo = new THREE.BufferGeometry();
+  trailGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(300), 3));
+  const trailMat = new THREE.LineBasicMaterial({ color: NEON, transparent: true, opacity: 0.3 });
+  trailLine = new THREE.Line(trailGeo, trailMat);
+  scene.add(trailLine);
+
+  // Starfield
+  createStarfield();
+
+  // Infinite ground (dark void)
+  const voidGeo = new THREE.PlaneGeometry(200, 200);
+  const voidMat = new THREE.MeshStandardMaterial({ color: 0x020208, roughness: 1.0, metalness: 0.0 });
+  const voidMesh = new THREE.Mesh(voidGeo, voidMat);
+  voidMesh.rotation.x = -Math.PI / 2;
+  voidMesh.position.y = -0.5;
+  voidMesh.receiveShadow = true;
+  scene.add(voidMesh);
+
+  // Event listeners
+  setupEvents();
+
+  // Start loop
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== BALL =====================
+function createBall() {
+  const geo = new THREE.SphereGeometry(BALL_RADIUS, 24, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.15, metalness: 0.3,
+    emissive: NEON, emissiveIntensity: 0.3
+  });
+  ballMesh = new THREE.Mesh(geo, mat);
+  ballMesh.position.y = BALL_RADIUS;
+  ballMesh.castShadow = true;
+  scene.add(ballMesh);
+
+  // Glow sprite
+  const glowCanvas = document.createElement('canvas');
+  glowCanvas.width = 64; glowCanvas.height = 64;
+  const ctx = glowCanvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(0,255,102,0.6)');
+  grad.addColorStop(0.5, 'rgba(0,255,102,0.15)');
+  grad.addColorStop(1, 'rgba(0,255,102,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  const glowTex = new THREE.CanvasTexture(glowCanvas);
+  const glowMat = new THREE.SpriteMaterial({ map: glowTex, transparent: true, blending: THREE.AdditiveBlending });
+  ballGlow = new THREE.Sprite(glowMat);
+  ballGlow.scale.set(0.7, 0.7, 0.7);
+  ballMesh.add(ballGlow);
+}
+
+// ===================== AIM INDICATOR =====================
+function createAimIndicator() {
+  aimGroup = new THREE.Group();
+  aimGroup.visible = false;
+  scene.add(aimGroup);
+}
+
+function updateAimVisual(dir, power) {
+  aimGroup.visible = true;
+  while (aimGroup.children.length) aimGroup.remove(aimGroup.children[0]);
+
+  const normalizedPower = Math.min(power / MAX_POWER, 1);
+  const len = normalizedPower * 3.5;
+  if (len < 0.05) { aimGroup.visible = false; return; }
+
+  const origin = new THREE.Vector3(state.ballX, BALL_RADIUS, state.ballZ);
+  const tip = new THREE.Vector3(
+    state.ballX + dir.x * len,
+    BALL_RADIUS,
+    state.ballZ + dir.z * len
+  );
+
+  // Main line
+  const pts = [origin, tip];
+  const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+  const lineMat = new THREE.LineBasicMaterial({ color: NEON });
+  aimGroup.add(new THREE.Line(lineGeo, lineMat));
+
+  // Arrowhead
+  const headLen = Math.min(0.2, len * 0.3);
+  const headW = 0.08;
+  const fwd = new THREE.Vector2(dir.x, dir.z).normalize();
+  const perp = new THREE.Vector2(-fwd.y, fwd.x);
+  const p1 = new THREE.Vector3(tip.x, BALL_RADIUS, tip.z);
+  const p2 = new THREE.Vector3(
+    tip.x - fwd.x * headLen + perp.x * headW,
+    BALL_RADIUS,
+    tip.z - fwd.y * headLen + perp.y * headW
+  );
+  const p3 = new THREE.Vector3(
+    tip.x - fwd.x * headLen - perp.x * headW,
+    BALL_RADIUS,
+    tip.z - fwd.y * headLen - perp.y * headW
+  );
+  const triGeo = new THREE.BufferGeometry().setFromPoints([p1, p2, p3]);
+  triGeo.setIndex([0, 1, 2]);
+  triGeo.computeVertexNormals();
+  const triMat = new THREE.MeshBasicMaterial({ color: NEON, side: THREE.DoubleSide });
+  aimGroup.add(new THREE.Mesh(triGeo, triMat));
+
+  // Dotted extension (prediction)
+  const extLen = Math.min(6, len * 2);
+  const dashCount = Math.floor(extLen / 0.3);
+  for (let i = 0; i < dashCount; i++) {
+    const t0 = len + i * 0.3 + 0.1;
+    const t1 = t0 + 0.12;
+    const dPts = [
+      new THREE.Vector3(state.ballX + dir.x * t0, BALL_RADIUS * 0.5, state.ballZ + dir.z * t0),
+      new THREE.Vector3(state.ballX + dir.x * t1, BALL_RADIUS * 0.5, state.ballZ + dir.z * t1)
+    ];
+    const dGeo = new THREE.BufferGeometry().setFromPoints(dPts);
+    const dMat = new THREE.LineBasicMaterial({ color: NEON, transparent: true, opacity: 0.25 * (1 - i / dashCount) });
+    aimGroup.add(new THREE.Line(dGeo, dMat));
+  }
+
+  // Power bar
+  $powerBar.style.display = 'block';
+  $powerFill.style.width = (normalizedPower * 100) + '%';
+  // Dynamic glow based on power level
+  const glowIntensity = Math.round(normalizedPower * 20 + 4);
+  const glowColor = normalizedPower < 0.5 ? '0,255,102' : normalizedPower < 0.8 ? '255,200,0' : '255,50,0';
+  $powerBar.style.boxShadow = `0 0 ${glowIntensity}px rgba(${glowColor},${0.3 + normalizedPower * 0.5})`;
+}
+
+// ===================== COURSE BUILDING =====================
+function buildCourse(idx) {
+  if (courseGroup) {
+    scene.remove(courseGroup);
+    courseGroup.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) { if (Array.isArray(c.material)) c.material.forEach(m => m.dispose()); else c.material.dispose(); } });
+  }
+  courseGroup = new THREE.Group();
+  scene.add(courseGroup);
+
+  const course = COURSES[idx];
+  const outline = course.outline;
+
+  // Floor
+  createFloor(outline);
+
+  // Outline walls
+  for (let i = 0; i < outline.length; i++) {
+    const [x1, z1] = outline[i];
+    const [x2, z2] = outline[(i + 1) % outline.length];
+    createWallSegment(x1, z1, x2, z2);
+  }
+
+  // Inner walls
+  for (const w of course.innerWalls) {
+    createWallSegment(w[0], w[1], w[2], w[3]);
+  }
+
+  // Bumpers
+  for (const b of course.bumpers) {
+    createBumper(b.x, b.z, b.r);
+  }
+
+  // Water
+  for (const w of course.water) {
+    createWater(w.cx, w.cz, w.w, w.l);
+  }
+
+  // Hole cup
+  createHoleCup(course.holePos.x, course.holePos.z);
+  holeCupPos.set(course.holePos.x, 0, course.holePos.z);
+
+  // Flag
+  createFlag(course.holePos.x, course.holePos.z);
+
+  // Neon outline on ground
+  createNeonOutline(outline);
+
+  // Neon accent lights at hole and ball start
+  const holePL = new THREE.PointLight(NEON, 0.5, 10);
+  holePL.position.set(course.holePos.x, 1.5, course.holePos.z);
+  courseGroup.add(holePL);
+  const startPL = new THREE.PointLight(NEON, 0.5, 10);
+  startPL.position.set(course.ballStart.x, 1.5, course.ballStart.z);
+  courseGroup.add(startPL);
+}
+
+function createFloor(outline) {
+  const shape = new THREE.Shape();
+  shape.moveTo(outline[0][0], -outline[0][1]);
+  for (let i = 1; i < outline.length; i++) {
+    shape.lineTo(outline[i][0], -outline[i][1]);
+  }
+  shape.closePath();
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.rotateX(-Math.PI / 2);
+
+  // Create green texture
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a1a0e';
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = '#0d2214';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 256; i += 16) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide
+  });
+  mat.addEventListener('dispose', function () {
+    tex.dispose();
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0.001;
+  mesh.receiveShadow = true;
+  courseGroup.add(mesh);
+
+  // Slight rim around floor edge for depth
+  const extGeo = new THREE.ExtrudeGeometry(shape, { depth: FLOOR_THICK, bevelEnabled: false });
+  extGeo.rotateX(-Math.PI / 2);
+  const extMat = new THREE.MeshStandardMaterial({ color: 0x060d08, roughness: 0.95 });
+  const extMesh = new THREE.Mesh(extGeo, extMat);
+  extMesh.position.y = -FLOOR_THICK;
+  courseGroup.add(extMesh);
+}
+
+function createWallSegment(x1, z1, x2, z2) {
+  const dx = x2 - x1, dz = z2 - z1;
+  const len = Math.sqrt(dx * dx + dz * dz);
+  if (len < 0.001) return;
+  const angle = Math.atan2(dx, dz);
+  const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+
+  // Wall body
+  const geo = new THREE.BoxGeometry(0.06, WALL_H, len + 0.06);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x0a1f12, roughness: 0.85, metalness: 0.1, emissive: 0x002211, emissiveIntensity: 0.1 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(cx, WALL_H / 2, cz);
+  mesh.rotation.y = angle;
+  mesh.castShadow = true;
+  courseGroup.add(mesh);
+
+  // Neon top edge
+  const edgePts = [
+    new THREE.Vector3(x1, WALL_H + 0.005, z1),
+    new THREE.Vector3(x2, WALL_H + 0.005, z2)
+  ];
+  const edgeGeo = new THREE.BufferGeometry().setFromPoints(edgePts);
+  const edgeMat = new THREE.LineBasicMaterial({ color: NEON });
+  courseGroup.add(new THREE.Line(edgeGeo, edgeMat));
+
+  // Neon bottom edge
+  const botPts = [
+    new THREE.Vector3(x1, 0.01, z1),
+    new THREE.Vector3(x2, 0.01, z2)
+  ];
+  const botGeo = new THREE.BufferGeometry().setFromPoints(botPts);
+  courseGroup.add(new THREE.Line(botGeo, edgeMat.clone()));
+}
+
+function createNeonOutline(outline) {
+  // Ground-level bright outline
+  const pts = outline.map(([x, z]) => new THREE.Vector3(x, 0.008, z));
+  pts.push(pts[0].clone());
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineBasicMaterial({ color: NEON, transparent: true, opacity: 0.5 });
+  courseGroup.add(new THREE.Line(geo, mat));
+}
+
+function createBumper(x, z, r) {
+  const geo = new THREE.CylinderGeometry(r, r, WALL_H, 24);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x0d2a1a, roughness: 0.6, metalness: 0.3,
+    emissive: NEON, emissiveIntensity: 0.4
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, WALL_H / 2, z);
+  mesh.castShadow = true;
+  courseGroup.add(mesh);
+
+  // Neon rings top + bottom
+  const ringGeoT = new THREE.RingGeometry(r - 0.01, r + 0.02, 24);
+  ringGeoT.rotateX(-Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({ color: NEON, side: THREE.DoubleSide });
+  const ringT = new THREE.Mesh(ringGeoT, ringMat);
+  ringT.position.set(x, WALL_H + 0.005, z);
+  courseGroup.add(ringT);
+
+  const ringGeoB = ringGeoT.clone();
+  const ringB = new THREE.Mesh(ringGeoB, ringMat);
+  ringB.position.set(x, 0.01, z);
+  courseGroup.add(ringB);
+}
+
+function createWater(cx, cz, w, l) {
+  const geo = new THREE.PlaneGeometry(w, l, 8, 8);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x0033aa, transparent: true, opacity: 0.45,
+    roughness: 0.3, metalness: 0.5,
+    emissive: 0x0022aa, emissiveIntensity: 0.2
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(cx, 0.005, cz);
+  mesh.userData.isWater = true;
+  courseGroup.add(mesh);
+
+  // Neon border
+  const hw = w / 2, hl = l / 2;
+  const pts = [
+    new THREE.Vector3(cx - hw, 0.01, cz - hl),
+    new THREE.Vector3(cx + hw, 0.01, cz - hl),
+    new THREE.Vector3(cx + hw, 0.01, cz + hl),
+    new THREE.Vector3(cx - hw, 0.01, cz + hl),
+    new THREE.Vector3(cx - hw, 0.01, cz - hl)
+  ];
+  const borderGeo = new THREE.BufferGeometry().setFromPoints(pts);
+  const borderMat = new THREE.LineBasicMaterial({ color: 0x0066ff, transparent: true, opacity: 0.6 });
+  courseGroup.add(new THREE.Line(borderGeo, borderMat));
+}
+
+function createHoleCup(x, z) {
+  // Dark hole
+  const holeGeo = new THREE.CircleGeometry(HOLE_RADIUS, 24);
+  holeGeo.rotateX(-Math.PI / 2);
+  const holeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const hole = new THREE.Mesh(holeGeo, holeMat);
+  hole.position.set(x, 0.003, z);
+  courseGroup.add(hole);
+
+  // Neon rim
+  const rimGeo = new THREE.RingGeometry(HOLE_RADIUS - 0.015, HOLE_RADIUS + 0.025, 32);
+  rimGeo.rotateX(-Math.PI / 2);
+  const rimMat = new THREE.MeshBasicMaterial({ color: NEON, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.position.set(x, 0.004, z);
+  courseGroup.add(rim);
+
+  // Inner glow
+  const glowGeo = new THREE.RingGeometry(0, HOLE_RADIUS * 1.5, 24);
+  glowGeo.rotateX(-Math.PI / 2);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: NEON, transparent: true, opacity: 0.08, side: THREE.DoubleSide
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.position.set(x, 0.002, z);
+  courseGroup.add(glow);
+}
+
+function createFlag(x, z) {
+  if (flagPole) { scene.remove(flagPole); }
+  flagPole = new THREE.Group();
+
+  // Pole
+  const poleGeo = new THREE.CylinderGeometry(0.015, 0.015, 1.0, 8);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.3 });
+  const pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.y = 0.5;
+  flagPole.add(pole);
+
+  // Flag triangle
+  const flagShape = new THREE.Shape();
+  flagShape.moveTo(0, 0);
+  flagShape.lineTo(0.35, 0.1);
+  flagShape.lineTo(0, 0.22);
+  flagShape.closePath();
+  const flagGeo = new THREE.ShapeGeometry(flagShape);
+  const flagMat = new THREE.MeshBasicMaterial({ color: NEON, side: THREE.DoubleSide });
+  flagCloth = new THREE.Mesh(flagGeo, flagMat);
+  flagCloth.position.set(0.015, 0.78, 0);
+  flagPole.add(flagCloth);
+
+  flagPole.position.set(x, 0, z);
+  scene.add(flagPole);
+}
+
+// ===================== STARFIELD =====================
+function createStarfield() {
+  const count = 400;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 80;
+    positions[i * 3 + 1] = Math.random() * 40 + 5;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 80;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x334455, size: 0.12, sizeAttenuation: true });
+  scene.add(new THREE.Points(geo, mat));
+}
+
+// ===================== PARTICLES =====================
+class ParticleSystem {
+  constructor() {
+    this.particles = [];
+    this.maxParticles = 600;
+    this.positions = new Float32Array(this.maxParticles * 3);
+    this.colors = new Float32Array(this.maxParticles * 3);
+    this.sizes = new Float32Array(this.maxParticles);
+    this.geo = new THREE.BufferGeometry();
+    this.geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
+    this.geo.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
+    this.geo.setAttribute('size', new THREE.Float32BufferAttribute(this.sizes, 1));
+    this.mat = new THREE.PointsMaterial({
+      size: 0.06, vertexColors: true, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      sizeAttenuation: true
+    });
+    this.mesh = new THREE.Points(this.geo, this.mat);
+    scene.add(this.mesh);
+  }
+
+  emit(x, y, z, count, speed, color) {
+    const c = new THREE.Color(color || NEON);
+    for (let i = 0; i < count && this.particles.length < this.maxParticles; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const elev = (Math.random() - 0.3) * Math.PI;
+      const spd = speed * (0.5 + Math.random() * 0.5);
+      this.particles.push({
+        x, y, z,
+        vx: Math.cos(angle) * Math.cos(elev) * spd,
+        vy: Math.sin(elev) * spd * 1.5 + speed * 0.3,
+        vz: Math.sin(angle) * Math.cos(elev) * spd,
+        life: 1.0, decay: 1.2 + Math.random() * 0.8,
+        r: c.r, g: c.g, b: c.b
+      });
+    }
+  }
+
+  update(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.vy -= 4.0 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      p.life -= p.decay * dt;
+      if (p.life <= 0 || p.y < -1) {
+        this.particles.splice(i, 1);
+      }
+    }
+    const count = this.particles.length;
+    for (let i = 0; i < count; i++) {
+      const p = this.particles[i];
+      this.positions[i * 3] = p.x;
+      this.positions[i * 3 + 1] = p.y;
+      this.positions[i * 3 + 2] = p.z;
+      const a = Math.max(0, p.life);
+      this.colors[i * 3] = p.r * a;
+      this.colors[i * 3 + 1] = p.g * a;
+      this.colors[i * 3 + 2] = p.b * a;
+      this.sizes[i] = 0.06 * a;
+    }
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.color.needsUpdate = true;
+    this.geo.attributes.size.needsUpdate = true;
+    this.geo.setDrawRange(0, count);
+  }
+}
+
+// ===================== PHYSICS =====================
+function updatePhysics(dt) {
+  if (state.phase !== 'rolling') return;
+
+  const speed = Math.sqrt(state.vx * state.vx + state.vz * state.vz);
+  if (speed < MIN_SPEED) {
+    state.vx = 0; state.vz = 0;
+    state.phase = 'playing';
+    $aimHint.style.display = 'block';
+    return;
+  }
+
+  const maxStepDist = 0.008;
+  const numSteps = Math.max(1, Math.ceil(speed * dt / maxStepDist));
+  const stepDt = dt / numSteps;
+  const stepFriction = Math.pow(FRICTION, 1.0 / numSteps);
+  const course = COURSES[state.currentHole];
+
+  for (let s = 0; s < numSteps; s++) {
+    state.vx *= stepFriction;
+    state.vz *= stepFriction;
+    state.ballX += state.vx * stepDt;
+    state.ballZ += state.vz * stepDt;
+
+    // Wall collisions (outline)
+    const outline = course.outline;
+    for (let i = 0; i < outline.length; i++) {
+      const [x1, z1] = outline[i];
+      const [x2, z2] = outline[(i + 1) % outline.length];
+      wallCollision(x1, z1, x2, z2);
+    }
+
+    // Inner walls
+    for (const w of course.innerWalls) {
+      wallCollision(w[0], w[1], w[2], w[3]);
+    }
+
+    // Bumpers
+    for (const b of course.bumpers) {
+      bumperCollision(b.x, b.z, b.r);
+    }
+
+    // Water
+    for (const w of course.water) {
+      if (inRect(state.ballX, state.ballZ, w.cx, w.cz, w.w, w.l)) {
+        handleWater();
+        return;
+      }
+    }
+
+    // Hole detection
+    const hdx = state.ballX - course.holePos.x;
+    const hdz = state.ballZ - course.holePos.z;
+    const holeDist = Math.sqrt(hdx * hdx + hdz * hdz);
+    const curSpeed = Math.sqrt(state.vx * state.vx + state.vz * state.vz);
+    if (holeDist < HOLE_RADIUS * 0.85 && curSpeed < 3.0) {
+      handleHoleIn();
+      return;
+    }
+    // Ball near hole gets pulled in slightly
+    if (holeDist < HOLE_RADIUS * 1.3 && curSpeed < 1.5) {
+      const pullStrength = 0.4 * stepDt;
+      state.vx -= hdx / holeDist * pullStrength;
+      state.vz -= hdz / holeDist * pullStrength;
+    }
+
+    // Out of bounds check
+    if (!pointInPolygon(state.ballX, state.ballZ, outline)) {
+      // Defensive: if preShotPos also out of bounds, use ball start
+      if (pointInPolygon(state.preShotX, state.preShotZ, outline)) {
+        state.ballX = state.preShotX;
+        state.ballZ = state.preShotZ;
+      } else {
+        const course = COURSES[state.currentHole];
+        state.ballX = course.ballStart.x;
+        state.ballZ = course.ballStart.z;
+      }
+      state.vx = 0; state.vz = 0;
+      state.phase = 'playing';
+      $aimHint.style.display = 'block';
+      return;
+    }
+  }
+}
+
+function wallCollision(x1, z1, x2, z2) {
+  const dx = x2 - x1, dz = z2 - z1;
+  const len2 = dx * dx + dz * dz;
+  if (len2 < 0.0001) return;
+
+  let t = ((state.ballX - x1) * dx + (state.ballZ - z1) * dz) / len2;
+  t = Math.max(0, Math.min(1, t));
+
+  const closestX = x1 + t * dx;
+  const closestZ = z1 + t * dz;
+  const distX = state.ballX - closestX;
+  const distZ = state.ballZ - closestZ;
+  const dist = Math.sqrt(distX * distX + distZ * distZ);
+
+  if (dist < BALL_RADIUS && dist > 0.0001) {
+    const nx = distX / dist;
+    const nz = distZ / dist;
+    state.ballX = closestX + nx * (BALL_RADIUS + 0.001);
+    state.ballZ = closestZ + nz * (BALL_RADIUS + 0.001);
+
+    const dot = state.vx * nx + state.vz * nz;
+    if (dot < 0) {
+      state.vx -= 2 * dot * nx;
+      state.vz -= 2 * dot * nz;
+      state.vx *= RESTITUTION;
+      state.vz *= RESTITUTION;
+      particleSystem.emit(closestX, BALL_RADIUS, closestZ, 6, 1.0, NEON);
+    }
+  }
+}
+
+function bumperCollision(bx, bz, br) {
+  const dx = state.ballX - bx;
+  const dz = state.ballZ - bz;
+  const dist = Math.sqrt(dx * dx + dz * dz);
+  const minDist = BALL_RADIUS + br;
+
+  if (dist < minDist && dist > 0.0001) {
+    const nx = dx / dist;
+    const nz = dz / dist;
+    state.ballX = bx + nx * (minDist + 0.001);
+    state.ballZ = bz + nz * (minDist + 0.001);
+
+    const dot = state.vx * nx + state.vz * nz;
+    if (dot < 0) {
+      state.vx -= 2 * dot * nx;
+      state.vz -= 2 * dot * nz;
+      state.vx *= BUMPER_RESTITUTION;
+      state.vz *= BUMPER_RESTITUTION;
+      particleSystem.emit(
+        bx + nx * br, BALL_RADIUS, bz + nz * br,
+        10, 1.5, NEON
+      );
+    }
+  }
+}
+
+function inRect(x, z, cx, cz, w, l) {
+  return x > cx - w / 2 && x < cx + w / 2 && z > cz - l / 2 && z < cz + l / 2;
+}
+
+function pointInPolygon(px, pz, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], zi = poly[i][1];
+    const xj = poly[j][0], zj = poly[j][1];
+    if ((zi > pz) !== (zj > pz) && px < (xj - xi) * (pz - zi) / (zj - zi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// ===================== GAME EVENTS =====================
+function handleWater() {
+  state.vx = 0; state.vz = 0;
+  state.phase = 'splash';
+  state.splashT = 0;
+  particleSystem.emit(state.ballX, 0.1, state.ballZ, 25, 2.0, 0x0066ff);
+  state.strokes++;
+  updateHUD();
+}
+
+function handleHoleIn() {
+  state.vx = 0; state.vz = 0;
+  state.phase = 'dropping';
+  state.dropT = 0;
+  state.dropFrom = { x: state.ballX, z: state.ballZ };
+  particleSystem.emit(
+    COURSES[state.currentHole].holePos.x, 0.3,
+    COURSES[state.currentHole].holePos.z,
+    40, 3.0, NEON
+  );
+  particleSystem.emit(
+    COURSES[state.currentHole].holePos.x, 0.2,
+    COURSES[state.currentHole].holePos.z,
+    20, 2.0, 0xffcc00
+  );
+}
+
+function showHoleComplete() {
+  const course = COURSES[state.currentHole];
+  const diff = state.strokes - course.par;
+  let label = 'PAR';
+  if (state.strokes === 1) label = '★ HOLE IN ONE ★';
+  else if (diff <= -3) label = 'ALBATROSS!';
+  else if (diff === -2) label = 'EAGLE!';
+  else if (diff === -1) label = 'BIRDIE!';
+  else if (diff === 0) label = 'PAR';
+  else if (diff === 1) label = 'BOGEY';
+  else if (diff === 2) label = 'DOUBLE BOGEY';
+  else label = '+' + diff;
+
+  state.scores.push(state.strokes);
+  state.totalStrokes += state.strokes;
+
+  $hcTitle.textContent = state.strokes === 1 ? '★ HOLE IN ONE! ★' : 'HOLE COMPLETE!';
+  $hcScore.textContent = state.strokes + ' stroke' + (state.strokes !== 1 ? 's' : '') + ' (Par ' + course.par + ')';
+  $hcLabel.textContent = label;
+  $btnNext.textContent = state.currentHole < COURSES.length - 1 ? 'NEXT HOLE →' : 'VIEW RESULTS';
+  $holeComplete.style.display = 'block';
+  state.phase = 'holeComplete';
+}
+
+function showGameOver() {
+  $holeComplete.style.display = 'none';
+  let totalPar = 0;
+  $scorecardBody.innerHTML = '';
+  for (let i = 0; i < COURSES.length; i++) {
+    const c = COURSES[i];
+    const s = state.scores[i];
+    totalPar += c.par;
+    const diff = s - c.par;
+    const diffStr = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : '' + diff);
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${i + 1}</td><td>${c.par}</td><td>${s}</td><td style="color:${diff <= 0 ? '#00ff66' : '#ff6644'}">${diffStr}</td>`;
+    $scorecardBody.appendChild(row);
+  }
+  const totalDiff = state.totalStrokes - totalPar;
+  const totalStr = totalDiff === 0 ? 'EVEN PAR' : (totalDiff > 0 ? '+' + totalDiff + ' OVER PAR' : Math.abs(totalDiff) + ' UNDER PAR');
+  $totalScore.textContent = 'TOTAL: ' + state.totalStrokes + ' (' + totalStr + ')';
+  $gameOver.style.display = 'block';
+  state.phase = 'gameOver';
+}
+
+// ===================== GAME SETUP =====================
+function startGame() {
+  state.currentHole = 0;
+  state.totalStrokes = 0;
+  state.scores = [];
+  $startScreen.style.display = 'none';
+  $gameOver.style.display = 'none';
+  loadHole(0);
+}
+
+function loadHole(idx) {
+  state.currentHole = idx;
+  state.strokes = 0;
+  const course = COURSES[idx];
+  state.ballX = course.ballStart.x;
+  state.ballZ = course.ballStart.z;
+  state.preShotX = state.ballX;
+  state.preShotZ = state.ballZ;
+  state.vx = 0; state.vz = 0;
+  state.phase = 'playing';
+  state.dropping = false;
+  state.splashing = false;
+
+  buildCourse(idx);
+  ballMesh.visible = true;
+  ballMesh.position.set(state.ballX, BALL_RADIUS, state.ballZ);
+
+  // Smooth camera transition
+  const dirX = course.holePos.x - course.ballStart.x;
+  const dirZ = course.holePos.z - course.ballStart.z;
+  const dirLen = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
+  const targetCamPos = new THREE.Vector3(
+    course.ballStart.x - (dirX / dirLen) * 5,
+    7,
+    course.ballStart.z - (dirZ / dirLen) * 5
+  );
+  const targetLookAt = new THREE.Vector3(state.ballX, 0, state.ballZ);
+  cameraTransition = { from: camera.position.clone(), to: targetCamPos, lookFrom: controls.target.clone(), lookTo: targetLookAt, t: 0, duration: 0.8 };
+  controls.target.copy(targetLookAt);
+  controls.update();
+
+  // Clear trail
+  trailPoints = [];
+
+  // Update HUD
+  updateHUD();
+  $hud.style.display = 'block';
+  $scoreArea.style.display = 'block';
+  $aimHint.style.display = 'block';
+  $holeComplete.style.display = 'none';
+  $powerBar.style.display = 'none';
+  aimGroup.visible = false;
+}
+
+function updateHUD() {
+  const course = COURSES[state.currentHole];
+  $holeName.textContent = course.name;
+  $holeNum.textContent = state.currentHole + 1;
+  $parNum.textContent = course.par;
+  $strokeNum.textContent = state.strokes;
+  $totalDisplay.textContent = state.totalStrokes + state.strokes;
+}
+
+// ===================== AIM / INPUT =====================
+function screenToGround(sx, sy) {
+  const mouse = new THREE.Vector2(
+    (sx / window.innerWidth) * 2 - 1,
+    -(sy / window.innerHeight) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+  const target = new THREE.Vector3();
+  raycaster.ray.intersectPlane(groundPlane, target);
+  return target;
+}
+
+function startAim(sx, sy) {
+  if (state.phase !== 'playing') return;
+  state.phase = 'aiming';
+  state.aimScreenStart = { x: sx, y: sy };
+  state.aimScreenCurrent = { x: sx, y: sy };
+  $aimHint.style.display = 'none';
+}
+
+function moveAim(sx, sy) {
+  if (state.phase !== 'aiming') return;
+  state.aimScreenCurrent = { x: sx, y: sy };
+
+  const worldStart = screenToGround(state.aimScreenStart.x, state.aimScreenStart.y);
+  const worldCurrent = screenToGround(sx, sy);
+  if (!worldStart || !worldCurrent) return;
+
+  // Direction is opposite of drag (slingshot)
+  const dragX = worldCurrent.x - worldStart.x;
+  const dragZ = worldCurrent.z - worldStart.z;
+  const dragLen = Math.sqrt(dragX * dragX + dragZ * dragZ);
+
+  if (dragLen < 0.05) {
+    aimGroup.visible = false;
+    $powerBar.style.display = 'none';
+    return;
+  }
+
+  const dir = { x: -dragX / dragLen, z: -dragZ / dragLen };
+  const power = Math.min(dragLen * 6, MAX_POWER);
+
+  updateAimVisual(dir, power);
+}
+
+function releaseAim() {
+  if (state.phase !== 'aiming') return;
+
+  const worldStart = screenToGround(state.aimScreenStart.x, state.aimScreenStart.y);
+  const worldCurrent = screenToGround(state.aimScreenCurrent.x, state.aimScreenCurrent.y);
+
+  aimGroup.visible = false;
+  $powerBar.style.display = 'none';
+
+  if (!worldStart || !worldCurrent) { state.phase = 'playing'; $aimHint.style.display = 'block'; return; }
+
+  const dragX = worldCurrent.x - worldStart.x;
+  const dragZ = worldCurrent.z - worldStart.z;
+  const dragLen = Math.sqrt(dragX * dragX + dragZ * dragZ);
+
+  if (dragLen < 0.1) { state.phase = 'playing'; $aimHint.style.display = 'block'; return; }
+
+  const power = Math.min(dragLen * 6, MAX_POWER);
+  const dirX = -dragX / dragLen;
+  const dirZ = -dragZ / dragLen;
+
+  state.preShotX = state.ballX;
+  state.preShotZ = state.ballZ;
+  state.vx = dirX * power;
+  state.vz = dirZ * power;
+  state.strokes++;
+  state.phase = 'rolling';
+  updateHUD();
+
+  // Small launch particles
+  particleSystem.emit(state.ballX, BALL_RADIUS, state.ballZ, 8, 0.8, NEON);
+}
+
+function cancelAim() {
+  if (state.phase !== 'aiming') return;
+  state.phase = 'playing';
+  aimGroup.visible = false;
+  $powerBar.style.display = 'none';
+  $aimHint.style.display = 'block';
+}
+
+// ===================== EVENTS =====================
+function setupEvents() {
+  const canvas = renderer.domElement;
+
+  // Pointer events for aiming
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (state.phase === 'playing') {
+      startAim(e.clientX, e.clientY);
+      e.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    moveAim(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    releaseAim();
+  });
+
+  canvas.addEventListener('pointerleave', () => {
+    cancelAim();
+  });
+
+  // Prevent context menu on canvas
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Buttons
+  document.getElementById('btn-start').addEventListener('click', startGame);
+  $btnNext.addEventListener('click', () => {
+    if (state.currentHole < COURSES.length - 1) {
+      loadHole(state.currentHole + 1);
+    } else {
+      showGameOver();
+    }
+  });
+  document.getElementById('btn-restart').addEventListener('click', startGame);
+
+  // Keyboard shortcut (R to restart hole)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      if (state.phase === 'playing' || state.phase === 'rolling') {
+        loadHole(state.currentHole);
+      }
+    }
+    if (e.key === ' ' || e.key === 'Enter') {
+      if (state.phase === 'holeComplete') $btnNext.click();
+    }
+  });
+
+  // Resize
+  window.addEventListener('resize', () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    composer.setSize(w, h);
+  });
+}
+
+// ===================== GAME LOOP =====================
+let prevTime = 0;
+
+function gameLoop(time) {
+  requestAnimationFrame(gameLoop);
+
+  const rawDt = (time - prevTime) / 1000;
+  prevTime = time;
+  const dt = Math.min(rawDt, 0.05);
+  state.time = time / 1000;
+
+  // Physics
+  updatePhysics(dt);
+
+  // Drop animation
+  if (state.phase === 'dropping') {
+    state.dropT += dt;
+    const t = Math.min(state.dropT / 0.6, 1);
+    const course = COURSES[state.currentHole];
+    if (t < 0.5) {
+      const tt = t * 2;
+      ballMesh.position.x = lerp(state.dropFrom.x, course.holePos.x, easeInOut(tt));
+      ballMesh.position.z = lerp(state.dropFrom.z, course.holePos.z, easeInOut(tt));
+      ballMesh.position.y = BALL_RADIUS;
+    } else {
+      const tt = (t - 0.5) * 2;
+      ballMesh.position.x = course.holePos.x;
+      ballMesh.position.z = course.holePos.z;
+      ballMesh.position.y = BALL_RADIUS * (1 - easeIn(tt));
+      ballMesh.scale.setScalar(1 - tt * 0.3);
+    }
+    if (t >= 1) {
+      ballMesh.visible = false;
+      ballMesh.scale.setScalar(1);
+      showHoleComplete();
+    }
+  }
+
+  // Splash / water reset animation
+  if (state.phase === 'splash') {
+    state.splashT += dt;
+    if (state.splashT < 0.4) {
+      ballMesh.position.y = BALL_RADIUS * (1 - state.splashT / 0.4);
+    } else if (state.splashT < 0.8) {
+      ballMesh.visible = false;
+    } else {
+      state.ballX = state.preShotX;
+      state.ballZ = state.preShotZ;
+      ballMesh.position.set(state.ballX, BALL_RADIUS, state.ballZ);
+      ballMesh.visible = true;
+      state.phase = 'playing';
+      $aimHint.style.display = 'block';
+    }
+  }
+
+  // Update ball visual
+  if (state.phase === 'playing' || state.phase === 'aiming' || state.phase === 'rolling') {
+    ballMesh.position.x = state.ballX;
+    ballMesh.position.z = state.ballZ;
+    ballMesh.position.y = BALL_RADIUS;
+  }
+
+  // Ball pulse when idle
+  if (state.phase === 'playing' || state.phase === 'aiming') {
+    const pulse = 0.25 + 0.2 * Math.sin(state.time * 4);
+    ballMesh.material.emissiveIntensity = pulse;
+    ballGlow.scale.setScalar(0.6 + 0.15 * Math.sin(state.time * 3));
+  } else {
+    ballMesh.material.emissiveIntensity = 0.2;
+  }
+
+  // Rolling ball rotation
+  if (state.phase === 'rolling') {
+    const speed = Math.sqrt(state.vx * state.vx + state.vz * state.vz);
+    if (speed > 0.01) {
+      const axis = new THREE.Vector3(-state.vz, 0, state.vx).normalize();
+      const angularVel = speed / BALL_RADIUS;
+      ballMesh.rotateOnWorldAxis(axis, angularVel * dt);
+    }
+  }
+
+  // Trail
+  if (state.phase === 'rolling') {
+    trailPoints.push({ x: state.ballX, y: BALL_RADIUS * 0.3, z: state.ballZ, age: 0 });
+    if (trailPoints.length > 80) trailPoints.shift();
+  }
+  for (let i = trailPoints.length - 1; i >= 0; i--) {
+    trailPoints[i].age += dt * 2;
+    if (trailPoints[i].age > 1) { trailPoints.splice(i, 1); }
+  }
+  updateTrail();
+
+  // Animate water
+  courseGroup && courseGroup.traverse(child => {
+    if (child.userData.isWater && child.geometry) {
+      const posAttr = child.geometry.attributes.position;
+      const arr = posAttr.array;
+      for (let i = 0; i < posAttr.count; i++) {
+        arr[i * 3 + 1] = Math.sin(state.time * 2 + arr[i * 3] * 3) * 0.015 +
+                          Math.cos(state.time * 1.5 + arr[i * 3 + 2] * 2) * 0.01;
+      }
+      posAttr.needsUpdate = true;
+    }
+  });
+
+  // Animate flag
+  if (flagCloth) {
+    flagCloth.rotation.y = Math.sin(state.time * 3) * 0.15;
+    flagCloth.position.x = 0.015 + Math.sin(state.time * 4) * 0.01;
+  }
+
+  // Camera smooth follow
+  if (cameraTransition) {
+    cameraTransition.t += dt / cameraTransition.duration;
+    if (cameraTransition.t >= 1) {
+      camera.position.copy(cameraTransition.to);
+      controls.target.copy(cameraTransition.lookTo);
+      cameraTransition = null;
+    } else {
+      const ease = easeInOut(cameraTransition.t);
+      camera.position.lerpVectors(cameraTransition.from, cameraTransition.to, ease);
+      controls.target.lerpVectors(cameraTransition.lookFrom, cameraTransition.lookTo, ease);
+    }
+  } else if (state.phase === 'rolling' || state.phase === 'playing' || state.phase === 'aiming') {
+    const target = new THREE.Vector3(state.ballX, 0, state.ballZ);
+    controls.target.lerp(target, state.phase === 'rolling' ? 0.05 : 0.03);
+  }
+  controls.update();
+
+  // Particles
+  particleSystem.update(dt);
+
+  // Render
+  composer.render();
+}
+
+function updateTrail() {
+  const posAttr = trailLine.geometry.attributes.position;
+  const arr = posAttr.array;
+  const count = trailPoints.length;
+  for (let i = 0; i < count; i++) {
+    arr[i * 3] = trailPoints[i].x;
+    arr[i * 3 + 1] = trailPoints[i].y;
+    arr[i * 3 + 2] = trailPoints[i].z;
+  }
+  posAttr.needsUpdate = true;
+  trailLine.geometry.setDrawRange(0, count);
+  trailLine.material.opacity = 0.3;
+}
+
+// ===================== UTILS =====================
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+function easeIn(t) { return t * t; }
+
+// ===================== START =====================
+init();
+</script>
+</body>
+</html>

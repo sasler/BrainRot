@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MINI GOLF 3D</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; }
+body { font-family: 'Courier New', monospace; }
+canvas { display: block; }
+
+#ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(5, 5, 16, 0.93);
+  pointer-events: all;
+  gap: 1.2rem; padding: 2rem;
+}
+.screen.hidden { display: none; }
+
+.neon-title {
+  font-size: clamp(2rem, 8vw, 5rem);
+  font-weight: bold; color: #00ff66;
+  text-shadow: 0 0 10px #00ff66, 0 0 30px #00ff66, 0 0 60px #00ff66;
+  letter-spacing: 0.15em; text-align: center;
+}
+.neon-sub {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  color: #00ff66; text-shadow: 0 0 10px #00ff66;
+  letter-spacing: 0.1em; text-align: center;
+}
+.instructions {
+  max-width: 500px; text-align: center;
+  font-size: clamp(0.7rem, 2vw, 0.95rem);
+  color: #66cc99; line-height: 2.0;
+  border: 1px solid #00ff6630; padding: 1rem 1.5rem;
+  background: rgba(0,255,102,0.03);
+}
+.neon-btn {
+  padding: 0.7em 2.5em;
+  font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+  font-family: inherit; font-weight: bold;
+  letter-spacing: 0.15em; color: #050510;
+  background: #00ff66; border: none; cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 0 15px #00ff66, 0 0 30px #00ff6660;
+  transition: all 0.15s;
+}
+.neon-btn:hover { background: #66ffaa; transform: scale(1.05); box-shadow: 0 0 25px #00ff66, 0 0 50px #00ff66; }
+.neon-btn:active { transform: scale(0.98); }
+
+/* HUD */
+#hud { position: absolute; inset: 0; pointer-events: none; }
+#hud.hidden { display: none; }
+#hud-top {
+  position: absolute; top: 0.8rem; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  padding: 0 0.8rem; gap: 0.4rem;
+}
+.hud-panel {
+  background: rgba(5,5,16,0.78); border: 1px solid #00ff6640;
+  padding: 0.35rem 0.7rem; text-align: center; min-width: 70px;
+}
+.hud-lbl { font-size: 0.6rem; color: #00ff6680; letter-spacing: 0.08em; text-transform: uppercase; }
+.hud-val { font-size: 1.1rem; color: #00ff66; font-weight: bold; line-height: 1.3; }
+
+#aim-hint {
+  position: absolute; bottom: 5.5rem; left: 50%; transform: translateX(-50%);
+  color: #00ff6650; font-size: 0.75rem; letter-spacing: 0.08em;
+  pointer-events: none; text-align: center; white-space: nowrap;
+}
+#power-wrap {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  width: 190px; display: none; flex-direction: column; align-items: center; gap: 0.3rem;
+}
+#power-wrap.show { display: flex; }
+#power-track { width: 100%; height: 10px; background: rgba(0,255,102,0.12); border: 1px solid #00ff6640; overflow: hidden; }
+#power-fill { height: 100%; width: 0%; background: linear-gradient(to right, #00ff66, #ffff00, #ff4444); box-shadow: 0 0 8px #00ff66; }
+#power-lbl { font-size: 0.68rem; color: #00ff6670; letter-spacing: 0.1em; }
+
+/* Hole Complete */
+.score-breakdown { font-size: clamp(0.8rem, 2.5vw, 1.1rem); color: #66cc99; text-align: center; line-height: 2.2; }
+.score-result { font-size: clamp(1.5rem, 5vw, 2.5rem); font-weight: bold; text-align: center; }
+.r-eagle  { color: #ffdd00; text-shadow: 0 0 15px #ffdd00; }
+.r-birdie { color: #00ff66; text-shadow: 0 0 15px #00ff66; }
+.r-par    { color: #ffffff; }
+.r-bogey  { color: #ff8844; text-shadow: 0 0 10px #ff8844; }
+.r-bad    { color: #ff4444; text-shadow: 0 0 10px #ff4444; }
+
+/* Score table */
+.score-tbl { border-collapse: collapse; font-size: clamp(0.65rem, 1.8vw, 0.9rem); color: #66cc99; }
+.score-tbl th, .score-tbl td { padding: 0.25rem 0.7rem; text-align: center; border-bottom: 1px solid #00ff6620; }
+.score-tbl th { color: #00ff66; }
+.score-tbl .tot td { color: #00ff66; font-weight: bold; border-top: 1px solid #00ff6640; }
+
+/* Penalty flash */
+#penalty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(1rem, 3vw, 1.5rem); color: #ff4444; text-shadow: 0 0 15px #ff4444; pointer-events: none; opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
+#penalty.show { opacity: 1; }
+
+/* Floating message */
+#floatmsg { position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%); font-size: clamp(1.5rem, 5vw, 3rem); font-weight: bold; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s; white-space: nowrap; }
+#floatmsg.show { opacity: 1; }
+
+/* Hole name overlay */
+#hole-announce {
+  position: absolute; top: 40%; left: 50%; transform: translate(-50%,-50%);
+  text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.5s;
+}
+#hole-announce.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<div id="ui">
+
+  <!-- Start Screen -->
+  <div class="screen" id="scr-start">
+    <div class="neon-title">⛳ MINI GOLF 3D</div>
+    <div class="instructions">
+      <b>🖱 LEFT DRAG</b> — Pull back to aim &amp; set power, release to shoot<br>
+      <b>🖱 RIGHT DRAG</b> — Rotate camera<br>
+      <b>📱 1 FINGER</b> — Aim &amp; shoot &nbsp;|&nbsp; <b>2 FINGERS</b> — Orbit<br>
+      <br>
+      5 Holes · Ramps · Water Hazards · Obstacles<br>
+      Beat par to become a legend!
+    </div>
+    <button class="neon-btn" id="btn-start">PLAY GAME</button>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-top">
+      <div class="hud-panel">
+        <div class="hud-lbl">Hole</div>
+        <div class="hud-val" id="hv-hole">1 / 5</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-lbl">Strokes</div>
+        <div class="hud-val" id="hv-strokes">0</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-lbl">Par</div>
+        <div class="hud-val" id="hv-par">—</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-lbl">Total</div>
+        <div class="hud-val" id="hv-total">0</div>
+      </div>
+    </div>
+    <div id="aim-hint">◀ DRAG TO AIM &amp; SHOOT ▶</div>
+    <div id="power-wrap">
+      <div id="power-track"><div id="power-fill"></div></div>
+      <div id="power-lbl">POWER</div>
+    </div>
+  </div>
+
+  <!-- Hole Complete -->
+  <div class="screen hidden" id="scr-hole">
+    <div class="neon-sub" id="hc-num">HOLE 1</div>
+    <div class="neon-title" style="font-size:clamp(1.4rem,5vw,3rem)" id="hc-name">THE GREEN</div>
+    <div class="score-breakdown" id="hc-breakdown">Strokes: 2 &nbsp;|&nbsp; Par: 2</div>
+    <div class="score-result" id="hc-result">PAR</div>
+    <button class="neon-btn" id="btn-next">NEXT HOLE →</button>
+  </div>
+
+  <!-- Game Over -->
+  <div class="screen hidden" id="scr-over">
+    <div class="neon-title" style="font-size:clamp(1.8rem,6vw,3.5rem)">⛳ GAME COMPLETE!</div>
+    <div id="over-tbl-wrap"></div>
+    <div class="score-result" id="over-total" style="color:#fff"></div>
+    <button class="neon-btn" id="btn-again">PLAY AGAIN</button>
+  </div>
+
+  <!-- Hole announce -->
+  <div id="hole-announce">
+    <div class="neon-sub" id="ann-num" style="font-size:clamp(1rem,3vw,1.4rem)">HOLE 1</div>
+    <div class="neon-title" style="font-size:clamp(1.8rem,6vw,3.5rem)" id="ann-name">THE GREEN</div>
+    <div class="neon-sub" id="ann-par" style="color:#ffffff;font-size:clamp(0.9rem,2.5vw,1.2rem)">PAR 2</div>
+  </div>
+
+  <div id="floatmsg"></div>
+  <div id="penalty">+1 STROKE — WATER HAZARD!</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ══════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════
+const BALL_R      = 0.22;
+const GRAVITY     = 26;
+const FRICTION    = 0.93;       // velocity multiplier per second on ground
+const WALL_REST   = 0.52;
+const FLOOR_REST  = 0.22;
+const MAX_POWER   = 22;
+const DRAG_SCALE  = 0.07;       // pixels → power units
+const HOLE_R      = 0.36;
+const HOLE_SPDSQ  = 20;         // max speed² for capture
+const STOP_VEL    = 0.07;
+const FALL_Y      = -1.8;
+const TILE_H      = 0.42;
+
+// ══════════════════════════════════════════════════════
+//  RENDERER & SCENE
+// ══════════════════════════════════════════════════════
+const canvas = document.getElementById('gc');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+scene.fog = new THREE.FogExp2(0x050510, 0.016);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+camera.position.set(0, 10, -15);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.minDistance = 3;
+controls.maxDistance = 55;
+controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.touches  = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ══════════════════════════════════════════════════════
+//  LIGHTING
+// ══════════════════════════════════════════════════════
+scene.add(new THREE.AmbientLight(0x334455, 0.5));
+
+const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+sun.position.set(8, 20, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5;
+sun.shadow.camera.far = 100;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -40;
+sun.shadow.camera.right = sun.shadow.camera.top = 40;
+scene.add(sun);
+
+const neonFill = new THREE.PointLight(0x00ff66, 0.25, 35);
+neonFill.position.set(0, 6, 0);
+scene.add(neonFill);
+
+// ══════════════════════════════════════════════════════
+//  MATERIALS
+// ══════════════════════════════════════════════════════
+const matTile = new THREE.MeshStandardMaterial({
+  color: 0x071a08, roughness: 0.88, metalness: 0.0,
+  emissive: 0x001f08, emissiveIntensity: 0.5 });
+
+const matRamp = new THREE.MeshStandardMaterial({
+  color: 0x0c2010, roughness: 0.82, metalness: 0.05,
+  emissive: 0x003018, emissiveIntensity: 0.45 });
+
+const matWall = new THREE.MeshStandardMaterial({
+  color: 0x0a0a22, roughness: 0.7, metalness: 0.4,
+  emissive: 0x00082a, emissiveIntensity: 0.6 });
+
+const matWater = new THREE.MeshStandardMaterial({
+  color: 0x001228, roughness: 0.0, metalness: 0.9,
+  emissive: 0x001840, emissiveIntensity: 0.6,
+  transparent: true, opacity: 0.88 });
+
+const matObs = new THREE.MeshStandardMaterial({
+  color: 0x200a0c, roughness: 0.55, metalness: 0.55,
+  emissive: 0x3a0010, emissiveIntensity: 0.8 });
+
+const matRot = new THREE.MeshStandardMaterial({
+  color: 0x180820, roughness: 0.4, metalness: 0.7,
+  emissive: 0x3500a0, emissiveIntensity: 0.9 });
+
+const matNeon = new THREE.MeshStandardMaterial({
+  color: 0x00ff66, emissive: 0x00ff66, emissiveIntensity: 1.1,
+  roughness: 0.2, metalness: 0.0 });
+
+const matHole = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 1.0 });
+const matPole = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, metalness: 0.8, roughness: 0.2, emissive: 0x222222 });
+const matFlag = new THREE.MeshStandardMaterial({ color: 0x00ff66, emissive: 0x00ff66, emissiveIntensity: 0.8, side: THREE.DoubleSide });
+
+// ══════════════════════════════════════════════════════
+//  STARS
+// ══════════════════════════════════════════════════════
+{
+  const g = new THREE.BufferGeometry();
+  const N = 700, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    pos[i*3]   = (Math.random() - 0.5) * 500;
+    pos[i*3+1] = Math.random() * 120 + 15;
+    pos[i*3+2] = (Math.random() - 0.5) * 500;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.55 })));
+}
+
+// ══════════════════════════════════════════════════════
+//  BALL
+// ══════════════════════════════════════════════════════
+const ballMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff, roughness: 0.08, metalness: 0.35,
+  emissive: 0x00ff66, emissiveIntensity: 0.18 });
+const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 18), ballMat);
+ballMesh.castShadow = true;
+scene.add(ballMesh);
+
+const ballLight = new THREE.PointLight(0x00ff66, 0.9, 5);
+scene.add(ballLight);
+
+// Ball trail
+const TRAIL_LEN = 18;
+const trailPositions = new Float32Array(TRAIL_LEN * 3);
+const trailGeom = new THREE.BufferGeometry();
+trailGeom.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+const trailMat = new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.35 });
+const trailLine = new THREE.Line(trailGeom, trailMat);
+scene.add(trailLine);
+const trailBuf = Array.from({ length: TRAIL_LEN }, () => new THREE.Vector3());
+let trailTimer = 0;
+
+// ══════════════════════════════════════════════════════
+//  AIM INDICATOR
+// ══════════════════════════════════════════════════════
+const aimGroup = new THREE.Group();
+scene.add(aimGroup);
+
+// Arrow shaft
+const aimShaftMat = new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.82 });
+const aimShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 6), aimShaftMat);
+aimGroup.add(aimShaft);
+
+// Arrow head
+const aimHeadMat = new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.9 });
+const aimHead = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.28, 6), aimHeadMat);
+aimGroup.add(aimHead);
+
+// Aim dots (trajectory preview)
+const AIM_DOTS = 7;
+const aimDots = [];
+for (let i = 0; i < AIM_DOTS; i++) {
+  const r = 0.075 - i * 0.007;
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(Math.max(r, 0.02), 6, 5),
+    new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.65 - i * 0.07 })
+  );
+  scene.add(dot);
+  aimDots.push(dot);
+}
+
+aimGroup.visible = false;
+aimDots.forEach(d => d.visible = false);
+
+// ══════════════════════════════════════════════════════
+//  PARTICLES
+// ══════════════════════════════════════════════════════
+const MAX_PART = 250;
+const partPool = [];
+const partGeom = new THREE.SphereGeometry(0.07, 5, 4);
+const PART_COLORS = [0x00ff66, 0x66ff00, 0xffff00, 0x00ffcc, 0xffffff, 0xff88ff];
+
+function spawnParticles(pos, count = 35) {
+  for (let i = 0; i < count; i++) {
+    let p = partPool.find(p => !p.alive);
+    if (!p) {
+      const mesh = new THREE.Mesh(partGeom, new THREE.MeshBasicMaterial({ transparent: true }));
+      p = { mesh, vel: new THREE.Vector3(), life: 0, maxLife: 0, alive: false };
+      scene.add(mesh);
+      partPool.push(p);
+    }
+    if (partPool.length > MAX_PART) break;
+    p.mesh.visible = true;
+    p.mesh.position.copy(pos);
+    p.vel.set((Math.random()-0.5)*8, Math.random()*7+2, (Math.random()-0.5)*8);
+    p.life = 0;
+    p.maxLife = 0.7 + Math.random() * 0.7;
+    p.alive = true;
+    p.mesh.material.color.setHex(PART_COLORS[Math.floor(Math.random() * PART_COLORS.length)]);
+    p.mesh.material.opacity = 1;
+    p.mesh.scale.setScalar(1);
+  }
+}
+
+function updateParticles(dt) {
+  for (const p of partPool) {
+    if (!p.alive) continue;
+    p.life += dt;
+    if (p.life >= p.maxLife) { p.alive = false; p.mesh.visible = false; continue; }
+    p.vel.y -= 14 * dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    const t = p.life / p.maxLife;
+    p.mesh.scale.setScalar(1.2 * (1 - t));
+    p.mesh.material.opacity = 1 - t * t;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  COURSE DEFINITIONS
+// ══════════════════════════════════════════════════════
+// Tile/ramp y = top surface Y.  Wall y = bottom Y.
+
+const COURSES = [
+
+  // ── HOLE 1: The Fairway (Par 2) ─────────────────────
+  // Simple straight introduction
+  {
+    name: 'THE FAIRWAY', par: 2,
+    ballStart: new THREE.Vector3(0, BALL_R, -7),
+    holePos:   new THREE.Vector3(0, 0, 7.2),
+    tiles: [{ x:0, y:0, z:0, w:4, d:17 }],
+    walls: [
+      { x:-2.5, y:0, z:0,    w:1, h:0.9, d:17.2 },
+      { x: 2.5, y:0, z:0,    w:1, h:0.9, d:17.2 },
+      { x:0,    y:0, z:-9.1, w:6, h:0.9, d:0.8  },
+    ],
+    ramps: [], water: [], obstacles: [], rotating: null,
+  },
+
+  // ── HOLE 2: The Dogleg (Par 3) ─────────────────────
+  // L-shape turn with corner bumper
+  {
+    name: 'THE DOGLEG', par: 3,
+    ballStart: new THREE.Vector3(-5, BALL_R, 0),
+    holePos:   new THREE.Vector3(4, 0, 8.5),
+    tiles: [
+      { x:0,  y:0, z:0,   w:12, d:4 },   // horizontal arm
+      { x:4,  y:0, z:7.5, w:4,  d:15 },  // vertical arm (overlaps corner)
+    ],
+    walls: [
+      // horizontal arm
+      { x:0,    y:0, z:-2.6, w:12.4, h:0.9, d:0.8 },
+      { x:-6.6, y:0, z:0,    w:0.8,  h:0.9, d:4.4 },
+      { x:-2.5, y:0, z:2.6,  w:7.4,  h:0.9, d:0.8 },
+      // vertical arm
+      { x:1.4,  y:0, z:7.5,  w:0.8,  h:0.9, d:15.2 },
+      { x:6.6,  y:0, z:7.5,  w:0.8,  h:0.9, d:15.2 },
+      { x:4,    y:0, z:15.6, w:5.4,  h:0.9, d:0.8  },
+      // corner bumper
+      { x:-0.5, y:0, z:0.5,  w:1.6,  h:0.9, d:1.6  },
+    ],
+    ramps: [], water: [], obstacles: [], rotating: null,
+  },
+
+  // ── HOLE 3: The Hill (Par 3) ────────────────────────
+  // Ramp up to an elevated green
+  {
+    name: 'THE HILL', par: 3,
+    ballStart: new THREE.Vector3(0, BALL_R, -5),
+    holePos:   new THREE.Vector3(0, 2.6, 10),
+    tiles: [
+      { x:0, y:0,   z:-1.5, w:4, d:9 },   // lower  z=-6..3
+      { x:0, y:2.6, z:9.5,  w:4, d:7 },   // upper  z=6..13
+    ],
+    walls: [
+      // lower platform
+      { x:-2.5, y:0,   z:-1.5, w:1, h:0.9, d:9   },
+      { x: 2.5, y:0,   z:-1.5, w:1, h:0.9, d:9   },
+      { x:0,    y:0,   z:-6.1, w:5, h:0.9, d:0.8  },
+      // upper platform
+      { x:-2.5, y:2.6, z:9.5,  w:1, h:0.9, d:7.4  },
+      { x: 2.5, y:2.6, z:9.5,  w:1, h:0.9, d:7.4  },
+      { x:0,    y:2.6, z:13.3, w:5, h:0.9, d:0.8  },
+    ],
+    ramps: [
+      // z0=3 → z1=6, y0=0 → y1=2.6, width=4
+      { x:0, w:4, z0:3, z1:6, y0:0, y1:2.6 },
+    ],
+    water: [], obstacles: [], rotating: null,
+  },
+
+  // ── HOLE 4: The Bridge (Par 4) ──────────────────────
+  // Narrow bridge over a water hazard, zigzag bumpers
+  {
+    name: 'THE BRIDGE', par: 4,
+    ballStart: new THREE.Vector3(0, BALL_R, -4),
+    holePos:   new THREE.Vector3(0, 0, 22),
+    tiles: [
+      { x:0, y:0, z:0,   w:6,   d:10 },   // start  z=-5..5
+      { x:0, y:0, z:11,  w:2.0, d:12 },   // bridge z=5..17
+      { x:0, y:0, z:22,  w:6,   d:10 },   // end    z=17..27
+    ],
+    walls: [
+      // start
+      { x:-3.5, y:0, z:0,   w:1,  h:0.9, d:10  },
+      { x: 3.5, y:0, z:0,   w:1,  h:0.9, d:10  },
+      { x:0,    y:0, z:-5.6, w:8, h:0.9, d:0.8 },
+      // bridge
+      { x:-1.5, y:0, z:11,  w:0.8, h:0.9, d:12 },
+      { x: 1.5, y:0, z:11,  w:0.8, h:0.9, d:12 },
+      // end platform
+      { x:-3.5, y:0, z:22,  w:1,  h:0.9, d:10  },
+      { x: 3.5, y:0, z:22,  w:1,  h:0.9, d:10  },
+      { x:0,    y:0, z:27.6, w:8, h:0.9, d:0.8 },
+    ],
+    ramps: [],
+    water: [
+      { x:-5,  z:11, w:7, d:12 },
+      { x: 5,  z:11, w:7, d:12 },
+    ],
+    obstacles: [
+      { x:-1.2, y:0, z:19,  w:1.4, h:0.9, d:1.4 },
+      { x: 1.2, y:0, z:21.5,w:1.4, h:0.9, d:1.4 },
+    ],
+    rotating: null,
+  },
+
+  // ── HOLE 5: The Gauntlet (Par 5) ────────────────────
+  // Narrow chute → obstacle island → ramp → elevated green with rotating gate
+  {
+    name: 'THE GAUNTLET', par: 5,
+    ballStart: new THREE.Vector3(0, BALL_R, -5),
+    holePos:   new THREE.Vector3(0, 3.2, 31),
+    tiles: [
+      { x:0, y:0,   z:0,    w:5,   d:10  },  // start   z=-5..5
+      { x:0, y:0,   z:11,   w:2.2, d:12  },  // narrow  z=5..17
+      { x:0, y:0,   z:19.5, w:7,   d:7   },  // mid     z=16..23
+      { x:0, y:3.2, z:30,   w:5,   d:10  },  // top     z=25..35
+    ],
+    walls: [
+      // start
+      { x:-3,   y:0,   z:0,    w:1,  h:0.9, d:10  },
+      { x: 3,   y:0,   z:0,    w:1,  h:0.9, d:10  },
+      { x:0,    y:0,   z:-5.6, w:7,  h:0.9, d:0.8 },
+      // narrow
+      { x:-1.6, y:0,   z:11,   w:0.8,h:0.9, d:12  },
+      { x: 1.6, y:0,   z:11,   w:0.8,h:0.9, d:12  },
+      // mid
+      { x:-4,   y:0,   z:19.5, w:1,  h:0.9, d:7   },
+      { x: 4,   y:0,   z:19.5, w:1,  h:0.9, d:7   },
+      { x:0,    y:0,   z:23.1, w:9,  h:0.9, d:0.8 },
+      // elevated
+      { x:-3,   y:3.2, z:30,   w:1,  h:0.9, d:10  },
+      { x: 3,   y:3.2, z:30,   w:1,  h:0.9, d:10  },
+      { x:0,    y:3.2, z:35.6, w:7,  h:0.9, d:0.8 },
+    ],
+    ramps: [
+      { x:0, w:5, z0:23, z1:26.5, y0:0, y1:3.2 },
+    ],
+    water: [
+      { x:-5,  z:11,   w:7, d:12 },
+      { x: 5,  z:11,   w:7, d:12 },
+    ],
+    obstacles: [
+      { x:-1.3, y:0, z:18,   w:1.4, h:0.9, d:1.4 },
+      { x: 1.3, y:0, z:20.8, w:1.4, h:0.9, d:1.4 },
+    ],
+    rotating: { x:0, y:3.2, z:29.5, armLen:4.6, h:0.55, d:0.42, speed:1.5 },
+  },
+];
+
+// ══════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════
+let gState = 'start'; // start | idle | aiming | rolling | completing | hole_complete | game_over
+let holeIdx = 0, holeStrokes = 0, totalStrokes = 0, holeScores = [];
+
+const ballPos = new THREE.Vector3();
+const ballVel = new THREE.Vector3();
+let ballGround = false;
+const lastSafe = new THREE.Vector3();
+let ballInHole = false, sinkT = 0;
+let penaltyFlash = 0;
+let msgTimer = 0;
+
+// Physics collections (filled by loadHole)
+let phyTiles = [], phyWalls = [], phyRamps = [], phyWater = [];
+let holeMeshes = [];
+let rotMesh = null, rotSpeed = 0;
+let holeData = null;
+let waterTime = 0;
+let waterMeshes = [];
+
+// Aim
+let isAiming = false;
+const aimStart = new THREE.Vector2();
+const aimCurr  = new THREE.Vector2();
+const aimDir   = new THREE.Vector3();
+let aimPower = 0;
+
+// Camera follow
+const camTarget = new THREE.Vector3();
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function addEdges(geom, parent, opacity = 0.45) {
+  const eg = new THREE.EdgesGeometry(geom, 25);
+  const em = new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity });
+  parent.add(new THREE.LineSegments(eg, em));
+}
+
+function makeMesh(geom, mat, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(geom, mat.clone());
+  m.rotation.set(rx, ry, rz);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+
+function resolveWall(bp, bv, w) {
+  // Sphere–AABB collision and resolution
+  const cx = Math.max(w.x0, Math.min(bp.x, w.x1));
+  const cy = Math.max(w.y0, Math.min(bp.y, w.y1));
+  const cz = Math.max(w.z0, Math.min(bp.z, w.z1));
+  const dx = bp.x - cx, dy = bp.y - cy, dz = bp.z - cz;
+  const d2 = dx*dx + dy*dy + dz*dz;
+  if (d2 < BALL_R * BALL_R && d2 > 1e-8) {
+    const d = Math.sqrt(d2);
+    const nx = dx/d, ny = dy/d, nz = dz/d;
+    const pen = BALL_R - d;
+    bp.x += nx * pen; bp.y += ny * pen; bp.z += nz * pen;
+    const vn = bv.x*nx + bv.y*ny + bv.z*nz;
+    if (vn < 0) {
+      const f = -(1 + WALL_REST) * vn;
+      bv.x += nx*f; bv.y += ny*f; bv.z += nz*f;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  COURSE LOADER
+// ══════════════════════════════════════════════════════
+function loadHole(idx) {
+  // Dispose old
+  for (const m of holeMeshes) {
+    scene.remove(m);
+    if (m.geometry) m.geometry.dispose();
+  }
+  holeMeshes = []; waterMeshes = []; rotMesh = null;
+  phyTiles = []; phyWalls = []; phyRamps = []; phyWater = [];
+
+  const hole = COURSES[idx];
+  holeData = hole;
+
+  function add(mesh) {
+    scene.add(mesh);
+    holeMeshes.push(mesh);
+    return mesh;
+  }
+
+  // ── TILES ──────────────────────────────────────────
+  for (const t of hole.tiles) {
+    const g = new THREE.BoxGeometry(t.w, TILE_H, t.d);
+    const m = makeMesh(g, matTile);
+    m.position.set(t.x, t.y - TILE_H / 2, t.z);
+    add(m);
+    addEdges(g, m, 0.4);
+    // subtle top tint
+    const topG = new THREE.PlaneGeometry(t.w - 0.05, t.d - 0.05);
+    const topM = new THREE.Mesh(topG, new THREE.MeshStandardMaterial({ color: 0x00ff66, emissive: 0x00ff66, emissiveIntensity: 0.07, roughness: 1, transparent: true, opacity: 0.18 }));
+    topM.rotation.x = -Math.PI / 2;
+    topM.position.set(t.x, t.y + 0.001, t.z);
+    add(topM);
+
+    phyTiles.push({ y: t.y, x0: t.x - t.w/2, x1: t.x + t.w/2, z0: t.z - t.d/2, z1: t.z + t.d/2 });
+  }
+
+  // ── RAMPS ──────────────────────────────────────────
+  for (const r of hole.ramps) {
+    const dz = r.z1 - r.z0, dy = r.y1 - r.y0;
+    const L  = Math.sqrt(dz*dz + dy*dy);
+    const ang = Math.atan2(dy, dz);
+    const g = new THREE.BoxGeometry(r.w, TILE_H, L);
+    const m = makeMesh(g, matRamp, -ang, 0, 0);
+    m.position.set(r.x, (r.y0 + r.y1) / 2, (r.z0 + r.z1) / 2);
+    add(m);
+    addEdges(g, m, 0.5);
+
+    phyRamps.push({ y0: r.y0, y1: r.y1, z0: r.z0, z1: r.z1,
+      x0: r.x - r.w/2, x1: r.x + r.w/2, dy, dz, L });
+  }
+
+  // ── WALLS ──────────────────────────────────────────
+  for (const w of hole.walls) {
+    const g = new THREE.BoxGeometry(w.w, w.h, w.d);
+    const m = makeMesh(g, matWall);
+    m.position.set(w.x, w.y + w.h/2, w.z);
+    add(m);
+    addEdges(g, m, 0.7);
+
+    phyWalls.push({ x0: w.x - w.w/2, x1: w.x + w.w/2, y0: w.y, y1: w.y + w.h, z0: w.z - w.d/2, z1: w.z + w.d/2 });
+  }
+
+  // ── WATER ──────────────────────────────────────────
+  for (const wa of hole.water) {
+    const g = new THREE.BoxGeometry(wa.w, 0.3, wa.d);
+    const m = new THREE.Mesh(g, matWater.clone());
+    m.position.set(wa.x, -0.22, wa.z);
+    add(m);
+    waterMeshes.push(m);
+    phyWater.push({ x0: wa.x - wa.w/2, x1: wa.x + wa.w/2, z0: wa.z - wa.d/2, z1: wa.z + wa.d/2 });
+  }
+
+  // ── OBSTACLES ──────────────────────────────────────
+  for (const ob of hole.obstacles) {
+    const g = new THREE.BoxGeometry(ob.w, ob.h, ob.d);
+    const m = makeMesh(g, matObs);
+    m.position.set(ob.x, ob.y + ob.h/2, ob.z);
+    add(m);
+    addEdges(g, m, 0.9);
+    // Red glow under obstacle
+    const gl = new THREE.PointLight(0xff2244, 0.5, 4);
+    m.add(gl);
+
+    phyWalls.push({ x0: ob.x - ob.w/2, x1: ob.x + ob.w/2, y0: ob.y, y1: ob.y + ob.h, z0: ob.z - ob.d/2, z1: ob.z + ob.d/2 });
+  }
+
+  // ── ROTATING OBSTACLE ──────────────────────────────
+  if (hole.rotating) {
+    const ro = hole.rotating;
+    const g  = new THREE.BoxGeometry(ro.armLen * 2, ro.h, ro.d);
+    rotMesh  = makeMesh(g, matRot);
+    rotMesh.position.set(ro.x, ro.y + ro.h/2, ro.z);
+    add(rotMesh);
+    addEdges(g, rotMesh, 1.0);
+    const gl = new THREE.PointLight(0xaa00ff, 0.8, 7);
+    rotMesh.add(gl);
+    rotSpeed = ro.speed;
+  }
+
+  // ── HOLE CUP + FLAG ────────────────────────────────
+  {
+    const hp = hole.holePos;
+
+    // Hole cup
+    const cupG = new THREE.CylinderGeometry(HOLE_R, HOLE_R, 0.12, 18);
+    const cup  = new THREE.Mesh(cupG, matHole);
+    cup.position.set(hp.x, hp.y - 0.06, hp.z);
+    add(cup);
+
+    // Rim ring (neon green)
+    const rimG = new THREE.TorusGeometry(HOLE_R + 0.02, 0.04, 6, 26);
+    const rim  = new THREE.Mesh(rimG, matNeon.clone());
+    rim.position.set(hp.x, hp.y + 0.01, hp.z);
+    rim.rotation.x = Math.PI / 2;
+    add(rim);
+
+    // Flag pole
+    const poleG = new THREE.CylinderGeometry(0.04, 0.04, 2.8, 6);
+    const pole  = new THREE.Mesh(poleG, matPole.clone());
+    pole.position.set(hp.x, hp.y + 1.4, hp.z);
+    add(pole);
+
+    // Flag (triangle)
+    const fG = new THREE.BufferGeometry();
+    fG.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0,0,0, 0.65,-0.22,0, 0,-0.52,0]), 3));
+    const flag = new THREE.Mesh(fG, matFlag.clone());
+    flag.position.set(hp.x, hp.y + 2.7, hp.z);
+    add(flag);
+
+    // Soft light at hole
+    const holeLight = new THREE.PointLight(0x00ff66, 0.5, 5);
+    holeLight.position.set(hp.x, hp.y + 1, hp.z);
+    add(holeLight);
+  }
+
+  // ── TEE MARKER ─────────────────────────────────────
+  {
+    const sp = hole.ballStart;
+    const teeG = new THREE.CylinderGeometry(0.18, 0.18, 0.06, 12);
+    const tee  = new THREE.Mesh(teeG, matNeon.clone());
+    tee.position.set(sp.x, sp.y - BALL_R + 0.03, sp.z);
+    add(tee);
+  }
+
+  // ── DECORATIVE EDGE TRIM ───────────────────────────
+  // Place thin neon strips along long edges for extra visual flair
+  for (const t of hole.tiles) {
+    const stripG = new THREE.BoxGeometry(t.w + 0.02, 0.04, 0.04);
+    for (const zOff of [t.z - t.d/2, t.z + t.d/2]) {
+      const strip = new THREE.Mesh(stripG, matNeon.clone());
+      strip.position.set(t.x, t.y + 0.001, zOff);
+      add(strip);
+    }
+  }
+
+  // ── INIT BALL ──────────────────────────────────────
+  ballPos.copy(hole.ballStart);
+  ballVel.set(0, 0, 0);
+  ballGround = true;
+  ballInHole = false;
+  sinkT = 0;
+  lastSafe.copy(hole.ballStart);
+  ballMesh.scale.setScalar(1);
+  ballMesh.visible = true;
+  trailBuf.forEach(v => v.copy(hole.ballStart));
+
+  // ── CAMERA ─────────────────────────────────────────
+  const sp = hole.ballStart, hp2 = hole.holePos;
+  const mid = sp.clone().lerp(hp2, 0.25);
+  const dist = sp.distanceTo(hp2) * 0.65;
+  camera.position.set(sp.x, sp.y + Math.max(9, dist * 0.5), sp.z - Math.max(13, dist * 0.7));
+  controls.target.copy(mid);
+  camTarget.copy(mid);
+  controls.update();
+
+  neonFill.position.set(mid.x, mid.y + 6, mid.z);
+}
+
+// ══════════════════════════════════════════════════════
+//  PHYSICS UPDATE
+// ══════════════════════════════════════════════════════
+function physicsUpdate(dt) {
+  if (gState !== 'rolling' || ballInHole) return;
+  dt = Math.min(dt, 1/30);
+
+  // Apply gravity
+  if (!ballGround) ballVel.y -= GRAVITY * dt;
+
+  // Move
+  ballPos.addScaledVector(ballVel, dt);
+  ballGround = false;
+
+  // ── TILE COLLISIONS ────────────────────────────────
+  for (const t of phyTiles) {
+    if (ballPos.x < t.x0 || ballPos.x > t.x1) continue;
+    if (ballPos.z < t.z0 || ballPos.z > t.z1) continue;
+    if (ballPos.y - BALL_R > t.y + 0.05) continue;       // ball above surface
+    if (ballPos.y < t.y - 1.5) continue;                  // ball far below (ignore)
+    if (ballPos.y - BALL_R < t.y) {
+      ballPos.y = t.y + BALL_R;
+      if (ballVel.y < 0) {
+        ballVel.y = Math.abs(ballVel.y) > 0.6 ? -ballVel.y * FLOOR_REST : 0;
+      }
+    }
+    ballGround = true;
+  }
+
+  // ── RAMP COLLISIONS ────────────────────────────────
+  for (const r of phyRamps) {
+    if (ballPos.x < r.x0 || ballPos.x > r.x1) continue;
+    const clampZ = Math.max(r.z0, Math.min(ballPos.z, r.z1));
+    const t   = (clampZ - r.z0) / (r.z1 - r.z0);
+    const surfY = r.y0 + t * (r.y1 - r.y0);
+    if (ballPos.z < r.z0 - 0.15 || ballPos.z > r.z1 + 0.15) continue;
+    if (ballPos.y - BALL_R > surfY + 0.08) continue;
+    if (ballPos.y < surfY - 1.5) continue;
+
+    if (ballPos.y - BALL_R < surfY) {
+      ballPos.y = surfY + BALL_R;
+      // Reflect along ramp normal
+      const invL = 1 / r.L;
+      const ny = r.dz * invL, nz = -r.dy * invL; // normal in YZ
+      const vn = ballVel.y * ny + ballVel.z * nz;
+      if (vn < 0) {
+        ballVel.y -= (1 + FLOOR_REST) * vn * ny;
+        ballVel.z -= (1 + FLOOR_REST) * vn * nz;
+      }
+    }
+    ballGround = true;
+    // Slope gravity (tangent acceleration downhill)
+    const L2 = r.L * r.L;
+    ballVel.z += (-GRAVITY * r.dz * r.dy / L2) * dt;
+  }
+
+  // ── FRICTION ───────────────────────────────────────
+  if (ballGround) {
+    const fr = Math.pow(FRICTION, dt * 60);
+    ballVel.x *= fr; ballVel.z *= fr;
+    if (Math.abs(ballVel.x) < 0.001) ballVel.x = 0;
+    if (Math.abs(ballVel.z) < 0.001) ballVel.z = 0;
+    lastSafe.copy(ballPos);
+  }
+
+  // ── WALL / OBSTACLE COLLISIONS ─────────────────────
+  for (const w of phyWalls) resolveWall(ballPos, ballVel, w);
+
+  // ── ROTATING OBSTACLE ──────────────────────────────
+  if (rotMesh) {
+    rotMesh.updateWorldMatrix(true, false);
+    const box = new THREE.Box3().setFromObject(rotMesh);
+    resolveWall(ballPos, ballVel, { x0: box.min.x, x1: box.max.x, y0: box.min.y, y1: box.max.y, z0: box.min.z, z1: box.max.z });
+  }
+
+  // ── WATER / VOID ───────────────────────────────────
+  if (ballPos.y < FALL_Y) { handlePenalty(); return; }
+  for (const w of phyWater) {
+    if (ballPos.x > w.x0 && ballPos.x < w.x1 && ballPos.z > w.z0 && ballPos.z < w.z1 && ballPos.y < 0.4) {
+      handlePenalty(); return;
+    }
+  }
+
+  // ── HOLE CAPTURE ───────────────────────────────────
+  if (ballGround) {
+    const hp = holeData.holePos;
+    const dx = ballPos.x - hp.x, dz = ballPos.z - hp.z;
+    const spd2 = ballVel.x*ballVel.x + ballVel.y*ballVel.y + ballVel.z*ballVel.z;
+    if (dx*dx + dz*dz < HOLE_R*HOLE_R && spd2 < HOLE_SPDSQ) {
+      handleHoleIn(); return;
+    }
+  }
+
+  // ── STOP DETECTION ─────────────────────────────────
+  if (ballGround) {
+    const spd2 = ballVel.x*ballVel.x + ballVel.z*ballVel.z;
+    if (spd2 < STOP_VEL*STOP_VEL && Math.abs(ballVel.y) < STOP_VEL) {
+      ballVel.set(0, 0, 0);
+      gState = 'idle';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  GAME EVENTS
+// ══════════════════════════════════════════════════════
+function handlePenalty() {
+  holeStrokes++;
+  ballVel.set(0, 0, 0);
+  ballPos.copy(lastSafe);
+  ballMesh.scale.setScalar(1);
+  gState = 'idle';
+  penaltyFlash = 2.0;
+  const el = document.getElementById('penalty');
+  el.classList.add('show');
+  updateHUD();
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function handleHoleIn() {
+  ballInHole = true;
+  gState = 'completing';
+  sinkT = 0;
+  spawnParticles(ballPos, 45);
+  // Extra burst particles at hole
+  spawnParticles(holeData.holePos.clone().setY(holeData.holePos.y + 0.3), 25);
+
+  const diff = holeStrokes - holeData.par;
+  holeScores.push({ hole: holeIdx + 1, name: holeData.name, par: holeData.par, strokes: holeStrokes });
+  totalStrokes += holeStrokes;
+
+  showFloatMsg(scoreLabel(diff), scoreCls(diff));
+}
+
+function scoreLabel(d) {
+  if (d <= -2) return '🦅 EAGLE!';
+  if (d === -1) return '🐦 BIRDIE!';
+  if (d ===  0) return 'PAR';
+  if (d ===  1) return 'BOGEY';
+  return '+' + d + ' DOUBLE BOGEY';
+}
+function scoreCls(d) {
+  if (d <= -2) return 'r-eagle';
+  if (d === -1) return 'r-birdie';
+  if (d ===  0) return 'r-par';
+  if (d ===  1) return 'r-bogey';
+  return 'r-bad';
+}
+
+function showFloatMsg(txt, cls) {
+  const el = document.getElementById('floatmsg');
+  el.textContent = txt;
+  el.className = '';
+  if (cls) el.classList.add(cls);
+  el.classList.add('show');
+  msgTimer = 2.2;
+}
+
+let completingTimer = 0;
+function tickCompleting(dt) {
+  if (gState !== 'completing') return;
+  completingTimer += dt;
+  sinkT = Math.min(completingTimer / 0.55, 1);
+  const hp = holeData.holePos;
+  ballPos.x += (hp.x - ballPos.x) * 0.12;
+  ballPos.z += (hp.z - ballPos.z) * 0.12;
+  ballPos.y = hp.y + BALL_R * (1 - sinkT * 1.1);
+  ballMesh.scale.setScalar(Math.max(1 - sinkT, 0.02));
+  if (sinkT >= 1) {
+    gState = 'hole_complete';
+    completingTimer = 0;
+    setTimeout(showHoleComplete, 1200);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  AIM SYSTEM
+// ══════════════════════════════════════════════════════
+function computeAimDir(dx, dy) {
+  // Map screen drag to world XZ direction
+  const fwd = new THREE.Vector3();
+  camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+  const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+
+  // Pull-back: ball shoots OPPOSITE to drag direction
+  aimDir.set(0, 0, 0)
+    .addScaledVector(right, -dx)
+    .addScaledVector(fwd,    dy);  // screen Y down = camera backward = -fwd, negated = +fwd
+  aimDir.y = 0;
+  if (aimDir.lengthSq() < 0.001) return;
+  aimDir.normalize();
+}
+
+function startAim(x, y) {
+  if (gState !== 'idle') return;
+  isAiming = true;
+  gState = 'aiming';
+  aimStart.set(x, y);
+  aimCurr.set(x, y);
+  aimPower = 0;
+  document.getElementById('power-wrap').classList.add('show');
+  document.getElementById('aim-hint').style.display = 'none';
+}
+
+function updateAim(x, y) {
+  if (!isAiming) return;
+  aimCurr.set(x, y);
+  const dx = aimCurr.x - aimStart.x;
+  const dy = aimCurr.y - aimStart.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  aimPower = Math.min(dist * DRAG_SCALE, MAX_POWER);
+  computeAimDir(dx, dy);
+  updateAimVisual();
+  document.getElementById('power-fill').style.width = (aimPower / MAX_POWER * 100) + '%';
+}
+
+function fireShot() {
+  if (!isAiming) return;
+  isAiming = false;
+  document.getElementById('power-wrap').classList.remove('show');
+  document.getElementById('aim-hint').style.display = '';
+  aimGroup.visible = false;
+  aimDots.forEach(d => d.visible = false);
+
+  if (aimPower < 0.3 || aimDir.lengthSq() < 0.01) {
+    gState = 'idle'; return;
+  }
+
+  holeStrokes++;
+  ballVel.copy(aimDir).multiplyScalar(aimPower);
+  ballVel.y = 0.4; // slight upward nudge
+  ballGround = false;
+  gState = 'rolling';
+  updateHUD();
+}
+
+function cancelAim() {
+  if (!isAiming) return;
+  isAiming = false;
+  gState = 'idle';
+  document.getElementById('power-wrap').classList.remove('show');
+  document.getElementById('aim-hint').style.display = '';
+  aimGroup.visible = false;
+  aimDots.forEach(d => d.visible = false);
+}
+
+function updateAimVisual() {
+  if (!isAiming || aimDir.lengthSq() < 0.01) {
+    aimGroup.visible = false;
+    aimDots.forEach(d => d.visible = false);
+    return;
+  }
+
+  const len = (aimPower / MAX_POWER) * 6.5;
+  const yOff = ballPos.y + 0.08;
+
+  // Arrow position + orientation
+  const shaftLen = Math.max(len - 0.28, 0.1);
+  aimShaft.scale.y = shaftLen;
+  const center = new THREE.Vector3(
+    ballPos.x + aimDir.x * (shaftLen / 2 + BALL_R + 0.05),
+    yOff,
+    ballPos.z + aimDir.z * (shaftLen / 2 + BALL_R + 0.05)
+  );
+  aimShaft.position.copy(center);
+  aimHead.position.set(
+    ballPos.x + aimDir.x * (shaftLen + BALL_R + 0.22),
+    yOff,
+    ballPos.z + aimDir.z * (shaftLen + BALL_R + 0.22)
+  );
+  // Rotate shaft and head to face aimDir (cylinder is along Y, rotate to XZ)
+  const up = new THREE.Vector3(0, 1, 0);
+  const q = new THREE.Quaternion().setFromUnitVectors(up, aimDir.clone().setY(0).normalize());
+  aimShaft.quaternion.copy(q);
+  aimHead.quaternion.copy(q);
+  aimGroup.visible = true;
+
+  // Trajectory dots (simple ballistic preview)
+  const vx = aimDir.x * aimPower;
+  const vz = aimDir.z * aimPower;
+  const vy = 0.4;
+  let px = ballPos.x, py = ballPos.y, pz = ballPos.z;
+  let pvx = vx, pvy = vy, pvz = vz;
+  const simDt = 0.055;
+  for (let i = 0; i < AIM_DOTS; i++) {
+    for (let s = 0; s < 3; s++) {
+      if (!isBallOnAnySurface(px, pz)) pvy -= GRAVITY * simDt;
+      else pvy = 0;
+      px += pvx * simDt; py += pvy * simDt; pz += pvz * simDt;
+      pvx *= 0.98; pvz *= 0.98;
+      const sy = getSurfaceY(px, pz);
+      if (py < sy + BALL_R) { py = sy + BALL_R; pvy = 0; }
+    }
+    aimDots[i].position.set(px, py + 0.06, pz);
+    aimDots[i].visible = aimPower > 0.5;
+  }
+}
+
+function isBallOnAnySurface(x, z) {
+  for (const t of phyTiles) if (x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1) return true;
+  for (const r of phyRamps) if (x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1) return true;
+  return false;
+}
+function getSurfaceY(x, z) {
+  let best = -99;
+  for (const t of phyTiles) if (x > t.x0 && x < t.x1 && z > t.z0 && z < t.z1) best = Math.max(best, t.y);
+  for (const r of phyRamps) {
+    if (x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1) {
+      const tt = (z - r.z0) / (r.z1 - r.z0);
+      best = Math.max(best, r.y0 + tt * (r.y1 - r.y0));
+    }
+  }
+  return best;
+}
+
+// ══════════════════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════════════════
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  startAim(e.clientX, e.clientY);
+});
+canvas.addEventListener('mousemove', e => {
+  if (!isAiming) return;
+  updateAim(e.clientX, e.clientY);
+});
+canvas.addEventListener('mouseup', e => {
+  if (e.button !== 0) return;
+  fireShot();
+});
+canvas.addEventListener('mouseleave', () => cancelAim());
+
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    e.preventDefault();
+    startAim(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  if (isAiming && e.touches.length === 1) {
+    e.preventDefault();
+    updateAim(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', () => fireShot());
+canvas.addEventListener('touchcancel', () => cancelAim());
+
+// ══════════════════════════════════════════════════════
+//  UI MANAGEMENT
+// ══════════════════════════════════════════════════════
+function hideAllScreens() {
+  ['scr-start','scr-hole','scr-over'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+  const hud = document.getElementById('hud'); if (hud) hud.classList.add('hidden');
+}
+function showScreen(id) {
+  hideAllScreens();
+  if (id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+}
+
+function updateHUD() {
+  document.getElementById('hv-hole').textContent    = `${holeIdx+1} / 5`;
+  document.getElementById('hv-strokes').textContent = holeStrokes;
+  document.getElementById('hv-par').textContent     = holeData ? holeData.par : '—';
+  document.getElementById('hv-total').textContent   = totalStrokes + holeStrokes;
+}
+
+function showHoleAnnounce(hole) {
+  const el = document.getElementById('hole-announce');
+  document.getElementById('ann-num').textContent  = `HOLE ${holeIdx+1} OF 5`;
+  document.getElementById('ann-name').textContent = hole.name;
+  document.getElementById('ann-par').textContent  = `PAR ${hole.par}`;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function showHoleComplete() {
+  const sc = holeScores[holeScores.length - 1];
+  const diff = sc.strokes - sc.par;
+  document.getElementById('hc-num').textContent = `HOLE ${sc.hole} OF 5`;
+  document.getElementById('hc-name').textContent = sc.name;
+  document.getElementById('hc-breakdown').textContent = `Strokes: ${sc.strokes}   |   Par: ${sc.par}`;
+  const res = document.getElementById('hc-result');
+  res.textContent = scoreLabel(diff);
+  res.className = 'score-result ' + scoreCls(diff);
+  const btn = document.getElementById('btn-next');
+  btn.textContent = holeIdx >= COURSES.length - 1 ? 'SEE FINAL SCORE' : 'NEXT HOLE →';
+  showScreen('scr-hole');
+}
+
+function showGameOver() {
+  let html = `<table class="score-tbl"><thead><tr><th>Hole</th><th>Name</th><th>Par</th><th>Score</th><th>+/-</th></tr></thead><tbody>`;
+  for (const s of holeScores) {
+    const d = s.strokes - s.par;
+    const cls = d < 0 ? 'r-birdie' : d > 0 ? 'r-bogey' : '';
+    const dStr = d === 0 ? 'E' : (d > 0 ? '+' : '') + d;
+    html += `<tr><td>${s.hole}</td><td style="text-align:left">${s.name}</td><td>${s.par}</td><td>${s.strokes}</td><td class="${cls}">${dStr}</td></tr>`;
+  }
+  const totalPar = holeScores.reduce((a,s) => a + s.par, 0);
+  const tDiff = totalStrokes - totalPar;
+  const dStr = tDiff === 0 ? 'EVEN' : (tDiff > 0 ? '+' : '') + tDiff;
+  html += `<tr class="tot"><td colspan="2">TOTAL</td><td>${totalPar}</td><td>${totalStrokes}</td><td>${dStr}</td></tr>`;
+  html += '</tbody></table>';
+  document.getElementById('over-tbl-wrap').innerHTML = html;
+
+  const finalEl = document.getElementById('over-total');
+  finalEl.textContent = tDiff < 0 ? `${dStr} — INCREDIBLE!` : tDiff === 0 ? 'EVEN PAR — WELL PLAYED!' : `${dStr} OVER PAR`;
+  finalEl.className = 'score-result ' + scoreCls(tDiff);
+  showScreen('scr-over');
+}
+
+// ══════════════════════════════════════════════════════
+//  BUTTON HANDLERS
+// ══════════════════════════════════════════════════════
+document.getElementById('btn-start').addEventListener('click', () => {
+  holeIdx = 0; totalStrokes = 0; holeStrokes = 0; holeScores = [];
+  loadHole(0);
+  showScreen('');  // hide all, show hud
+  document.getElementById('hud').classList.remove('hidden');
+  gState = 'idle';
+  updateHUD();
+  showHoleAnnounce(COURSES[0]);
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  holeIdx++;
+  if (holeIdx >= COURSES.length) {
+    showGameOver(); return;
+  }
+  holeStrokes = 0;
+  loadHole(holeIdx);
+  document.getElementById('hud').classList.remove('hidden');
+  showScreen('');
+  document.getElementById('hud').classList.remove('hidden');
+  gState = 'idle';
+  updateHUD();
+  showHoleAnnounce(COURSES[holeIdx]);
+});
+
+document.getElementById('btn-again').addEventListener('click', () => {
+  holeIdx = 0; totalStrokes = 0; holeStrokes = 0; holeScores = [];
+  loadHole(0);
+  showScreen('');
+  document.getElementById('hud').classList.remove('hidden');
+  gState = 'idle';
+  updateHUD();
+  showHoleAnnounce(COURSES[0]);
+});
+
+// ══════════════════════════════════════════════════════
+//  ANIMATION LOOP
+// ══════════════════════════════════════════════════════
+let last = 0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - last) / 1000, 0.05);
+  last = ts;
+
+  // Rotating obstacle
+  if (rotMesh) rotMesh.rotation.y += rotSpeed * dt;
+
+  // Water ripple animation
+  waterTime += dt;
+  for (const m of waterMeshes) {
+    m.material.emissiveIntensity = 0.5 + Math.sin(waterTime * 2.5) * 0.25;
+    m.position.y = -0.22 + Math.sin(waterTime * 1.8) * 0.025;
+  }
+
+  // Ball light flicker
+  ballLight.intensity = 0.85 + Math.sin(ts * 0.005) * 0.12;
+
+  // Physics
+  physicsUpdate(dt);
+  tickCompleting(dt);
+
+  // Float message timeout
+  if (msgTimer > 0) {
+    msgTimer -= dt;
+    if (msgTimer <= 0) {
+      const el = document.getElementById('floatmsg');
+      el.classList.remove('show');
+    }
+  }
+
+  // Ball mesh sync
+  ballMesh.position.copy(ballPos);
+  ballLight.position.copy(ballPos);
+  // Spin ball based on velocity
+  if (ballVel.length() > 0.1) {
+    const axis = new THREE.Vector3(-ballVel.z, 0, ballVel.x).normalize();
+    const spd  = ballVel.length();
+    ballMesh.rotateOnWorldAxis(axis, spd * dt / BALL_R);
+  }
+
+  // Trail update
+  trailTimer += dt;
+  if (trailTimer > 0.03 && gState === 'rolling') {
+    trailTimer = 0;
+    for (let i = TRAIL_LEN - 1; i > 0; i--) trailBuf[i].copy(trailBuf[i-1]);
+    trailBuf[0].copy(ballPos);
+    const arr = trailGeom.attributes.position.array;
+    for (let i = 0; i < TRAIL_LEN; i++) {
+      arr[i*3]   = trailBuf[i].x;
+      arr[i*3+1] = trailBuf[i].y + 0.05;
+      arr[i*3+2] = trailBuf[i].z;
+    }
+    trailGeom.attributes.position.needsUpdate = true;
+    trailMat.opacity = gState === 'rolling' ? 0.35 : 0;
+  }
+  if (gState !== 'rolling') trailMat.opacity *= 0.9;
+
+  // Particles
+  updateParticles(dt);
+
+  // Camera follow ball
+  if (gState === 'rolling' || gState === 'completing') {
+    camTarget.lerp(ballPos, 0.06);
+    controls.target.lerp(camTarget, 0.12);
+  } else if (gState === 'idle' || gState === 'aiming') {
+    const hp = holeData ? holeData.holePos : ballPos;
+    const ideal = ballPos.clone().lerp(hp, 0.15);
+    camTarget.lerp(ideal, 0.04);
+    controls.target.lerp(camTarget, 0.06);
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+requestAnimationFrame(loop);
+
+// ══════════════════════════════════════════════════════
+//  INITIAL STATE
+// ══════════════════════════════════════════════════════
+showScreen('scr-start');
+</script>
+</body>
+</html>

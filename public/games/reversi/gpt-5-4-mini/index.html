@@ -141,6 +141,12 @@
       color: #f0e8ff;
     }
 
+    .sound-toggle {
+      width: 48px;
+      padding-inline: 0;
+      font-size: 18px;
+    }
+
     .button:hover, .button:focus-visible, .select:hover, .select:focus-visible {
       transform: translateY(-1px);
       border-color: rgba(170, 102, 255, 0.6);
@@ -439,6 +445,7 @@
           <option value="overclock">Overclock — Depth 4+</option>
         </select>
         <button class="button" id="newGameBtn">New Game</button>
+        <button class="button sound-toggle" id="soundToggle" aria-label="Mute sounds" aria-pressed="false">🔊</button>
       </div>
     </header>
 
@@ -522,6 +529,7 @@
       const scoreWhite = document.getElementById('scoreWhite');
       const difficultyEl = document.getElementById('difficulty');
       const newGameBtn = document.getElementById('newGameBtn');
+      const soundToggle = document.getElementById('soundToggle');
       const playAgainBtn = document.getElementById('playAgainBtn');
       const statusText = document.getElementById('statusText');
       const messageText = document.getElementById('messageText');
@@ -541,7 +549,117 @@
       let boardGeom = { x: 0, y: 0, size: 0, cell: 0 };
       let animationClock = performance.now();
       let aiTimer = null;
+      let muted = false;
       const animations = new Map();
+
+      const soundManager = (() => {
+        let audioContext = null;
+        let masterGain = null;
+
+        function getContext() {
+          if (audioContext) return audioContext;
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return null;
+          audioContext = new AudioContextClass();
+          masterGain = audioContext.createGain();
+          masterGain.gain.value = 0.8;
+          masterGain.connect(audioContext.destination);
+          return audioContext;
+        }
+
+        async function ensureContext() {
+          const ctx = getContext();
+          if (!ctx) return null;
+          if (ctx.state === 'suspended') {
+            try {
+              await ctx.resume();
+            } catch {
+              return null;
+            }
+          }
+          return ctx;
+        }
+
+        function scheduleTone({
+          type = 'sine',
+          frequency = 440,
+          endFrequency = null,
+          gain = 0.08,
+          attack = 0.005,
+          decay = 0.06,
+          when = 0
+        }) {
+          if (muted || !masterGain || !audioContext) return;
+          const osc = audioContext.createOscillator();
+          const amp = audioContext.createGain();
+          const start = audioContext.currentTime + when;
+          osc.type = type;
+          osc.frequency.setValueAtTime(Math.max(1, frequency), start);
+          if (endFrequency && endFrequency !== frequency) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), start + Math.max(0.01, decay));
+          }
+          amp.gain.setValueAtTime(0.0001, start);
+          amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), start + attack);
+          amp.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(attack + 0.01, decay));
+          osc.connect(amp);
+          amp.connect(masterGain);
+          osc.start(start);
+          osc.stop(start + Math.max(attack + decay + 0.05, 0.12));
+          osc.onended = () => {
+            osc.disconnect();
+            amp.disconnect();
+          };
+        }
+
+        return {
+          ensureContext,
+          playPlacePiece() {
+            scheduleTone({ type: 'sine', frequency: 600, gain: 0.11, attack: 0.004, decay: 0.04 });
+          },
+          playFlipPieces(count) {
+            const pitches = [780, 920, 690, 980, 840, 720, 1040, 760];
+            for (let i = 0; i < count; i++) {
+              scheduleTone({
+                type: 'triangle',
+                frequency: pitches[i % pitches.length],
+                gain: 0.07,
+                attack: 0.003,
+                decay: 0.05,
+                when: i * 0.028
+              });
+            }
+          },
+          playInvalidMove() {
+            scheduleTone({ type: 'square', frequency: 150, gain: 0.07, attack: 0.004, decay: 0.1 });
+          },
+          playAiBlip() {
+            scheduleTone({ type: 'sine', frequency: 1760, gain: 0.022, attack: 0.003, decay: 0.05 });
+          },
+          playWinFanfare() {
+            scheduleTone({ type: 'sine', frequency: 392, gain: 0.05, attack: 0.01, decay: 0.2 });
+            scheduleTone({ type: 'triangle', frequency: 523.25, gain: 0.045, attack: 0.01, decay: 0.22, when: 0.08 });
+            scheduleTone({ type: 'sine', frequency: 659.25, gain: 0.05, attack: 0.01, decay: 0.24, when: 0.16 });
+            scheduleTone({ type: 'sine', frequency: 784, gain: 0.06, attack: 0.01, decay: 0.26, when: 0.24 });
+          },
+          playLoseTone() {
+            scheduleTone({ type: 'sine', frequency: 330, endFrequency: 196, gain: 0.06, attack: 0.01, decay: 0.3 });
+          },
+          playPassTurn() {
+            scheduleTone({ type: 'sine', frequency: 920, gain: 0.04, attack: 0.004, decay: 0.04 });
+            scheduleTone({ type: 'sine', frequency: 740, gain: 0.035, attack: 0.004, decay: 0.05, when: 0.055 });
+          }
+        };
+      })();
+
+      function updateSoundToggle() {
+        soundToggle.textContent = muted ? '🔇' : '🔊';
+        soundToggle.setAttribute('aria-pressed', String(muted));
+        soundToggle.setAttribute('aria-label', muted ? 'Unmute sounds' : 'Mute sounds');
+      }
+
+      function primeAudio() {
+        void soundManager.ensureContext();
+      }
 
       function createBoard() {
         board = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
@@ -682,9 +800,11 @@
         if (black > white) {
           title = 'Black wins';
           status = 'win';
+          soundManager.playWinFanfare();
         } else if (white > black) {
           title = 'White wins';
           status = 'lose';
+          soundManager.playLoseTone();
         }
         statusText.textContent = title;
         statusText.className = `status ${status}`;
@@ -705,12 +825,14 @@
           currentPlayer = BLACK;
           busy = false;
           setMessage('White has no legal move and passes the turn back to you.');
+          soundManager.playPassTurn();
           updateTurnUI();
           if (isTerminal(board)) endGame();
           return;
         }
         if (currentPlayer === BLACK && !humanMoves.length) {
           setMessage('No legal move available. You must pass.');
+          soundManager.playPassTurn();
           currentPlayer = WHITE;
           busy = true;
           updateTurnUI();
@@ -730,6 +852,7 @@
       function scheduleAiMove(fromPass) {
         clearTimeout(aiTimer);
         const tempo = DIFFICULTIES[difficultyEl.value].tempo;
+        soundManager.playAiBlip();
         aiTimer = setTimeout(() => {
           aiTimer = null;
           if (gameOver || currentPlayer !== WHITE) return;
@@ -741,10 +864,15 @@
         if (gameOver || busy || currentPlayer !== BLACK) return;
         const moves = getValidMoves(board, BLACK);
         const move = moves.find(m => m.r === row && m.c === col);
-        if (!move) return;
+        if (!move) {
+          soundManager.playInvalidMove();
+          return;
+        }
         busy = true;
         const next = applyMove(board, move, BLACK);
         triggerAnimations(board, next, move, BLACK);
+        soundManager.playPlacePiece();
+        soundManager.playFlipPieces(move.flips.length);
         board = next;
         currentPlayer = WHITE;
         setMessage(move.flips.length > 6 ? 'Massive capture! The white line shatters.' : 'Disc placed. The AI is recalculating the battlefield...');
@@ -770,6 +898,8 @@
         const prev = cloneBoard(board);
         board = applyMove(board, best.move, WHITE);
         triggerAnimations(prev, board, best.move, WHITE);
+        soundManager.playPlacePiece();
+        soundManager.playFlipPieces(best.move.flips.length);
         setMessage(best.move.flips.length > 5 ? 'White lands a sharp counter and flips the line.' : 'White responds with a calculated strike.');
         syncScores();
         currentPlayer = BLACK;
@@ -1220,6 +1350,7 @@
       canvas.addEventListener('pointermove', evaluateClick);
       canvas.addEventListener('pointerleave', () => { hoverCell = null; });
       canvas.addEventListener('pointerdown', (evt) => {
+        primeAudio();
         canvas.setPointerCapture?.(evt.pointerId);
         evaluateClick(evt);
       });
@@ -1238,10 +1369,18 @@
 
       newGameBtn.addEventListener('click', startNewGame);
       playAgainBtn.addEventListener('click', startNewGame);
+      soundToggle.addEventListener('click', () => {
+        primeAudio();
+        muted = !muted;
+        updateSoundToggle();
+      });
       window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('keydown', primeAudio, { capture: true, once: true });
+      window.addEventListener('pointerdown', primeAudio, { capture: true, once: true });
 
       createBoard();
       resizeCanvas();
+      updateSoundToggle();
       requestAnimationFrame(render);
     })();
   </script>

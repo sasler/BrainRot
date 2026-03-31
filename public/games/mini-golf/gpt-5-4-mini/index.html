@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MINI GOLF 3D</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #050510;
+      --panel: rgba(8, 10, 20, 0.88);
+      --panel2: rgba(10, 12, 26, 0.72);
+      --text: #e8f0e8;
+      --muted: #8fa39b;
+      --neon: #00ff66;
+      --neon2: #7cffb1;
+      --danger: #ff5c84;
+      --water: #1bb6ff;
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, #0b1230 0%, var(--bg) 45%, #020205 100%);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      touch-action: none;
+      user-select: none;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(0,255,102,0.08), transparent 24%),
+        radial-gradient(circle at 80% 20%, rgba(0,255,102,0.06), transparent 22%),
+        radial-gradient(circle at 50% 80%, rgba(0,255,102,0.04), transparent 30%);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    #wrap { position: fixed; inset: 0; }
+    canvas { width: 100%; height: 100%; display: block; }
+    #hud {
+      position: fixed; left: 0; right: 0; top: 0;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 14px 16px; gap: 12px; pointer-events: none; z-index: 10;
+      text-shadow: 0 0 12px rgba(0,255,102,0.32);
+    }
+    .hud-left, .hud-right { display: flex; flex-direction: column; gap: 8px; }
+    .hud-card {
+      background: linear-gradient(180deg, rgba(12,16,30,0.88), rgba(5,7,14,0.72));
+      border: 1px solid rgba(0,255,102,0.24);
+      box-shadow: 0 0 0 1px rgba(0,255,102,0.06) inset, 0 18px 60px var(--shadow), 0 0 28px rgba(0,255,102,0.08);
+      border-radius: 16px;
+      padding: 10px 14px;
+      backdrop-filter: blur(10px);
+    }
+    .label { font-size: 11px; letter-spacing: .2em; color: var(--neon2); opacity: .88; text-transform: uppercase; }
+    .value { font-size: 18px; font-weight: 800; letter-spacing: .04em; }
+    .tiny { font-size: 12px; color: var(--muted); line-height: 1.35; }
+    #powerWrap {
+      width: min(26vw, 260px);
+      min-width: 170px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #powerBar {
+      height: 12px; border-radius: 999px; overflow: hidden;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(0,255,102,0.18);
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.55);
+    }
+    #powerFill {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #1c6, #00ff66 50%, #d8ffe7 100%);
+      box-shadow: 0 0 18px rgba(0,255,102,0.8);
+      transition: width 60ms linear;
+    }
+    #message {
+      position: fixed; left: 50%; top: 18%; transform: translateX(-50%);
+      padding: 14px 18px; border-radius: 16px;
+      background: rgba(6, 10, 18, 0.72);
+      border: 1px solid rgba(0,255,102,0.22);
+      box-shadow: 0 0 28px rgba(0,255,102,0.12), 0 18px 60px rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+      z-index: 11; pointer-events: none; opacity: 0; transition: opacity .25s ease, transform .25s ease;
+      text-align: center; min-width: min(82vw, 520px);
+    }
+    #message.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #message .big { font-size: 22px; font-weight: 900; letter-spacing: .15em; color: var(--neon); }
+    #message .small { margin-top: 6px; color: var(--muted); font-size: 13px; }
+    .overlay {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 35%, rgba(8,16,28,0.85), rgba(2,2,5,0.96));
+      backdrop-filter: blur(16px);
+    }
+    .panel {
+      width: min(92vw, 740px);
+      border-radius: 26px;
+      padding: clamp(20px, 4vw, 34px);
+      background: linear-gradient(180deg, rgba(12,18,34,0.9), rgba(5,7,14,0.88));
+      border: 1px solid rgba(0,255,102,0.22);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset, 0 25px 90px rgba(0,0,0,0.56), 0 0 40px rgba(0,255,102,0.12);
+      text-align: center;
+    }
+    .title {
+      font-size: clamp(44px, 8vw, 82px);
+      font-weight: 900;
+      letter-spacing: .18em;
+      margin-bottom: 10px;
+      color: #dbffe8;
+      text-shadow: 0 0 18px rgba(0,255,102,0.45), 0 0 40px rgba(0,255,102,0.18);
+    }
+    .subtitle { color: var(--muted); font-size: clamp(14px, 2vw, 18px); line-height: 1.6; max-width: 56ch; margin: 0 auto 20px; }
+    .grid {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+      margin: 18px auto 24px;
+      text-align: left;
+    }
+    .info {
+      border-radius: 18px; padding: 14px 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,102,0.14);
+    }
+    .info h3 { color: var(--neon); font-size: 13px; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 8px; }
+    .info p { color: #bed0c8; line-height: 1.5; font-size: 14px; }
+    .ctaRow { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      appearance: none; border: 0; cursor: pointer;
+      padding: 14px 20px; border-radius: 999px;
+      background: linear-gradient(180deg, #00ff66, #11c85c);
+      color: #05110a; font-weight: 900; letter-spacing: .16em; text-transform: uppercase;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 24px rgba(0,255,102,0.22), 0 16px 40px rgba(0,0,0,0.35);
+      min-width: 180px;
+    }
+    .btn.secondary {
+      background: rgba(255,255,255,0.04); color: #dfffea; border: 1px solid rgba(0,255,102,0.22);
+    }
+    .resultTitle { font-size: clamp(34px, 6vw, 58px); font-weight: 900; letter-spacing: .12em; color: #e9fff0; margin-bottom: 10px; }
+    .resultStat { font-size: 20px; margin: 8px 0; color: #d6e7dc; }
+    .resultStat strong { color: var(--neon); }
+    .hide { display: none !important; }
+    @media (max-width: 760px) {
+      #hud { padding: 10px; }
+      .hud-card { border-radius: 14px; padding: 9px 11px; }
+      .value { font-size: 16px; }
+      #powerWrap { min-width: 140px; width: 42vw; }
+      .grid { grid-template-columns: 1fr; }
+      .panel { width: min(94vw, 680px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap"></div>
+
+  <div id="hud" class="hide">
+    <div class="hud-left">
+      <div class="hud-card">
+        <div class="label">Hole</div>
+        <div class="value"><span id="holeNum">1</span> / <span id="holeTotal">4</span> — <span id="holeName">Neon Starter</span></div>
+      </div>
+      <div class="hud-card">
+        <div class="label">Strokes</div>
+        <div class="value"><span id="strokes">0</span> <span class="tiny">/ Par <span id="par">3</span></span></div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div id="powerWrap" class="hud-card">
+        <div class="label">Power</div>
+        <div id="powerBar"><div id="powerFill"></div></div>
+        <div class="tiny">Left-drag to aim &amp; shoot. Right-drag to orbit.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="message"><div class="big" id="messageBig">GREEN</div><div class="small" id="messageSmall"></div></div>
+
+  <div id="startScreen" class="overlay">
+    <div class="panel">
+      <div class="title">MINI GOLF 3D</div>
+      <div class="subtitle">A neon-lit 3D mini golf challenge built for quick, satisfying shots, smooth physics, and delightfully mean courses.</div>
+      <div class="grid">
+        <div class="info"><h3>How to Play</h3><p>Drag from the ball to pull back and release to shoot. The farther you pull, the more power you unleash.</p></div>
+        <div class="info"><h3>Camera</h3><p>Hold right-click and drag to orbit around the green. The camera follows the ball smoothly between shots.</p></div>
+        <div class="info"><h3>Hazards</h3><p>Water resets you to the tee with a penalty stroke. Ramps, slopes, walls, and bumpers all affect the roll.</p></div>
+        <div class="info"><h3>Goal</h3><p>Sink the ball in the cup in as few strokes as possible. Beat par across all four holes to finish with style.</p></div>
+      </div>
+      <div class="ctaRow"><button class="btn" id="startBtn">Start Round</button></div>
+    </div>
+  </div>
+
+  <div id="clearScreen" class="overlay hide">
+    <div class="panel">
+      <div class="resultTitle">HOLE COMPLETE</div>
+      <div class="resultStat">Hole score: <strong id="holeDelta">E</strong></div>
+      <div class="resultStat">Strokes: <strong id="holeStrokes">0</strong> &nbsp;|&nbsp; Par: <strong id="holePar">0</strong></div>
+      <div class="resultStat">Total: <strong id="roundStrokes">0</strong> strokes</div>
+      <div class="ctaRow" style="margin-top:18px"><button class="btn" id="nextBtn">Next Hole</button></div>
+    </div>
+  </div>
+
+  <div id="gameOverScreen" class="overlay hide">
+    <div class="panel">
+      <div class="resultTitle">ROUND COMPLETE</div>
+      <div class="resultStat">Total strokes: <strong id="finalStrokes">0</strong></div>
+      <div class="resultStat">Total par: <strong id="finalPar">0</strong></div>
+      <div class="resultStat">Final score: <strong id="finalDelta">E</strong></div>
+      <div class="ctaRow" style="margin-top:18px"><button class="btn" id="restartBtn">Play Again</button></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const wrap = document.getElementById('wrap');
+    const hud = document.getElementById('hud');
+    const startScreen = document.getElementById('startScreen');
+    const clearScreen = document.getElementById('clearScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const message = document.getElementById('message');
+    const messageBig = document.getElementById('messageBig');
+    const messageSmall = document.getElementById('messageSmall');
+    const powerFill = document.getElementById('powerFill');
+
+    const holeNumEl = document.getElementById('holeNum');
+    const holeTotalEl = document.getElementById('holeTotal');
+    const holeNameEl = document.getElementById('holeName');
+    const strokesEl = document.getElementById('strokes');
+    const parEl = document.getElementById('par');
+    const holeDeltaEl = document.getElementById('holeDelta');
+    const holeStrokesEl = document.getElementById('holeStrokes');
+    const holeParEl = document.getElementById('holePar');
+    const roundStrokesEl = document.getElementById('roundStrokes');
+    const finalStrokesEl = document.getElementById('finalStrokes');
+    const finalParEl = document.getElementById('finalPar');
+    const finalDeltaEl = document.getElementById('finalDelta');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050510);
+    scene.fog = new THREE.Fog(0x050510, 24, 86);
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 220);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    wrap.appendChild(renderer.domElement);
+
+    const amb = new THREE.AmbientLight(0xa9ffe0, 0.35);
+    scene.add(amb);
+    const sun = new THREE.DirectionalLight(0xccffee, 1.45);
+    sun.position.set(10, 24, 12);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 60;
+    sun.shadow.camera.left = -24;
+    sun.shadow.camera.right = 24;
+    sun.shadow.camera.top = 24;
+    sun.shadow.camera.bottom = -24;
+    scene.add(sun);
+    const fill = new THREE.PointLight(0x00ff66, 1.1, 42, 1.8);
+    fill.position.set(0, 6, 0);
+    scene.add(fill);
+
+    const stars = new THREE.BufferGeometry();
+    const starCount = 420;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3 + 0] = (Math.random() - 0.5) * 180;
+      starPositions[i * 3 + 1] = 12 + Math.random() * 70;
+      starPositions[i * 3 + 2] = (Math.random() - 0.5) * 180;
+    }
+    stars.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0x88ffcc, size: 0.08, transparent: true, opacity: 0.92, depthWrite: false });
+    scene.add(new THREE.Points(stars, starMat));
+
+    const courseRoot = new THREE.Group();
+    scene.add(courseRoot);
+
+    const playerRoot = new THREE.Group();
+    scene.add(playerRoot);
+
+    const ballRadius = 0.46;
+    const ballGeom = new THREE.SphereGeometry(ballRadius, 32, 24);
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xdfffee, emissive: 0x00ff66, emissiveIntensity: 1.85, roughness: 0.18, metalness: 0.05 });
+    const ball = new THREE.Mesh(ballGeom, ballMat);
+    ball.castShadow = true;
+    playerRoot.add(ball);
+
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(ballRadius * 1.8, 20, 16), new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.14 }));
+    playerRoot.add(halo);
+
+    const glowLight = new THREE.PointLight(0x00ff66, 2.1, 9, 2.1);
+    playerRoot.add(glowLight);
+
+    const lineGeo = new THREE.BufferGeometry();
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.92 });
+    const aimLine = new THREE.Line(lineGeo, lineMat);
+    aimLine.visible = false;
+    scene.add(aimLine);
+
+    const predGeo = new THREE.BufferGeometry();
+    const predMat = new THREE.LineBasicMaterial({ color: 0xb4ffd0, transparent: true, opacity: 0.35 });
+    const predLine = new THREE.Line(predGeo, predMat);
+    predLine.visible = false;
+    scene.add(predLine);
+
+    const ghostBall = new THREE.Mesh(new THREE.SphereGeometry(ballRadius * 0.82, 16, 12), new THREE.MeshBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.16 }));
+    ghostBall.visible = false;
+    scene.add(ghostBall);
+
+    const flare = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), new THREE.MeshBasicMaterial({ color: 0x00ff66 }));
+    flare.visible = false;
+    scene.add(flare);
+
+    const courseMaterials = {
+      ground: new THREE.MeshStandardMaterial({ color: 0x0b1720, roughness: 0.95, metalness: 0.02 }),
+      green: new THREE.MeshStandardMaterial({ color: 0x0d2815, roughness: 0.9, metalness: 0.04, emissive: 0x04160b, emissiveIntensity: 0.4 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0x071010, roughness: 0.45, metalness: 0.35, emissive: 0x001f12, emissiveIntensity: 0.55 }),
+      neon: new THREE.MeshStandardMaterial({ color: 0x08130b, roughness: 0.2, metalness: 0.6, emissive: 0x00ff66, emissiveIntensity: 1.8 }),
+      water: new THREE.MeshStandardMaterial({ color: 0x062231, roughness: 0.08, metalness: 0.18, transparent: true, opacity: 0.62, emissive: 0x1a9cff, emissiveIntensity: 0.9 })
+    };
+
+    const courseState = {
+      bounds: new THREE.Box2(),
+      baseHeight: 0,
+      cup: new THREE.Vector3(),
+      cupRadius: 0.52,
+      cupDepth: 0.42,
+      tee: new THREE.Vector3(),
+      water: [],
+      walls: [],
+      bumpers: [],
+      slopes: [],
+      heightFn: null,
+      title: ''
+    };
+
+    const holes = [
+      {
+        name: 'NEON STARTER',
+        par: 3,
+        size: { w: 30, d: 18 },
+        tee: [-11, 5.8],
+        cup: [11.2, -4.8],
+        build(group) {
+          const bounds = new THREE.Box2(new THREE.Vector2(-14.5, -8.5), new THREE.Vector2(14.5, 8.5));
+          const heightFn = (x, z) => {
+            let h = -0.02;
+            h += 0.018 * (x + 13);
+            h += 0.012 * (z - 2);
+            h += hill(x, z, -2, 0.5, 2.2, 0.14);
+            h += hill(x, z, 5.7, -2.8, 1.7, 0.08);
+            return h;
+          };
+          return {
+            bounds,
+            tee: new THREE.Vector3(-11, 0, 5.8),
+            cup: new THREE.Vector3(11.2, 0, -4.8),
+            cupRadius: 0.53,
+            cupDepth: 0.42,
+            baseHeight: -0.02,
+            heightFn,
+            walls: [
+              wallRect(-14.6, -8.9, 29.2, 0.7), wallRect(-14.6, 8.2, 29.2, 0.7), wallRect(-14.9, -8.9, 0.7, 17.8), wallRect(14.2, -8.9, 0.7, 17.8),
+              wallRect(-1.2, -2.2, 3.0, 0.45), wallRect(4.0, 2.2, 3.3, 0.45)
+            ],
+            bumpers: [{ x: -5.8, z: 2.8, r: 1.0 }, { x: 6.8, z: -1.2, r: 0.9 }],
+            water: [{ x: -3.8, z: -4.5, w: 4.8, d: 2.4, level: -0.09 }],
+            decor() {
+              addRim(group, bounds, 0.16);
+              addBanner(group, 'WELCOME TO THE GREEN');
+            }
+          };
+        }
+      },
+      {
+        name: 'SPLIT FAIRWAY',
+        par: 4,
+        size: { w: 34, d: 22 },
+        tee: [-13.2, -6.6],
+        cup: [12.6, 6.8],
+        build(group) {
+          const bounds = new THREE.Box2(new THREE.Vector2(-16.5, -10.5), new THREE.Vector2(16.5, 10.5));
+          const heightFn = (x, z) => {
+            let h = -0.04;
+            h += -0.018 * x + 0.01 * z;
+            h += ramp(x, z, -6.5, -8.6, 8.7, 4.0, 0.66, 'x');
+            h += hill(x, z, 2.5, -2.2, 2.1, 0.12);
+            h += hill(x, z, 8.5, 5.8, 2.5, 0.1);
+            return h;
+          };
+          return {
+            bounds,
+            tee: new THREE.Vector3(-13.2, 0, -6.6),
+            cup: new THREE.Vector3(12.6, 0, 6.8),
+            cupRadius: 0.55,
+            cupDepth: 0.44,
+            baseHeight: -0.04,
+            heightFn,
+            walls: [
+              wallRect(-16.8, -10.9, 33.6, 0.75), wallRect(-16.8, 10.15, 33.6, 0.75), wallRect(-17.15, -10.9, 0.75, 21.7), wallRect(16.4, -10.9, 0.75, 21.7),
+              wallRect(-2.8, -5.0, 5.8, 0.42), wallRect(-2.8, 5.0, 5.8, 0.42), wallRect(6.1, -1.8, 0.42, 9.2)
+            ],
+            bumpers: [{ x: 0.0, z: 0.0, r: 1.0 }, { x: 8.8, z: 2.2, r: 1.1 }],
+            water: [{ x: -10.8, z: -2.4, w: 4.6, d: 4.4, level: -0.16 }, { x: 1.8, z: 2.8, w: 4.1, d: 3.5, level: -0.16 }],
+            decor() {
+              addRim(group, bounds, 0.16);
+              addBanner(group, 'THREAD THE CANYON');
+              addBridge(group, -5.6, -0.2, 5.4, 1.6, 0.62);
+            }
+          };
+        }
+      },
+      {
+        name: 'CIRCUIT BRIDGE',
+        par: 5,
+        size: { w: 40, d: 24 },
+        tee: [-15.0, 7.4],
+        cup: [15.8, -7.1],
+        build(group) {
+          const bounds = new THREE.Box2(new THREE.Vector2(-19.5, -11.5), new THREE.Vector2(19.5, 11.5));
+          const heightFn = (x, z) => {
+            let h = -0.05;
+            h += 0.016 * Math.sin(x * 0.26) + 0.015 * Math.cos(z * 0.31);
+            h += ramp(x, z, -14.0, 0.0, 7.3, 3.0, 0.78, 'x');
+            h += ramp(x, z, -2.6, -2.9, 9.0, 1.1, 0.58, 'z');
+            h += ramp(x, z, 6.0, 1.0, 8.0, 2.5, -0.58, 'x');
+            h += hill(x, z, 0.0, -4.0, 2.4, 0.17);
+            return h;
+          };
+          return {
+            bounds,
+            tee: new THREE.Vector3(-15.0, 0, 7.4),
+            cup: new THREE.Vector3(15.8, 0, -7.1),
+            cupRadius: 0.56,
+            cupDepth: 0.46,
+            baseHeight: -0.05,
+            heightFn,
+            walls: [
+              wallRect(-19.7, -11.9, 39.4, 0.8), wallRect(-19.7, 11.25, 39.4, 0.8), wallRect(-20.05, -11.9, 0.8, 23.8), wallRect(19.0, -11.9, 0.8, 23.8),
+              wallRect(-6.5, 3.6, 10.8, 0.42), wallRect(2.2, -3.8, 11.0, 0.42), wallRect(8.7, 3.8, 6.2, 0.42), wallRect(-9.6, -2.4, 0.42, 7.6)
+            ],
+            bumpers: [{ x: -10.0, z: 0.0, r: 1.0 }, { x: 3.8, z: 0.3, r: 1.1 }, { x: 11.0, z: -3.9, r: 1.0 }],
+            water: [{ x: -2.5, z: 5.6, w: 6.0, d: 4.6, level: -0.2 }, { x: 4.0, z: -7.9, w: 7.4, d: 3.8, level: -0.2 }],
+            decor() {
+              addRim(group, bounds, 0.16);
+              addBanner(group, 'WATCH THE BRIDGE');
+              addTower(group, 0, 5.2, 1.1);
+              addTower(group, 9.8, -3.9, 1.0);
+            }
+          };
+        }
+      },
+      {
+        name: 'FINAL CIRCUIT',
+        par: 5,
+        size: { w: 42, d: 26 },
+        tee: [-16.5, -8.5],
+        cup: [17.4, 8.5],
+        build(group) {
+          const bounds = new THREE.Box2(new THREE.Vector2(-20.5, -12.5), new THREE.Vector2(20.5, 12.5));
+          const heightFn = (x, z) => {
+            let h = -0.06;
+            h += 0.014 * x - 0.008 * z;
+            h += ramp(x, z, -11.7, -9.8, 7.2, 3.3, 0.72, 'x');
+            h += ramp(x, z, -0.1, -1.9, 7.0, 3.8, -0.72, 'z');
+            h += ramp(x, z, 8.8, -0.6, 9.2, 3.1, 0.6, 'x');
+            h += hill(x, z, 3.2, 5.0, 2.2, 0.2);
+            h += hill(x, z, -7.5, 4.0, 2.4, 0.12);
+            return h;
+          };
+          return {
+            bounds,
+            tee: new THREE.Vector3(-16.5, 0, -8.5),
+            cup: new THREE.Vector3(17.4, 0, 8.5),
+            cupRadius: 0.58,
+            cupDepth: 0.48,
+            baseHeight: -0.06,
+            heightFn,
+            walls: [
+              wallRect(-20.7, -12.9, 41.4, 0.82), wallRect(-20.7, 12.1, 41.4, 0.82), wallRect(-21.1, -12.9, 0.82, 25.8), wallRect(20.1, -12.9, 0.82, 25.8),
+              wallRect(-8.2, -5.8, 10.5, 0.46), wallRect(0.9, 2.5, 11.4, 0.46), wallRect(9.0, -3.0, 0.46, 11.4), wallRect(1.0, 7.5, 8.0, 0.46)
+            ],
+            bumpers: [{ x: -10.5, z: 2.2, r: 1.25 }, { x: 1.8, z: -2.2, r: 1.15 }, { x: 8.0, z: 4.5, r: 1.05 }, { x: 13.5, z: 1.0, r: 1.1 }],
+            water: [{ x: -2.4, z: -7.2, w: 4.5, d: 4.4, level: -0.23 }, { x: 6.5, z: 0.6, w: 4.2, d: 4.4, level: -0.23 }],
+            decor() {
+              addRim(group, bounds, 0.17);
+              addBanner(group, 'THE LAST LAP');
+              addTower(group, -4.7, -3.1, 1.35);
+              addTower(group, 10.3, 3.8, 1.1);
+            }
+          };
+        }
+      }
+    ];
+
+    holeTotalEl.textContent = holes.length;
+
+    const game = {
+      running: false,
+      state: 'title',
+      holeIndex: 0,
+      strokes: 0,
+      totalStrokes: 0,
+      totalPar: holes.reduce((a, h) => a + h.par, 0),
+      holePar: 0,
+      holeStrokes: 0,
+      aimActive: false,
+      orbiting: false,
+      sinking: false,
+      holeDelay: 0,
+      orbitYaw: 0.82,
+      orbitPitch: 0.54,
+      orbitDistance: 15.5,
+      desiredYaw: 0.82,
+      desiredPitch: 0.54,
+      pointerId: null,
+      rightPointerId: null,
+      startPointer: new THREE.Vector2(),
+      currentPointer: new THREE.Vector2(),
+      aimPower: 0,
+      shotPowerMax: 16.5,
+      ballVel: new THREE.Vector3(),
+      ballPos: new THREE.Vector3(),
+      lastBallPos: new THREE.Vector3(),
+      trail: [],
+      particles: [],
+      lastTime: 0,
+      animateT: 0,
+      cameraShake: 0,
+      orbitTarget: new THREE.Vector3(),
+      currentHole: null,
+      currentHeight: 0,
+      currentSurfaceNormal: new THREE.Vector3(0, 1, 0)
+    };
+
+    function showMessage(big, small = '', duration = 1400) {
+      messageBig.textContent = big;
+      messageSmall.textContent = small;
+      message.classList.add('show');
+      clearTimeout(showMessage._t);
+      showMessage._t = setTimeout(() => message.classList.remove('show'), duration);
+    }
+
+    function formatScore(delta) {
+      if (delta === 0) return 'E';
+      return delta > 0 ? `+${delta}` : `${delta}`;
+    }
+
+    function currentDelta() {
+      return game.totalStrokes - game.totalPar;
+    }
+
+    function resetRound() {
+      game.holeIndex = 0;
+      game.strokes = 0;
+      game.totalStrokes = 0;
+      game.holeDelay = 0;
+      game.running = true;
+      game.state = 'playing';
+      hud.classList.remove('hide');
+      startScreen.classList.add('hide');
+      clearScreen.classList.add('hide');
+      gameOverScreen.classList.add('hide');
+      loadHole(0);
+      showMessage('HOLE 1', 'Pull back from the ball to start your first shot.', 1500);
+    }
+
+    function endRound() {
+      game.state = 'game-over';
+      game.running = false;
+      hud.classList.add('hide');
+      finalStrokesEl.textContent = game.totalStrokes;
+      finalParEl.textContent = game.totalPar;
+      finalDeltaEl.textContent = formatScore(currentDelta());
+      gameOverScreen.classList.remove('hide');
+    }
+
+    function loadHole(index) {
+      const def = holes[index];
+      game.holePar = def.par;
+      game.holeStrokes = 0;
+      game.strokes = 0;
+      game.aimActive = false;
+      game.sinking = false;
+      game.holeDelay = 0;
+      game.trail.length = 0;
+      game.particles.length = 0;
+      playerRoot.visible = true;
+      aimLine.visible = false;
+      predLine.visible = false;
+      ghostBall.visible = false;
+      courseRoot.clear();
+
+      const hole = def.build(courseRoot);
+      courseState.bounds = hole.bounds;
+      courseState.baseHeight = hole.baseHeight;
+      courseState.cup = hole.cup.clone();
+      courseState.cupRadius = hole.cupRadius;
+      courseState.cupDepth = hole.cupDepth;
+      courseState.tee = hole.tee.clone();
+      courseState.water = hole.water || [];
+      courseState.walls = hole.walls || [];
+      courseState.bumpers = hole.bumpers || [];
+      courseState.heightFn = hole.heightFn;
+      courseState.title = hole.name;
+      game.currentHole = hole;
+
+      buildGround(hole);
+      buildCup(hole);
+      buildWalls(hole);
+      buildWater(hole);
+      if (hole.decor) hole.decor(courseRoot);
+      game.ballPos.copy(hole.tee);
+      game.ballVel.set(0, 0, 0);
+      game.ballPos.y = sampleHeight(game.ballPos.x, game.ballPos.z) + ballRadius;
+      setBallPosition(game.ballPos);
+      orbitLookAtBall(true);
+      updateHud();
+      holeNumEl.textContent = index + 1;
+      holeNameEl.textContent = hole.name;
+      parEl.textContent = hole.par;
+      showMessage(`HOLE ${index + 1}`, `${hole.name} — Par ${hole.par}`, 1400);
+    }
+
+    function buildGround(hole) {
+      const { bounds, heightFn } = courseState;
+      const w = bounds.max.x - bounds.min.x;
+      const d = bounds.max.y - bounds.min.y;
+      const segX = Math.max(72, Math.floor(w * 4));
+      const segZ = Math.max(44, Math.floor(d * 4));
+      const geom = new THREE.PlaneGeometry(w, d, segX, segZ);
+      geom.rotateX(-Math.PI / 2);
+      const pos = geom.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i) + (bounds.min.x + w / 2);
+        const z = pos.getZ(i) + (bounds.min.y + d / 2);
+        pos.setY(i, heightFn(x, z));
+      }
+      geom.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x0a1b12, roughness: 0.96, metalness: 0.02, emissive: 0x021108, emissiveIntensity: 0.32 });
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.receiveShadow = true;
+      mesh.position.set((bounds.min.x + bounds.max.x) / 2, 0, (bounds.min.y + bounds.max.y) / 2);
+      courseRoot.add(mesh);
+
+      const gridMat = new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.07 });
+      const grid = new THREE.GridHelper(Math.max(w, d), Math.max(w, d) * 2, 0x00ff66, 0x00ff66);
+      grid.material = gridMat;
+      grid.position.y = courseState.baseHeight + 0.05;
+      courseRoot.add(grid);
+    }
+
+    function buildCup(hole) {
+      const cupGroup = new THREE.Group();
+      cupGroup.position.copy(courseState.cup);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(courseState.cupRadius * 1.18, courseState.cupRadius * 1.18, 0.16, 28), courseMaterials.neon);
+      rim.position.y = 0.08;
+      rim.castShadow = true;
+      cupGroup.add(rim);
+      const dark = new THREE.Mesh(new THREE.CylinderGeometry(courseState.cupRadius * 0.82, courseState.cupRadius * 0.88, courseState.cupDepth, 26), new THREE.MeshStandardMaterial({ color: 0x010205, roughness: 1, metalness: 0 }));
+      dark.position.y = -courseState.cupDepth * 0.5;
+      cupGroup.add(dark);
+      const glow = new THREE.PointLight(0x00ff66, 1.6, 4.5, 2.0);
+      glow.position.y = 0.38;
+      cupGroup.add(glow);
+      courseRoot.add(cupGroup);
+    }
+
+    function buildWalls(hole) {
+      for (const rect of hole.walls) {
+        const mesh = makeWall(rect.x, rect.z, rect.w, rect.d, rect.h || 0.88);
+        courseRoot.add(mesh);
+      }
+      for (const b of hole.bumpers || []) {
+        const g = new THREE.CylinderGeometry(b.r, b.r, 0.6, 22);
+        const m = new THREE.Mesh(g, courseMaterials.wall);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        m.position.set(b.x, sampleHeight(b.x, b.z) + 0.3, b.z);
+        const neon = new THREE.Mesh(new THREE.CylinderGeometry(b.r * 1.08, b.r * 1.08, 0.1, 22), courseMaterials.neon);
+        neon.position.y = 0.34;
+        m.add(neon);
+        courseRoot.add(m);
+      }
+    }
+
+    function buildWater(hole) {
+      for (const w of hole.water || []) {
+        const g = new THREE.PlaneGeometry(w.w, w.d, 1, 1);
+        g.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(g, courseMaterials.water);
+        m.position.set(w.x, w.level ?? (courseState.baseHeight - 0.18), w.z);
+        m.receiveShadow = true;
+        courseRoot.add(m);
+        const frame = makeRim(w.x, w.z, w.w, w.d, 0.2, 0x00ff66, 0.08);
+        frame.position.y = (w.level ?? courseState.baseHeight - 0.18) + 0.01;
+        courseRoot.add(frame);
+      }
+    }
+
+    function makeWall(x, z, w, d, h = 0.88) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), courseMaterials.wall);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.position.set(x + w / 2, sampleHeight(x + w / 2, z + d / 2) + h / 2, z + d / 2);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0x00ff66, transparent: true, opacity: 0.72 }));
+      edge.scale.set(1.002, 1.002, 1.002);
+      mesh.add(edge);
+      return mesh;
+    }
+
+    function wallRect(x, z, w, d, h = 0.88) {
+      return { x, z, w, d, h };
+    }
+
+    function makeRim(x, z, w, d, h, color, opacity) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.5, roughness: 0.3, metalness: 0.45, transparent: true, opacity });
+      const top = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), mat);
+      top.position.set(0, h * 0.5, d / 2 - 0.04);
+      const bottom = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08), mat);
+      bottom.position.set(0, h * 0.5, -d / 2 + 0.04);
+      const left = new THREE.Mesh(new THREE.BoxGeometry(0.08, h, d), mat);
+      left.position.set(-w / 2 + 0.04, h * 0.5, 0);
+      const right = left.clone();
+      right.position.x = w / 2 - 0.04;
+      group.add(top, bottom, left, right);
+      group.position.set(x, 0, z);
+      return group;
+    }
+
+    function addRim(group, bounds, height) {
+      const w = bounds.max.x - bounds.min.x;
+      const d = bounds.max.y - bounds.min.y;
+      const rim = new THREE.Group();
+      const color = 0x00ff66;
+      const mat = new THREE.MeshStandardMaterial({ color: 0x03130b, emissive: color, emissiveIntensity: 1.0, roughness: 0.28, metalness: 0.4, transparent: true, opacity: 0.94 });
+      const b = [
+        new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, height, 0.18), mat),
+        new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, height, 0.18), mat),
+        new THREE.Mesh(new THREE.BoxGeometry(0.18, height, d + 0.4), mat),
+        new THREE.Mesh(new THREE.BoxGeometry(0.18, height, d + 0.4), mat)
+      ];
+      b[0].position.set(0, height * 0.5, d / 2 + 0.1);
+      b[1].position.set(0, height * 0.5, -d / 2 - 0.1);
+      b[2].position.set(w / 2 + 0.1, height * 0.5, 0);
+      b[3].position.set(-w / 2 - 0.1, height * 0.5, 0);
+      for (const m of b) { m.castShadow = true; m.receiveShadow = true; rim.add(m); }
+      rim.position.set((bounds.min.x + bounds.max.x) / 2, courseState.baseHeight - 0.02, (bounds.min.y + bounds.max.y) / 2);
+      group.add(rim);
+    }
+
+    function addBridge(group, x, z, w, d, y) {
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(w, 0.18, d), courseMaterials.green);
+      bridge.position.set(x, y, z);
+      bridge.castShadow = true;
+      bridge.receiveShadow = true;
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x05100a, emissive: 0x00ff66, emissiveIntensity: 0.8, roughness: 0.4, metalness: 0.3 });
+      const rail1 = new THREE.Mesh(new THREE.BoxGeometry(w, 0.09, 0.16), railMat);
+      rail1.position.set(0, 0.26, d / 2 - 0.02);
+      const rail2 = rail1.clone();
+      rail2.position.z = -d / 2 + 0.02;
+      bridge.add(rail1, rail2);
+      group.add(bridge);
+    }
+
+    function addTower(group, x, z, s) {
+      const tower = new THREE.Group();
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(0.28 * s, 0.35 * s, 2.3 * s, 10), courseMaterials.wall);
+      core.position.y = 1.15 * s;
+      core.castShadow = true;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.46 * s, 0.46 * s, 0.16 * s, 14), courseMaterials.neon);
+      cap.position.y = 2.25 * s;
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.2 * s, 16, 12), new THREE.MeshBasicMaterial({ color: 0x00ff66 }));
+      orb.position.y = 2.5 * s;
+      tower.add(core, cap, orb);
+      tower.position.set(x, sampleHeight(x, z), z);
+      group.add(tower);
+    }
+
+    function addBanner(group, text) {
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 512; canvas2.height = 128;
+      const ctx = canvas2.getContext('2d');
+      ctx.clearRect(0, 0, canvas2.width, canvas2.height);
+      ctx.fillStyle = 'rgba(0,255,102,0.12)';
+      roundRect(ctx, 8, 8, 496, 112, 24); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,255,102,0.7)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.fillStyle = '#dfffe7';
+      ctx.font = 'bold 42px Segoe UI, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 66);
+      const tex = new THREE.CanvasTexture(canvas2);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 1.7), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+      sign.position.set(0, 2.4, -courseState.bounds.max.y + 0.75);
+      group.add(sign);
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function hill(x, z, cx, cz, radius, height) {
+      const dx = x - cx, dz = z - cz;
+      const d = Math.sqrt(dx * dx + dz * dz) / radius;
+      if (d >= 1) return 0;
+      const t = 1 - d;
+      return height * t * t * (3 - 2 * t);
+    }
+
+    function ramp(x, z, x0, z0, w, d, rise, axis) {
+      const localX = x - x0;
+      const localZ = z - z0;
+      if (Math.abs(localX) > w / 2 || Math.abs(localZ) > d / 2) return 0;
+      const sx = THREE.MathUtils.clamp((localX + w / 2) / w, 0, 1);
+      const sz = THREE.MathUtils.clamp((localZ + d / 2) / d, 0, 1);
+      if (axis === 'x') return rise * sx;
+      if (axis === 'z') return rise * sz;
+      return rise * ((sx + sz) * 0.5);
+    }
+
+    function sampleHeight(x, z) {
+      if (!courseState.heightFn) return 0;
+      return courseState.heightFn(x, z);
+    }
+
+    function sampleGradient(x, z) {
+      const e = 0.18;
+      const hx1 = sampleHeight(x + e, z);
+      const hx0 = sampleHeight(x - e, z);
+      const hz1 = sampleHeight(x, z + e);
+      const hz0 = sampleHeight(x, z - e);
+      return new THREE.Vector2((hx1 - hx0) / (2 * e), (hz1 - hz0) / (2 * e));
+    }
+
+    function setBallPosition(v) {
+      ball.position.set(v.x, v.y, v.z);
+      halo.position.copy(ball.position);
+      glowLight.position.copy(ball.position).add(new THREE.Vector3(0, 0.2, 0));
+    }
+
+    function updateHud() {
+      strokesEl.textContent = game.strokes;
+      roundStrokesEl.textContent = game.totalStrokes + game.strokes;
+      holeStrokesEl.textContent = game.strokes;
+      holeParEl.textContent = game.holePar;
+      holeNumEl.textContent = game.holeIndex + 1;
+      parEl.textContent = game.holePar;
+    }
+
+    function orbitLookAtBall(hard = false) {
+      const t = ball.position.clone();
+      game.orbitTarget.lerp(t, hard ? 1 : 0.14);
+    }
+
+    function updateCamera(dt) {
+      game.orbitYaw += (game.desiredYaw - game.orbitYaw) * (1 - Math.pow(0.0001, dt));
+      game.orbitPitch += (game.desiredPitch - game.orbitPitch) * (1 - Math.pow(0.0001, dt));
+      const cp = THREE.MathUtils.clamp(game.orbitPitch, 0.22, 1.05);
+      const dist = game.orbitDistance;
+      const ox = Math.sin(game.orbitYaw) * Math.cos(cp) * dist;
+      const oz = Math.cos(game.orbitYaw) * Math.cos(cp) * dist;
+      const oy = Math.sin(cp) * dist + 3.4;
+      const desired = new THREE.Vector3(game.orbitTarget.x + ox, game.orbitTarget.y + oy, game.orbitTarget.z + oz);
+      camera.position.lerp(desired, 1 - Math.pow(0.0002, dt));
+      camera.lookAt(game.orbitTarget.x, game.orbitTarget.y + 0.35, game.orbitTarget.z);
+      fill.position.copy(camera.position);
+    }
+
+    function screenToWorldDrag(dx, dy) {
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0; forward.normalize();
+      const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize().multiplyScalar(-1);
+      return right.multiplyScalar(dx).add(forward.multiplyScalar(-dy));
+    }
+
+    function beginAim(point) {
+      if (game.state !== 'playing' || game.sinking) return;
+      const speed = game.ballVel.length();
+      if (speed > 0.18 || game.aimActive) return;
+      game.pointerId = point.id;
+      game.aimActive = true;
+      game.startPointer.set(point.x, point.y);
+      game.currentPointer.set(point.x, point.y);
+      powerFill.style.width = '0%';
+      aimLine.visible = true;
+      predLine.visible = true;
+      ghostBall.visible = true;
+      updateAimVisuals();
+    }
+
+    function updateAim(point) {
+      if (!game.aimActive || point.id !== game.pointerId) return;
+      game.currentPointer.set(point.x, point.y);
+      updateAimVisuals();
+    }
+
+    function endAim(point) {
+      if (!game.aimActive || point.id !== game.pointerId) return;
+      game.aimActive = false;
+      game.pointerId = null;
+      aimLine.visible = false;
+      predLine.visible = false;
+      ghostBall.visible = false;
+      const dragX = game.startPointer.x - game.currentPointer.x;
+      const dragY = game.currentPointer.y - game.startPointer.y;
+      const dragMag = Math.min(170, Math.hypot(dragX, dragY));
+      if (dragMag < 8) return;
+      const world = screenToWorldDrag(dragX / 18, dragY / 18);
+      const impulse = world.multiplyScalar(0.95);
+      impulse.y = 0;
+      const power = Math.min(game.shotPowerMax, dragMag * 0.1);
+      shoot(impulse.normalize().multiplyScalar(power));
+    }
+
+    function updateAimVisuals() {
+      const dragX = game.startPointer.x - game.currentPointer.x;
+      const dragY = game.currentPointer.y - game.startPointer.y;
+      const dragMag = Math.min(170, Math.hypot(dragX, dragY));
+      game.aimPower = dragMag / 170;
+      powerFill.style.width = `${Math.min(100, game.aimPower * 100)}%`;
+
+      const world = screenToWorldDrag(dragX / 18, dragY / 18);
+      world.y = 0;
+      const dir = world.lengthSq() > 0.0001 ? world.clone().normalize() : new THREE.Vector3(0, 0, 1);
+      const power = Math.min(game.shotPowerMax, dragMag * 0.1);
+      const shotVel = dir.clone().multiplyScalar(power);
+      drawAim(ball.position, shotVel);
+    }
+
+    function drawAim(start, velocity) {
+      const pts = [];
+      pts.push(start.clone().setY(start.y + 0.02));
+      let pos = start.clone();
+      let vel = velocity.clone();
+      const dt = 0.12;
+      for (let i = 0; i < 22; i++) {
+        const g = sampleGradient(pos.x, pos.z);
+        vel.x += -g.x * 2.3 * dt;
+        vel.z += -g.y * 2.3 * dt;
+        vel.multiplyScalar(0.985);
+        pos = pos.clone().addScaledVector(vel, dt);
+        pos.y = sampleHeight(pos.x, pos.z) + ballRadius;
+        pts.push(pos.clone());
+      }
+      lineGeo.setFromPoints([start.clone().add(new THREE.Vector3(0, 0.02, 0)), start.clone().add(new THREE.Vector3(0, 0.02, 0)).add(new THREE.Vector3(0, 0.1, 0))]);
+      predGeo.setFromPoints(pts);
+      if (pts[pts.length - 1]) {
+        ghostBall.visible = true;
+        ghostBall.position.copy(pts[pts.length - 1]);
+        flare.visible = true;
+        flare.position.copy(pts[1] || pts[0]).add(new THREE.Vector3(0, 0.1, 0));
+      }
+    }
+
+    function shoot(velocity) {
+      if (game.sinking || game.state !== 'playing') return;
+      game.ballVel.copy(velocity);
+      game.ballVel.y = 0;
+      game.strokes += 1;
+      game.totalStrokes += 1;
+      updateHud();
+      showMessage('SHOT', `Stroke ${game.strokes} on ${game.currentHole.name}`, 650);
+      spawnBurst(game.ballPos, 10, 0x00ff66, 0.04);
+    }
+
+    function updatePhysics(dt) {
+      const hole = game.currentHole;
+      if (!hole) return;
+      if (game.sinking) {
+        game.holeDelay -= dt;
+        if (game.holeDelay <= 0) nextHole();
+        return;
+      }
+
+      const pos = game.ballPos;
+      const vel = game.ballVel;
+      const grad = sampleGradient(pos.x, pos.z);
+      const slopeForce = 15.0;
+      vel.x += -grad.x * slopeForce * dt;
+      vel.z += -grad.y * slopeForce * dt;
+
+      const speed = vel.length();
+      const friction = THREE.MathUtils.lerp(2.4, 1.1, Math.min(1, speed / 8));
+      const drag = Math.exp(-friction * dt);
+      vel.multiplyScalar(drag);
+      if (speed < 0.012) vel.set(0, 0, 0);
+
+      const prev = pos.clone();
+      pos.x += vel.x * dt;
+      pos.z += vel.z * dt;
+
+      resolveBounds(pos, vel, hole.bounds);
+      resolveWalls(pos, vel, hole.walls);
+      resolveBumpers(pos, vel, hole.bumpers);
+
+      if (checkWater(pos, prev, hole.water)) {
+        return;
+      }
+
+      const h = sampleHeight(pos.x, pos.z);
+      game.currentHeight = h;
+      pos.y = h + ballRadius;
+      ball.rotation.x += vel.z * dt * 1.3;
+      ball.rotation.z -= vel.x * dt * 1.3;
+
+      if (!game.aimActive) orbitLookAtBall();
+
+      const cupFlat = Math.hypot(pos.x - courseState.cup.x, pos.z - courseState.cup.z);
+      const cupHeight = sampleHeight(courseState.cup.x, courseState.cup.z);
+      if (cupFlat < courseState.cupRadius * 0.82 && speed < 1.3 && pos.y - ballRadius <= cupHeight + 0.14) {
+        sinkBall();
+      }
+
+      if (speed > 0.1) spawnTrail(prev, pos);
+      updateParticles(dt);
+    }
+
+    function resolveBounds(pos, vel, bounds) {
+      const pad = ballRadius * 0.96;
+      if (pos.x < bounds.min.x + pad) { pos.x = bounds.min.x + pad; vel.x = Math.abs(vel.x) * 0.72; spawnSpark(pos, 5); }
+      if (pos.x > bounds.max.x - pad) { pos.x = bounds.max.x - pad; vel.x = -Math.abs(vel.x) * 0.72; spawnSpark(pos, 5); }
+      if (pos.z < bounds.min.y + pad) { pos.z = bounds.min.y + pad; vel.z = Math.abs(vel.z) * 0.72; spawnSpark(pos, 5); }
+      if (pos.z > bounds.max.y - pad) { pos.z = bounds.max.y - pad; vel.z = -Math.abs(vel.z) * 0.72; spawnSpark(pos, 5); }
+    }
+
+    function resolveWalls(pos, vel, walls) {
+      for (const rect of walls) {
+        const cx = rect.x + rect.w / 2;
+        const cz = rect.z + rect.d / 2;
+        const halfW = rect.w / 2 + ballRadius;
+        const halfD = rect.d / 2 + ballRadius;
+        const dx = pos.x - cx;
+        const dz = pos.z - cz;
+        if (Math.abs(dx) < halfW && Math.abs(dz) < halfD) {
+          const pushX = halfW - Math.abs(dx);
+          const pushZ = halfD - Math.abs(dz);
+          if (pushX < pushZ) {
+            pos.x += Math.sign(dx || 1) * pushX;
+            vel.x *= -0.78;
+          } else {
+            pos.z += Math.sign(dz || 1) * pushZ;
+            vel.z *= -0.78;
+          }
+          vel.multiplyScalar(0.98);
+          spawnSpark(pos, 4);
+        }
+      }
+    }
+
+    function resolveBumpers(pos, vel, bumpers) {
+      for (const b of bumpers || []) {
+        const dx = pos.x - b.x;
+        const dz = pos.z - b.z;
+        const d = Math.hypot(dx, dz);
+        const r = b.r + ballRadius;
+        if (d > 0.0001 && d < r) {
+          const nx = dx / d;
+          const nz = dz / d;
+          pos.x = b.x + nx * r;
+          pos.z = b.z + nz * r;
+          const dot = vel.x * nx + vel.z * nz;
+          if (dot < 0) {
+            vel.x -= 1.78 * dot * nx;
+            vel.z -= 1.78 * dot * nz;
+            vel.multiplyScalar(0.9);
+            spawnBurst(new THREE.Vector3(pos.x, pos.y, pos.z), 3, 0x00ff66, 0.03);
+          }
+        }
+      }
+    }
+
+    function checkWater(pos, prev, waters) {
+      for (const w of waters || []) {
+        const inside = pos.x > w.x - w.w / 2 && pos.x < w.x + w.w / 2 && pos.z > w.z - w.d / 2 && pos.z < w.z + w.d / 2;
+        if (inside) {
+          game.strokes += 1;
+          game.totalStrokes += 1;
+          updateHud();
+          showMessage('WATER HAZARD', 'Penalty stroke — back to the tee.', 1400);
+          spawnBurst(pos, 24, 0x1bb6ff, 0.08);
+          game.ballVel.set(0, 0, 0);
+          game.ballPos.copy(courseState.tee);
+          game.ballPos.y = sampleHeight(game.ballPos.x, game.ballPos.z) + ballRadius;
+          setBallPosition(game.ballPos);
+          orbitLookAtBall(true);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function sinkBall() {
+      game.sinking = true;
+      game.ballVel.set(0, 0, 0);
+      game.holeDelay = 1.35;
+      showMessage('SINK!', `${game.currentHole.name} in ${game.strokes} strokes`, 900);
+      spawnBurst(game.ballPos, 42, 0x00ff66, 0.11);
+      const start = game.ballPos.clone();
+      let t = 0;
+      const sinkInterval = setInterval(() => {
+        t += 0.08;
+        ball.position.y = start.y - t * 1.6;
+        halo.position.y = ball.position.y;
+        glowLight.position.y = ball.position.y + 0.2;
+        if (t > 1.1) clearInterval(sinkInterval);
+      }, 16);
+      setTimeout(() => completeHole(), 700);
+    }
+
+    function completeHole() {
+      clearScreen.classList.remove('hide');
+      const delta = game.strokes - game.holePar;
+      holeDeltaEl.textContent = formatScore(delta);
+      holeStrokesEl.textContent = game.strokes;
+      holeParEl.textContent = game.holePar;
+      roundStrokesEl.textContent = game.totalStrokes;
+      document.getElementById('nextBtn').textContent = game.holeIndex + 1 >= holes.length ? 'Finish Round' : 'Next Hole';
+    }
+
+    function nextHole() {
+      clearScreen.classList.add('hide');
+      game.totalStrokes += 0;
+      if (game.holeIndex + 1 >= holes.length) {
+        endRound();
+        return;
+      }
+      game.holeIndex += 1;
+      loadHole(game.holeIndex);
+      showMessage(`HOLE ${game.holeIndex + 1}`, `Par ${game.holePar} — keep the pace up.`, 1400);
+    }
+
+    function spawnTrail(from, to) {
+      const p = new THREE.Vector3().lerpVectors(from, to, 0.5);
+      game.particles.push({
+        pos: p,
+        vel: new THREE.Vector3((Math.random() - 0.5) * 0.3, Math.random() * 0.2, (Math.random() - 0.5) * 0.3),
+        life: 0.38,
+        max: 0.38,
+        color: 0x00ff66,
+        size: 0.06 + Math.random() * 0.03
+      });
+      if (game.particles.length > 180) game.particles.splice(0, game.particles.length - 180);
+    }
+
+    function spawnSpark(pos, count) { spawnBurst(pos, count, 0x00ff66, 0.05); }
+
+    function spawnBurst(pos, count, color, speed) {
+      for (let i = 0; i < count; i++) {
+        const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() * 1.3, Math.random() - 0.5).normalize();
+        game.particles.push({
+          pos: pos.clone().add(new THREE.Vector3(0, 0.12, 0)),
+          vel: dir.multiplyScalar(speed * (0.55 + Math.random() * 1.8)),
+          life: 0.42 + Math.random() * 0.55,
+          max: 0.42 + Math.random() * 0.55,
+          color,
+          size: 0.05 + Math.random() * 0.06
+        });
+      }
+      if (game.particles.length > 220) game.particles.splice(0, game.particles.length - 220);
+    }
+
+    let particleMesh = null;
+    let particleMat = null;
+    function updateParticles(dt) {
+      if (!particleMesh) {
+        const geom = new THREE.BufferGeometry();
+        const mat = new THREE.PointsMaterial({ size: 0.09, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, opacity: 0.9 });
+        particleMesh = new THREE.Points(geom, mat);
+        particleMat = mat;
+        scene.add(particleMesh);
+      }
+      const positions = [];
+      const colors = [];
+      for (let i = game.particles.length - 1; i >= 0; i--) {
+        const p = game.particles[i];
+        p.life -= dt;
+        if (p.life <= 0) { game.particles.splice(i, 1); continue; }
+        p.vel.y -= 4.5 * dt;
+        p.pos.addScaledVector(p.vel, dt);
+        positions.push(p.pos.x, p.pos.y, p.pos.z);
+        const c = new THREE.Color(p.color);
+        const alpha = Math.max(0, p.life / p.max);
+        c.multiplyScalar(alpha);
+        colors.push(c.r, c.g, c.b);
+      }
+      particleMesh.geometry.dispose();
+      particleMesh.geometry = new THREE.BufferGeometry();
+      particleMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      particleMesh.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      particleMesh.geometry.computeBoundingSphere();
+      particleMat.size = 0.075;
+    }
+
+    function updateLoop(time) {
+      requestAnimationFrame(updateLoop);
+      const now = time * 0.001;
+      const dt = Math.min(0.033, now - (game.lastTime || now));
+      game.lastTime = now;
+      game.animateT = now;
+      const pulse = 1.1 + Math.sin(now * 3.0) * 0.13;
+      ballMat.emissiveIntensity = pulse * 1.45;
+      halo.scale.setScalar(1 + Math.sin(now * 4.2) * 0.04);
+      glowLight.intensity = 1.6 + Math.sin(now * 5.2) * 0.3;
+
+      if (game.state === 'playing') {
+        updatePhysics(dt);
+      } else {
+        updateParticles(dt);
+      }
+      updateCamera(dt);
+      renderer.render(scene, camera);
+    }
+
+    function onResize() {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    }
+
+    function pointerPoint(event) {
+      return { id: event.pointerId, x: event.clientX, y: event.clientY };
+    }
+
+    function handlePointerDown(event) {
+      if (event.button === 2) {
+        game.orbiting = true;
+        game.rightPointerId = event.pointerId;
+        game.rightStart = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      if (game.state === 'title') {
+        resetRound();
+        return;
+      }
+      if (game.state !== 'playing') return;
+      beginAim(pointerPoint(event));
+    }
+
+    function handlePointerMove(event) {
+      if (game.orbiting && event.pointerId === game.rightPointerId) {
+        const dx = event.movementX || (event.clientX - game.rightStart.x);
+        const dy = event.movementY || (event.clientY - game.rightStart.y);
+        game.desiredYaw -= dx * 0.007;
+        game.desiredPitch -= dy * 0.0065;
+        game.desiredPitch = THREE.MathUtils.clamp(game.desiredPitch, 0.2, 1.02);
+        game.rightStart = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      updateAim(pointerPoint(event));
+    }
+
+    function handlePointerUp(event) {
+      if (game.orbiting && event.pointerId === game.rightPointerId) {
+        game.orbiting = false;
+        game.rightPointerId = null;
+        return;
+      }
+      endAim(pointerPoint(event));
+    }
+
+    function handleKeyDown(event) {
+      if (event.code === 'Space' || event.code === 'Enter') {
+        event.preventDefault();
+        if (game.state === 'title') resetRound();
+        else if (game.state === 'game-over') resetRound();
+        else if (game.state === 'playing' && !game.aimActive && game.ballVel.length() < 0.18) {
+          beginAim({ id: -1, x: innerWidth * 0.5, y: innerHeight * 0.5 });
+        } else if (game.state === 'hole-clear') {
+          nextHole();
+        }
+      }
+      if (event.code === 'KeyR') {
+        resetRound();
+      }
+    }
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('pointerdown', handlePointerDown, { passive: false });
+    document.addEventListener('pointermove', handlePointerMove, { passive: false });
+    document.addEventListener('pointerup', handlePointerUp, { passive: false });
+    document.addEventListener('pointercancel', handlePointerUp, { passive: false });
+    window.addEventListener('resize', onResize);
+    window.addEventListener('keydown', handleKeyDown);
+    document.getElementById('startBtn').addEventListener('click', resetRound);
+    document.getElementById('nextBtn').addEventListener('click', nextHole);
+    document.getElementById('restartBtn').addEventListener('click', resetRound);
+
+    function startIdleScene() {
+      const demoHole = holes[0].build(courseRoot);
+      courseState.bounds = demoHole.bounds;
+      courseState.baseHeight = demoHole.baseHeight;
+      courseState.cup = demoHole.cup.clone();
+      courseState.cupRadius = demoHole.cupRadius;
+      courseState.cupDepth = demoHole.cupDepth;
+      courseState.tee = demoHole.tee.clone();
+      courseState.water = demoHole.water;
+      courseState.walls = demoHole.walls;
+      courseState.bumpers = demoHole.bumpers;
+      courseState.heightFn = demoHole.heightFn;
+      courseState.title = demoHole.name;
+      game.currentHole = demoHole;
+      buildGround(demoHole);
+      buildCup(demoHole);
+      buildWalls(demoHole);
+      buildWater(demoHole);
+      demoHole.decor(courseRoot);
+      game.ballPos.copy(demoHole.tee);
+      game.ballPos.y = sampleHeight(game.ballPos.x, game.ballPos.z) + ballRadius;
+      setBallPosition(game.ballPos);
+      game.orbitTarget.copy(game.ballPos);
+      camera.position.set(-8, 12, 17);
+      camera.lookAt(game.ballPos);
+      updateParticles(0);
+    }
+
+    startIdleScene();
+    updateHud();
+    updateLoop(0);
+  </script>
+</body>
+</html>

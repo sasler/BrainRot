@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>MINI GOLF 3D</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050510;
+      --bg-soft: rgba(5, 12, 10, 0.72);
+      --panel: rgba(6, 16, 12, 0.78);
+      --panel-strong: rgba(5, 14, 10, 0.92);
+      --line: rgba(0, 255, 102, 0.2);
+      --line-strong: rgba(0, 255, 102, 0.45);
+      --neon: #00ff66;
+      --neon-soft: #7bffb2;
+      --cyan: #34f6ff;
+      --danger: #ff4d7a;
+      --gold: #ffd65b;
+      --text: #f3fff7;
+      --muted: #8ccfa4;
+      --shadow: 0 0 24px rgba(0, 255, 102, 0.2), 0 14px 42px rgba(0, 0, 0, 0.5);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-width: 320px;
+      min-height: 480px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(0, 255, 102, 0.08), transparent 24%),
+        radial-gradient(circle at 80% 18%, rgba(52, 246, 255, 0.07), transparent 20%),
+        radial-gradient(circle at 50% 95%, rgba(0, 255, 102, 0.05), transparent 32%),
+        linear-gradient(180deg, #06060e 0%, #020204 100%);
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background:
+        repeating-linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.018) 0 2px,
+          transparent 2px 5px
+        );
+      opacity: 0.18;
+      mix-blend-mode: screen;
+    }
+
+    body::after {
+      background:
+        radial-gradient(circle at center, transparent 48%, rgba(0, 0, 0, 0.52) 100%);
+      opacity: 0.9;
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 1;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #game.aiming {
+      cursor: crosshair;
+    }
+
+    #game.orbiting {
+      cursor: grabbing;
+    }
+
+    .hud,
+    .overlay-wrap {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .hud {
+      padding: clamp(12px, 2vw, 20px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand-card,
+    .panel,
+    .status-card,
+    .power-shell,
+    .instructions-chip,
+    .overlay-panel {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 100%),
+        var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+    }
+
+    .brand-card {
+      padding: 12px 14px;
+      border-radius: 16px;
+      min-width: 200px;
+    }
+
+    .brand-kicker,
+    .panel-label,
+    .overlay-kicker,
+    .instructions-chip {
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      font-size: 0.64rem;
+      color: var(--muted);
+    }
+
+    .brand-kicker {
+      color: var(--neon);
+      text-shadow: 0 0 14px rgba(0, 255, 102, 0.55);
+      margin-bottom: 5px;
+    }
+
+    .brand-title {
+      font-size: clamp(1.1rem, 3vw, 1.45rem);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+    }
+
+    .panel-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      max-width: min(100%, 700px);
+    }
+
+    .panel {
+      min-width: 100px;
+      padding: 10px 12px 11px;
+      border-radius: 16px;
+    }
+
+    .panel-value {
+      margin-top: 4px;
+      font-size: clamp(0.96rem, 2vw, 1.28rem);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-shadow: 0 0 14px rgba(0, 255, 102, 0.16);
+    }
+
+    .panel-value.neon { color: var(--neon-soft); }
+    .panel-value.gold { color: var(--gold); text-shadow: 0 0 14px rgba(255, 214, 91, 0.24); }
+    .panel-value.cyan { color: var(--cyan); text-shadow: 0 0 14px rgba(52, 246, 255, 0.24); }
+
+    .hud-bottom {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .status-card {
+      min-width: min(88vw, 520px);
+      max-width: min(92vw, 620px);
+      padding: 10px 14px;
+      border-radius: 999px;
+      text-align: center;
+      color: var(--text);
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+    }
+
+    .status-card strong {
+      color: var(--neon-soft);
+    }
+
+    .power-shell {
+      width: min(86vw, 440px);
+      padding: 10px 12px;
+      border-radius: 18px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .power-shell.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .power-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+
+    .power-bar {
+      position: relative;
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .power-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      border-radius: inherit;
+      background:
+        linear-gradient(90deg, rgba(0, 255, 102, 0.55), #00ff66 50%, #9effc2 100%);
+      box-shadow:
+        0 0 18px rgba(0, 255, 102, 0.42),
+        inset 0 0 14px rgba(255, 255, 255, 0.22);
+    }
+
+    .instructions-chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .overlay-wrap {
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+
+    .overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .overlay::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(0, 255, 102, 0.16), transparent 24%),
+        radial-gradient(circle at 50% 80%, rgba(52, 246, 255, 0.12), transparent 28%),
+        rgba(2, 6, 4, 0.7);
+      backdrop-filter: blur(14px);
+    }
+
+    .overlay-panel {
+      position: relative;
+      width: min(92vw, 680px);
+      padding: clamp(20px, 4vw, 34px);
+      border-radius: 28px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .overlay-panel::before,
+    .overlay-panel::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .overlay-panel::before {
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(135deg, rgba(0, 255, 102, 0.12), transparent 42%),
+        radial-gradient(circle at 80% 18%, rgba(52, 246, 255, 0.16), transparent 26%);
+      opacity: 0.9;
+    }
+
+    .overlay-panel::after {
+      inset: 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 255, 102, 0.12);
+    }
+
+    .overlay-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .overlay-title {
+      margin-top: 10px;
+      font-size: clamp(2rem, 9vw, 4.4rem);
+      line-height: 0.94;
+      font-weight: 950;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 18px rgba(0, 255, 102, 0.24),
+        0 0 48px rgba(0, 255, 102, 0.1);
+    }
+
+    .overlay-subtitle,
+    .overlay-copy {
+      margin-top: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .overlay-stats {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+      gap: 12px;
+    }
+
+    .overlay-stat {
+      padding: 12px 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 255, 102, 0.14);
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .overlay-stat-value {
+      margin-top: 6px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .overlay-buttons {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      pointer-events: auto;
+      font: inherit;
+      border: none;
+      cursor: pointer;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 12px 20px;
+      min-width: 144px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 800;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      transform: translateY(-2px) scale(1.01);
+      outline: none;
+    }
+
+    .primary-btn {
+      background:
+        linear-gradient(135deg, rgba(0, 255, 102, 0.24), rgba(0, 255, 102, 0.14)),
+        rgba(4, 18, 10, 0.92);
+      box-shadow: 0 0 24px rgba(0, 255, 102, 0.2), inset 0 0 18px rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(0, 255, 102, 0.28);
+    }
+
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .instruction-list {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+      text-align: left;
+      max-width: 540px;
+      margin-inline: auto;
+    }
+
+    .instruction-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 255, 102, 0.12);
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .instruction-item strong {
+      color: var(--neon-soft);
+    }
+
+    .summary-list {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(0, 255, 102, 0.12);
+      background: rgba(0, 0, 0, 0.16);
+      color: var(--text);
+    }
+
+    .summary-row span:last-child {
+      color: var(--neon-soft);
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 700px) {
+      .hud-row {
+        align-items: stretch;
+      }
+
+      .panel-grid {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .panel {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+      }
+
+      .status-card {
+        font-size: 0.74rem;
+      }
+
+      .overlay-panel {
+        padding: 18px;
+        border-radius: 22px;
+      }
+
+      button {
+        min-width: 132px;
+        width: 100%;
+      }
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="game" aria-label="Mini Golf 3D game"></canvas>
+
+  <div class="hud">
+    <div class="hud-row">
+      <div class="brand-card">
+        <div class="brand-kicker">Neon Night Course</div>
+        <div class="brand-title">Mini Golf 3D</div>
+        <div class="brand-sub" id="holeName">Hole 1 · Glow Run</div>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-label">Hole</div>
+          <div class="panel-value neon" id="holeValue">1 / 5</div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Par</div>
+          <div class="panel-value cyan" id="parValue">2</div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Strokes</div>
+          <div class="panel-value gold" id="strokesValue">0</div>
+        </div>
+        <div class="panel">
+          <div class="panel-label">Total</div>
+          <div class="panel-value neon" id="totalValue">E</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="power-shell" id="powerShell">
+        <div class="power-header">
+          <span>Aim & Power</span>
+          <span id="powerValue">0%</span>
+        </div>
+        <div class="power-bar">
+          <div class="power-fill" id="powerFill"></div>
+        </div>
+      </div>
+
+      <div class="status-card" id="statusMessage">
+        <strong>Ready.</strong> Drag back from the ball to shoot. Right-click + drag to orbit the camera.
+      </div>
+
+      <div class="instructions-chip">
+        Pull back · release to putt · avoid water · sink the glowing cup
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay-wrap">
+    <div class="overlay active" id="startOverlay">
+      <div class="overlay-panel">
+        <div class="overlay-content">
+          <div class="overlay-kicker">Arcade Neon Challenge</div>
+          <h1 class="overlay-title">MINI GOLF 3D</h1>
+          <p class="overlay-subtitle">
+            A compact neon mini golf course floating in the dark. Read the green, use the slopes,
+            bank off glowing rails, and survive all five glowing holes under par.
+          </p>
+
+          <div class="instruction-list">
+            <div class="instruction-item"><strong>Mouse / touch:</strong> press near the ball, drag backward like a slingshot, then release to shoot.</div>
+            <div class="instruction-item"><strong>Orbit camera:</strong> right-click and drag to rotate around the action. Mouse wheel changes zoom.</div>
+            <div class="instruction-item"><strong>Course hazards:</strong> water resets your ball with a one-stroke penalty. Ramps, bumpers, and moving obstacles all affect the roll.</div>
+          </div>
+
+          <div class="overlay-buttons">
+            <button class="primary-btn" id="startButton">Start Round</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="resultOverlay">
+      <div class="overlay-panel">
+        <div class="overlay-content">
+          <div class="overlay-kicker" id="resultKicker">Hole Cleared</div>
+          <h2 class="overlay-title" id="resultTitle">Birdie</h2>
+          <p class="overlay-copy" id="resultCopy">You finished the hole cleanly.</p>
+          <div class="overlay-stats">
+            <div class="overlay-stat">
+              <div class="panel-label">Hole</div>
+              <div class="overlay-stat-value" id="resultHole">1</div>
+            </div>
+            <div class="overlay-stat">
+              <div class="panel-label">Strokes</div>
+              <div class="overlay-stat-value" id="resultStrokes">2</div>
+            </div>
+            <div class="overlay-stat">
+              <div class="panel-label">Par</div>
+              <div class="overlay-stat-value" id="resultPar">2</div>
+            </div>
+            <div class="overlay-stat">
+              <div class="panel-label">Score</div>
+              <div class="overlay-stat-value" id="resultScore">E</div>
+            </div>
+          </div>
+          <div class="overlay-buttons">
+            <button class="primary-btn" id="nextHoleButton">Next Hole</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="gameOverOverlay">
+      <div class="overlay-panel">
+        <div class="overlay-content">
+          <div class="overlay-kicker">Course Complete</div>
+          <h2 class="overlay-title">Final Score</h2>
+          <p class="overlay-copy" id="gameOverCopy">A neon round to remember.</p>
+          <div class="overlay-stats">
+            <div class="overlay-stat">
+              <div class="panel-label">Total</div>
+              <div class="overlay-stat-value" id="finalScore">E</div>
+            </div>
+            <div class="overlay-stat">
+              <div class="panel-label">Strokes</div>
+              <div class="overlay-stat-value" id="finalStrokes">0</div>
+            </div>
+            <div class="overlay-stat">
+              <div class="panel-label">Par Total</div>
+              <div class="overlay-stat-value" id="finalPar">0</div>
+            </div>
+          </div>
+          <div class="summary-list" id="summaryList"></div>
+          <div class="overlay-buttons">
+            <button class="primary-btn" id="restartButton">Play Again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    const canvas = document.getElementById("game");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050510);
+    scene.fog = new THREE.FogExp2(0x050510, 0.045);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 220);
+    camera.position.set(0, 10, 13);
+
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointerNdc = new THREE.Vector2();
+
+    const BALL_RADIUS = 0.34;
+    const MAX_SHOT_SPEED = 18.5;
+    const GRAVITY = 28;
+    const AIR_DRAG = 0.08;
+    const WALL_RESTITUTION = 0.78;
+    const BUMPER_RESTITUTION = 0.9;
+    const SAFE_SPEED = 0.12;
+
+    const tempVecA = new THREE.Vector3();
+    const tempVecB = new THREE.Vector3();
+    const tempVecC = new THREE.Vector3();
+    const tempVec2 = new THREE.Vector2();
+
+    const ambientLight = new THREE.AmbientLight(0x7bffb2, 0.68);
+    scene.add(ambientLight);
+
+    const hemi = new THREE.HemisphereLight(0x55ffaa, 0x071009, 0.88);
+    scene.add(hemi);
+
+    const keyLight = new THREE.DirectionalLight(0xa8ffd4, 1.25);
+    keyLight.position.set(10, 16, 8);
+    scene.add(keyLight);
+
+    const followLight = new THREE.PointLight(0x00ff66, 6, 18, 1.8);
+    scene.add(followLight);
+
+    const sceneGroup = new THREE.Group();
+    scene.add(sceneGroup);
+
+    const courseGroup = new THREE.Group();
+    sceneGroup.add(courseGroup);
+
+    const accentsGroup = new THREE.Group();
+    sceneGroup.add(accentsGroup);
+
+    const ballGroup = new THREE.Group();
+    sceneGroup.add(ballGroup);
+
+    const particleGroup = new THREE.Group();
+    scene.add(particleGroup);
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function damp(current, target, lambda, dt) {
+      return THREE.MathUtils.damp(current, target, lambda, dt);
+    }
+
+    function formatRelativeScore(value) {
+      if (value === 0) return "E";
+      return value > 0 ? `+${value}` : `${value}`;
+    }
+
+    function describeRelativeScore(delta) {
+      if (delta <= -3) return "Albatross";
+      if (delta === -2) return "Eagle";
+      if (delta === -1) return "Birdie";
+      if (delta === 0) return "Par";
+      if (delta === 1) return "Bogey";
+      if (delta === 2) return "Double Bogey";
+      return `${delta > 0 ? "+" : ""}${delta}`;
+    }
+
+    function worldToLocalXZ(obj, x, z) {
+      const dx = x - obj.x;
+      const dz = z - obj.z;
+      const cos = Math.cos(obj.rotY || 0);
+      const sin = Math.sin(obj.rotY || 0);
+      return {
+        x: cos * dx + sin * dz,
+        z: -sin * dx + cos * dz
+      };
+    }
+
+    function localToWorldXZ(obj, x, z) {
+      const cos = Math.cos(obj.rotY || 0);
+      const sin = Math.sin(obj.rotY || 0);
+      return {
+        x: x * cos - z * sin + obj.x,
+        z: x * sin + z * cos + obj.z
+      };
+    }
+
+    function rotateNormalToWorld(obj, nx, nz) {
+      const cos = Math.cos(obj.rotY || 0);
+      const sin = Math.sin(obj.rotY || 0);
+      return new THREE.Vector3(
+        nx * cos - nz * sin,
+        0,
+        nx * sin + nz * cos
+      );
+    }
+
+    const palette = {
+      floor: new THREE.Color(0x0b2617),
+      floorAlt: new THREE.Color(0x0f3120),
+      wall: new THREE.Color(0x103621),
+      bumper: new THREE.Color(0x102e24),
+      cup: new THREE.Color(0x0b130f),
+      water: new THREE.Color(0x0b3040),
+      glow: new THREE.Color(0x00ff66),
+      cyan: new THREE.Color(0x34f6ff)
+    };
+
+    function createStars() {
+      const starGeometry = new THREE.BufferGeometry();
+      const count = 1200;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const colorA = new THREE.Color(0x00ff66);
+      const colorB = new THREE.Color(0x8edcff);
+      for (let i = 0; i < count; i++) {
+        const radius = 34 + Math.random() * 90;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(THREE.MathUtils.randFloatSpread(1.65) / 1.65);
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.cos(phi) * 0.55 + 18;
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+        const c = i % 3 === 0 ? colorA : colorB;
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+      }
+      starGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      starGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const starMaterial = new THREE.PointsMaterial({
+        size: 0.18,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.95,
+        vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+      return stars;
+    }
+
+    const stars = createStars();
+
+    function createGlowRing(radius, color) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, 0.03, 12, 48),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.75
+        })
+      );
+      ring.rotation.x = Math.PI / 2;
+      return ring;
+    }
+
+    const ballMaterial = new THREE.MeshStandardMaterial({
+      color: 0xe8fff1,
+      emissive: 0x00ff66,
+      emissiveIntensity: 1.8,
+      metalness: 0.2,
+      roughness: 0.12
+    });
+
+    const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 28, 28), ballMaterial);
+    ballMesh.castShadow = false;
+    ballGroup.add(ballMesh);
+
+    const ballGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(BALL_RADIUS * 1.55, 20, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0x00ff66,
+        transparent: true,
+        opacity: 0.11,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    ballGroup.add(ballGlow);
+
+    const aimLineGeometry = new THREE.BufferGeometry();
+    const aimLinePositions = new Float32Array(3 * 18);
+    aimLineGeometry.setAttribute("position", new THREE.BufferAttribute(aimLinePositions, 3));
+    const aimLine = new THREE.Line(
+      aimLineGeometry,
+      new THREE.LineBasicMaterial({
+        color: 0x00ff66,
+        transparent: true,
+        opacity: 0.95
+      })
+    );
+    aimLine.visible = false;
+    scene.add(aimLine);
+
+    const aimRing = createGlowRing(0.42, 0x34f6ff);
+    aimRing.visible = false;
+    scene.add(aimRing);
+
+    function createParticle() {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.MeshBasicMaterial({
+          color: 0x00ff66,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      mesh.visible = false;
+      particleGroup.add(mesh);
+      return {
+        mesh,
+        velocity: new THREE.Vector3(),
+        life: 0,
+        maxLife: 1,
+        active: false
+      };
+    }
+
+    const particles = Array.from({ length: 180 }, createParticle);
+
+    function spawnParticles(options) {
+      const {
+        position,
+        count = 8,
+        speed = 3,
+        color = 0x00ff66,
+        life = 0.5,
+        spread = 1,
+        upward = 0.4,
+        size = 0.08
+      } = options;
+
+      let spawned = 0;
+      for (const particle of particles) {
+        if (spawned >= count) break;
+        if (particle.active) continue;
+        particle.active = true;
+        particle.life = particle.maxLife = life * (0.8 + Math.random() * 0.4);
+        particle.mesh.visible = true;
+        particle.mesh.position.copy(position);
+        particle.mesh.scale.setScalar(size * (0.8 + Math.random() * 0.5));
+        particle.mesh.material.color.setHex(color);
+        particle.mesh.material.opacity = 0.8;
+        const theta = Math.random() * Math.PI * 2;
+        const radial = Math.random() * spread;
+        particle.velocity.set(
+          Math.cos(theta) * radial * speed,
+          (Math.random() * 0.8 + upward) * speed,
+          Math.sin(theta) * radial * speed
+        );
+        spawned++;
+      }
+    }
+
+    function updateParticles(dt) {
+      for (const particle of particles) {
+        if (!particle.active) continue;
+        particle.life -= dt;
+        if (particle.life <= 0) {
+          particle.active = false;
+          particle.mesh.visible = false;
+          continue;
+        }
+        particle.velocity.y -= dt * 8;
+        particle.mesh.position.addScaledVector(particle.velocity, dt);
+        const alpha = particle.life / particle.maxLife;
+        particle.mesh.material.opacity = alpha * 0.85;
+      }
+    }
+
+    const cameraRig = {
+      yaw: -0.95,
+      pitch: 0.72,
+      distance: 11.2,
+      targetDistance: 11.2,
+      smoothedTarget: new THREE.Vector3(),
+      lookAhead: new THREE.Vector3()
+    };
+
+    const ball = {
+      position: ballGroup.position,
+      velocity: new THREE.Vector3(),
+      grounded: false,
+      normal: new THREE.Vector3(0, 1, 0),
+      lastSafe: new THREE.Vector3(),
+      sinking: false,
+      sinkT: 0,
+      hidden: false,
+      resetting: false,
+      resetTimer: 0,
+      strokeCommitted: false
+    };
+
+    const input = {
+      aiming: false,
+      orbiting: false,
+      pointerId: null,
+      orbitPointerId: null,
+      aimStartWorld: new THREE.Vector3(),
+      aimCurrentWorld: new THREE.Vector3(),
+      aimDirection: new THREE.Vector3(1, 0, 0),
+      power: 0,
+      lastScreenX: 0,
+      lastScreenY: 0
+    };
+
+    const ui = {
+      holeName: document.getElementById("holeName"),
+      holeValue: document.getElementById("holeValue"),
+      parValue: document.getElementById("parValue"),
+      strokesValue: document.getElementById("strokesValue"),
+      totalValue: document.getElementById("totalValue"),
+      powerShell: document.getElementById("powerShell"),
+      powerFill: document.getElementById("powerFill"),
+      powerValue: document.getElementById("powerValue"),
+      statusMessage: document.getElementById("statusMessage"),
+      startOverlay: document.getElementById("startOverlay"),
+      resultOverlay: document.getElementById("resultOverlay"),
+      gameOverOverlay: document.getElementById("gameOverOverlay"),
+      resultKicker: document.getElementById("resultKicker"),
+      resultTitle: document.getElementById("resultTitle"),
+      resultCopy: document.getElementById("resultCopy"),
+      resultHole: document.getElementById("resultHole"),
+      resultStrokes: document.getElementById("resultStrokes"),
+      resultPar: document.getElementById("resultPar"),
+      resultScore: document.getElementById("resultScore"),
+      finalScore: document.getElementById("finalScore"),
+      finalStrokes: document.getElementById("finalStrokes"),
+      finalPar: document.getElementById("finalPar"),
+      gameOverCopy: document.getElementById("gameOverCopy"),
+      summaryList: document.getElementById("summaryList"),
+      startButton: document.getElementById("startButton"),
+      nextHoleButton: document.getElementById("nextHoleButton"),
+      restartButton: document.getElementById("restartButton")
+    };
+
+    const statusState = {
+      base: "Drag back from the ball to shoot. Right-click + drag to orbit the camera.",
+      flash: "",
+      timer: 0
+    };
+
+    const game = {
+      started: false,
+      phase: "start",
+      currentHoleIndex: 0,
+      strokesThisHole: 0,
+      totalStrokes: 0,
+      totalPar: 0,
+      holeResults: [],
+      course: null
+    };
+
+    function setStatus(message, timeout = 2.6) {
+      statusState.flash = message;
+      statusState.timer = timeout;
+      refreshHud();
+    }
+
+    function getCompletedRelativeScore() {
+      return game.holeResults.reduce((sum, result) => sum + result.delta, 0);
+    }
+
+    function refreshHud() {
+      const hole = holes[game.currentHoleIndex] || holes[0];
+      ui.holeName.textContent = `Hole ${game.currentHoleIndex + 1} · ${hole.name}`;
+      ui.holeValue.textContent = `${game.currentHoleIndex + 1} / ${holes.length}`;
+      ui.parValue.textContent = hole.par;
+      ui.strokesValue.textContent = game.strokesThisHole;
+      ui.totalValue.textContent = formatRelativeScore(getCompletedRelativeScore());
+      const message = statusState.timer > 0 ? statusState.flash : statusState.base;
+      ui.statusMessage.innerHTML = `<strong>${game.phase === "playing" ? "Live." : "Ready."}</strong> ${message}`;
+    }
+
+    const holes = [
+      {
+        name: "Glow Run",
+        par: 2,
+        spawn: { x: -11.5, z: 0 },
+        cup: { x: 11.7, z: 0, radius: 0.46, depth: 0.72 },
+        accents: [
+          { x: -2, y: 0.14, z: -5.2, sx: 1.2, sz: 0.15 },
+          { x: 2.4, y: 0.14, z: 5.2, sx: 1.4, sz: 0.15 }
+        ],
+        patches: [
+          { x: -7.5, z: 0, w: 11, d: 8.4, y: 0, slopeX: 0.018, slopeZ: -0.012, rotY: 0 },
+          { x: 2.6, z: 0, w: 13.8, d: 8.2, y: 0.2, slopeX: -0.015, slopeZ: 0.01, rotY: 0 }
+        ],
+        walls: [
+          { x: -7.5, z: -4.35, length: 11.2, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -7.5, z: 4.35, length: 11.2, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -13.15, z: 0, length: 8.2, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: 2.6, z: -4.25, length: 14, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 2.6, z: 4.25, length: 14, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 9.65, z: 0, length: 5.2, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 }
+        ],
+        bumpers: [
+          { x: 0.2, z: 1.6, radius: 0.72, height: 0.74 },
+          { x: 0.5, z: -1.6, radius: 0.48, height: 0.74 }
+        ],
+        waters: [],
+        obstacles: []
+      },
+      {
+        name: "Split Current",
+        par: 3,
+        spawn: { x: -13.8, z: -5.4 },
+        cup: { x: 11.4, z: 7.1, radius: 0.48, depth: 0.72 },
+        accents: [
+          { x: -6.8, y: 0.22, z: 5.6, sx: 1.8, sz: 0.15 },
+          { x: 4.2, y: 0.22, z: -4.4, sx: 1.4, sz: 0.15 }
+        ],
+        patches: [
+          { x: -10.6, z: -5.2, w: 9.6, d: 8.2, y: 0, slopeX: 0.015, slopeZ: 0.012, rotY: 0 },
+          { x: -1.7, z: -1.2, w: 11.2, d: 5.2, y: 0.25, slopeX: 0.06, slopeZ: 0.02, rotY: Math.PI / 7 },
+          { x: 7.3, z: 6.6, w: 11.2, d: 8.6, y: 1.1, slopeX: -0.024, slopeZ: -0.02, rotY: 0 }
+        ],
+        walls: [
+          { x: -10.6, z: -9.35, length: 9.6, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -15.55, z: -5.2, length: 8.2, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: -10.6, z: -1.1, length: 6.5, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -1.7, z: 1.6, length: 11.2, thickness: 0.42, height: 1.2, rotY: Math.PI / 7 },
+          { x: 7.3, z: 10.95, length: 11.3, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 1.8, z: 6.6, length: 8.8, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: 12.95, z: 6.6, length: 8.6, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 }
+        ],
+        bumpers: [
+          { x: -2.8, z: -4.1, radius: 0.66, height: 0.76 },
+          { x: 4.5, z: 4.8, radius: 0.74, height: 0.76 }
+        ],
+        waters: [
+          { x: -0.2, z: 4.3, w: 7.2, d: 6.1, y: -0.05 },
+          { x: 3.9, z: -1.6, w: 5.4, d: 3.8, y: -0.05 }
+        ],
+        obstacles: [
+          { type: "slider", x: 7.4, z: 2.4, range: 3.4, speed: 1.4, width: 0.7, depth: 3, height: 1.1, axis: "z" }
+        ]
+      },
+      {
+        name: "Ramp Riot",
+        par: 4,
+        spawn: { x: -15.4, z: -1.8 },
+        cup: { x: 13.5, z: 4.5, radius: 0.5, depth: 0.76 },
+        accents: [
+          { x: -5.2, y: 1.05, z: -5.1, sx: 1.2, sz: 0.14 },
+          { x: 5.8, y: 2.2, z: 6.1, sx: 1.6, sz: 0.14 }
+        ],
+        patches: [
+          { x: -12.4, z: -1.8, w: 8.8, d: 8.4, y: 0, slopeX: 0.01, slopeZ: 0, rotY: 0 },
+          { x: -4.6, z: -1.2, w: 7.2, d: 4.8, y: 1.4, slopeX: 0.24, slopeZ: 0, rotY: 0 },
+          { x: 2.8, z: 0.2, w: 8.4, d: 5.6, y: 3.1, slopeX: 0.02, slopeZ: 0.035, rotY: 0 },
+          { x: 10.5, z: 4.4, w: 9, d: 7.6, y: 2.1, slopeX: -0.17, slopeZ: -0.012, rotY: 0 }
+        ],
+        walls: [
+          { x: -12.4, z: -6.1, length: 8.8, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -16.95, z: -1.8, length: 8.5, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: -12.4, z: 2.45, length: 8.8, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -4.6, z: -3.7, length: 4.8, thickness: 0.42, height: 1.3, rotY: Math.PI / 2 },
+          { x: 2.8, z: -2.7, length: 8.4, thickness: 0.42, height: 1.3, rotY: 0 },
+          { x: 2.8, z: 3.1, length: 8.4, thickness: 0.42, height: 1.3, rotY: 0 },
+          { x: 10.5, z: 8.25, length: 9, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 14.95, z: 4.4, length: 7.6, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 }
+        ],
+        bumpers: [
+          { x: 3.1, z: 0.1, radius: 0.68, height: 0.78 },
+          { x: 8.4, z: 2.2, radius: 0.5, height: 0.78 }
+        ],
+        waters: [
+          { x: 0.4, z: 6.2, w: 9.2, d: 5.2, y: 0.05 },
+          { x: -1.8, z: -7.4, w: 7.8, d: 3.4, y: -0.05 }
+        ],
+        obstacles: [
+          { type: "rotor", x: 6.8, z: 0.2, length: 4.8, thickness: 0.36, height: 0.92, speed: 1.9 }
+        ]
+      },
+      {
+        name: "Blacklight Gauntlet",
+        par: 5,
+        spawn: { x: -16.4, z: -6.6 },
+        cup: { x: 16, z: 8.4, radius: 0.5, depth: 0.8 },
+        accents: [
+          { x: -10.2, y: 0.2, z: 7.5, sx: 1.6, sz: 0.14 },
+          { x: 10.8, y: 1.8, z: -7.6, sx: 2.2, sz: 0.14 }
+        ],
+        patches: [
+          { x: -12.3, z: -6.1, w: 10.2, d: 7.8, y: 0, slopeX: 0.012, slopeZ: 0.014, rotY: 0 },
+          { x: -4.2, z: 0.2, w: 7.6, d: 4.4, y: 0.8, slopeX: 0.22, slopeZ: 0.018, rotY: 0 },
+          { x: 4.6, z: 0.2, w: 9.8, d: 4, y: 2.6, slopeX: 0.02, slopeZ: 0.02, rotY: 0 },
+          { x: 12.8, z: 6.6, w: 8.6, d: 8.2, y: 1.2, slopeX: -0.12, slopeZ: -0.03, rotY: 0.12 }
+        ],
+        walls: [
+          { x: -12.3, z: -10.05, length: 10.2, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: -17.6, z: -6.1, length: 7.8, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: -7.25, z: -6.1, length: 4.6, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 },
+          { x: -4.2, z: -2.15, length: 7.6, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 4.6, z: -1.9, length: 9.8, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 4.6, z: 2.3, length: 9.8, thickness: 0.42, height: 1.2, rotY: 0 },
+          { x: 12.8, z: 10.85, length: 8.8, thickness: 0.42, height: 1.2, rotY: 0.12 },
+          { x: 17.2, z: 6.6, length: 8.2, thickness: 0.42, height: 1.2, rotY: Math.PI / 2 + 0.12 }
+        ],
+        bumpers: [
+          { x: -1.1, z: -0.4, radius: 0.64, height: 0.76 },
+          { x: 7.4, z: 0.2, radius: 0.72, height: 0.76 },
+          { x: 11, z: 4, radius: 0.56, height: 0.76 }
+        ],
+        waters: [
+          { x: -8.4, z: 4.8, w: 7.6, d: 8.2, y: -0.06 },
+          { x: 4.8, z: -7, w: 10.2, d: 7.2, y: -0.06 },
+          { x: 12.4, z: -3.8, w: 5.2, d: 3.2, y: -0.06 }
+        ],
+        obstacles: [
+          { type: "rotor", x: 1.6, z: 0.2, length: 5.1, thickness: 0.36, height: 0.96, speed: -2.1 },
+          { type: "slider", x: 12.7, z: 1.9, range: 3.3, speed: 1.8, width: 0.7, depth: 3.1, height: 1.1, axis: "x" }
+        ]
+      },
+      {
+        name: "Neon Pinnacle",
+        par: 4,
+        spawn: { x: -17.2, z: -7.4 },
+        cup: { x: 15.4, z: 8.1, radius: 0.5, depth: 0.8 },
+        accents: [
+          { x: -9.8, y: 0.22, z: 7.8, sx: 1.8, sz: 0.14 },
+          { x: 0.8, y: 1.54, z: -6.2, sx: 1.6, sz: 0.14 },
+          { x: 10.8, y: 2.16, z: 7.2, sx: 2.3, sz: 0.14 }
+        ],
+        patches: [
+          { x: -13.2, z: -7, w: 9.2, d: 8, y: 0, slopeX: 0.014, slopeZ: 0.01, rotY: 0 },
+          { x: -4.4, z: -2.2, w: 8.2, d: 4.8, y: 1.25, slopeX: 0.18, slopeZ: 0.02, rotY: 0.08 },
+          { x: 5.4, z: 0.8, w: 9.8, d: 4.8, y: 2.6, slopeX: 0.028, slopeZ: -0.016, rotY: -0.04 },
+          { x: 13.2, z: 7.2, w: 9, d: 7.8, y: 1.9, slopeX: -0.13, slopeZ: -0.03, rotY: 0.14 }
+        ],
+        walls: [
+          { x: -13.2, z: -11.05, length: 9.2, thickness: 0.42, height: 1.24, rotY: 0 },
+          { x: -18.05, z: -7, length: 8, thickness: 0.42, height: 1.24, rotY: Math.PI / 2 },
+          { x: -8.75, z: -7, length: 4.7, thickness: 0.42, height: 1.24, rotY: Math.PI / 2 },
+          { x: -4.4, z: -4.65, length: 8.2, thickness: 0.42, height: 1.28, rotY: 0.08 },
+          { x: 0.1, z: -2.2, length: 4.8, thickness: 0.42, height: 1.28, rotY: Math.PI / 2 + 0.08 },
+          { x: 5.4, z: -1.65, length: 9.8, thickness: 0.42, height: 1.3, rotY: -0.04 },
+          { x: 5.4, z: 3.25, length: 9.8, thickness: 0.42, height: 1.3, rotY: -0.04 },
+          { x: 13.2, z: 11.15, length: 9, thickness: 0.42, height: 1.24, rotY: 0.14 },
+          { x: 17.75, z: 7.2, length: 7.8, thickness: 0.42, height: 1.24, rotY: Math.PI / 2 + 0.14 }
+        ],
+        bumpers: [
+          { x: -1.2, z: -1.8, radius: 0.62, height: 0.78 },
+          { x: 7.6, z: 0.6, radius: 0.7, height: 0.8 },
+          { x: 10.8, z: 4.7, radius: 0.54, height: 0.78 }
+        ],
+        waters: [
+          { x: -8.8, z: 4.9, w: 7.8, d: 8.6, y: -0.06 },
+          { x: 4.6, z: -7.1, w: 10.4, d: 7.3, y: -0.06 },
+          { x: 12.8, z: -3.8, w: 5.1, d: 3.2, y: -0.06 }
+        ],
+        obstacles: [
+          { type: "rotor", x: 1.8, z: 0.8, length: 5.2, thickness: 0.36, height: 0.96, speed: 2 },
+          { type: "slider", x: 12.6, z: 2.2, range: 3, speed: 1.7, width: 0.72, depth: 3.1, height: 1.1, axis: "x" }
+        ]
+      }
+    ];
+
+    function createFloorPatchMesh(patch, index) {
+      const height = 0.28;
+      const geometry = new THREE.BoxGeometry(patch.w, height, patch.d);
+      const material = new THREE.MeshStandardMaterial({
+        color: index % 2 === 0 ? palette.floor : palette.floorAlt,
+        emissive: 0x0b3b1a,
+        emissiveIntensity: 0.42,
+        roughness: 0.72,
+        metalness: 0.08
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(patch.x, patch.y, patch.z);
+      mesh.rotation.set(patch.slopeZ, patch.rotY || 0, -patch.slopeX);
+      courseGroup.add(mesh);
+
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geometry),
+        new THREE.LineBasicMaterial({
+          color: 0x00ff66,
+          transparent: true,
+          opacity: 0.28
+        })
+      );
+      edges.position.copy(mesh.position);
+      edges.rotation.copy(mesh.rotation);
+      edges.scale.set(1.003, 1.02, 1.003);
+      courseGroup.add(edges);
+    }
+
+    function createWallMesh(wall) {
+      const isHorizontal = Math.abs(Math.sin(wall.rotY || 0)) < 0.7;
+      const sx = isHorizontal ? wall.length : wall.thickness;
+      const sz = isHorizontal ? wall.thickness : wall.length;
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, wall.height, sz),
+        new THREE.MeshStandardMaterial({
+          color: palette.wall,
+          emissive: 0x00ff66,
+          emissiveIntensity: 0.34,
+          metalness: 0.18,
+          roughness: 0.38
+        })
+      );
+      mesh.position.set(wall.x, wall.height * 0.5 + 0.18, wall.z);
+      mesh.rotation.y = wall.rotY || 0;
+      courseGroup.add(mesh);
+
+      const glow = new THREE.LineSegments(
+        new THREE.EdgesGeometry(mesh.geometry),
+        new THREE.LineBasicMaterial({
+          color: 0x7bffb2,
+          transparent: true,
+          opacity: 0.42
+        })
+      );
+      glow.position.copy(mesh.position);
+      glow.rotation.copy(mesh.rotation);
+      glow.scale.set(1.01, 1.01, 1.01);
+      courseGroup.add(glow);
+    }
+
+    function createBumperMesh(bumper) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(bumper.radius, bumper.radius, bumper.height, 28, 1),
+        new THREE.MeshStandardMaterial({
+          color: palette.bumper,
+          emissive: 0x00ff66,
+          emissiveIntensity: 0.5,
+          roughness: 0.32,
+          metalness: 0.36
+        })
+      );
+      mesh.position.set(bumper.x, bumper.height * 0.5 + 0.14, bumper.z);
+      courseGroup.add(mesh);
+      const ring = createGlowRing(bumper.radius + 0.08, 0x00ff66);
+      ring.position.set(bumper.x, bumper.height + 0.16, bumper.z);
+      courseGroup.add(ring);
+      bumper.mesh = mesh;
+      bumper.ring = ring;
+    }
+
+    function createWaterMesh(water) {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(water.w, water.d),
+        new THREE.MeshBasicMaterial({
+          color: palette.water,
+          transparent: true,
+          opacity: 0.78
+        })
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(water.x, water.y + 0.04, water.z);
+      courseGroup.add(mesh);
+      const border = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(water.w, 0.06, water.d)),
+        new THREE.LineBasicMaterial({
+          color: 0x34f6ff,
+          transparent: true,
+          opacity: 0.55
+        })
+      );
+      border.position.set(water.x, water.y + 0.06, water.z);
+      courseGroup.add(border);
+      water.mesh = mesh;
+      water.border = border;
+    }
+
+    function createAccentMesh(accent) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(accent.sx, 0.06, accent.sz),
+        new THREE.MeshBasicMaterial({
+          color: 0x00ff66,
+          transparent: true,
+          opacity: 0.38
+        })
+      );
+      mesh.position.set(accent.x, accent.y, accent.z);
+      accentsGroup.add(mesh);
+    }
+
+    function createCup(hole) {
+      const cupSurface = sampleSurface(hole.cup.x, hole.cup.z, hole);
+      hole.cup.y = cupSurface ? cupSurface.y : 0;
+
+      const well = new THREE.Mesh(
+        new THREE.CylinderGeometry(hole.cup.radius, hole.cup.radius * 1.12, hole.cup.depth, 32),
+        new THREE.MeshStandardMaterial({
+          color: palette.cup,
+          emissive: 0x001a0b,
+          roughness: 0.84,
+          metalness: 0.04
+        })
+      );
+      well.position.set(hole.cup.x, hole.cup.y - hole.cup.depth * 0.48 + 0.06, hole.cup.z);
+      courseGroup.add(well);
+
+      const ring = createGlowRing(hole.cup.radius + 0.07, 0x00ff66);
+      ring.position.set(hole.cup.x, hole.cup.y + 0.03, hole.cup.z);
+      courseGroup.add(ring);
+
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 1.5, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xcfffe4,
+          emissive: 0x00ff66,
+          emissiveIntensity: 0.6
+        })
+      );
+      pole.position.set(hole.cup.x + 0.2, hole.cup.y + 0.74, hole.cup.z);
+      courseGroup.add(pole);
+
+      const flag = new THREE.Mesh(
+        new THREE.BufferGeometry(),
+        new THREE.MeshBasicMaterial({
+          color: 0x34f6ff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.9
+        })
+      );
+      const flagPositions = new Float32Array([
+        0, 0.22, 0,
+        0.62, 0.1, 0,
+        0, -0.02, 0,
+        0.62, 0.1, 0,
+        0.52, -0.12, 0,
+        0, -0.02, 0
+      ]);
+      flag.geometry.setAttribute("position", new THREE.BufferAttribute(flagPositions, 3));
+      flag.position.set(hole.cup.x + 0.24, hole.cup.y + 1.28, hole.cup.z);
+      courseGroup.add(flag);
+
+      hole.flag = flag;
+      hole.flagPole = pole;
+      hole.cupRing = ring;
+    }
+
+    function createObstacleMesh(obstacle) {
+      if (obstacle.type === "rotor") {
+        const group = new THREE.Group();
+        const hub = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.22, 0.22, obstacle.height + 0.12, 16),
+          new THREE.MeshStandardMaterial({
+            color: 0x0f2a1b,
+            emissive: 0x00ff66,
+            emissiveIntensity: 0.38
+          })
+        );
+        hub.position.y = (obstacle.height + 0.12) * 0.5;
+        group.add(hub);
+        const bar = new THREE.Mesh(
+          new THREE.BoxGeometry(obstacle.length, obstacle.height, obstacle.thickness),
+          new THREE.MeshStandardMaterial({
+            color: 0x133924,
+            emissive: 0x00ff66,
+            emissiveIntensity: 0.58,
+            roughness: 0.28,
+            metalness: 0.28
+          })
+        );
+        bar.position.y = obstacle.height * 0.5;
+        group.add(bar);
+        group.position.set(obstacle.x, 0.12, obstacle.z);
+        courseGroup.add(group);
+        obstacle.mesh = group;
+        obstacle.collider = {
+          x: obstacle.x,
+          z: obstacle.z,
+          y: 0.12,
+          length: obstacle.length,
+          thickness: obstacle.thickness,
+          height: obstacle.height,
+          rotY: 0
+        };
+        return;
+      }
+
+      if (obstacle.type === "slider") {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(obstacle.width, obstacle.height, obstacle.depth),
+          new THREE.MeshStandardMaterial({
+            color: 0x143621,
+            emissive: 0x34f6ff,
+            emissiveIntensity: 0.42,
+            roughness: 0.34,
+            metalness: 0.2
+          })
+        );
+        mesh.position.set(obstacle.x, obstacle.height * 0.5 + 0.14, obstacle.z);
+        courseGroup.add(mesh);
+        obstacle.mesh = mesh;
+        obstacle.collider = {
+          x: obstacle.x,
+          z: obstacle.z,
+          y: 0.14,
+          length: obstacle.axis === "x" ? obstacle.depth : obstacle.width,
+          thickness: obstacle.axis === "x" ? obstacle.width : obstacle.depth,
+          height: obstacle.height,
+          rotY: obstacle.axis === "x" ? Math.PI / 2 : 0
+        };
+      }
+    }
+
+    function disposeObject3D(object) {
+      object.traverse((child) => {
+        child.geometry?.dispose?.();
+        if (Array.isArray(child.material)) {
+          child.material.forEach((material) => material.dispose?.());
+        } else {
+          child.material?.dispose?.();
+        }
+      });
+    }
+
+    function clearGroups() {
+      for (const group of [courseGroup, accentsGroup]) {
+        while (group.children.length) {
+          const child = group.children[group.children.length - 1];
+          group.remove(child);
+          disposeObject3D(child);
+        }
+      }
+    }
+
+    function loadHole(index) {
+      clearGroups();
+      const hole = JSON.parse(JSON.stringify(holes[index]));
+      game.course = hole;
+      game.currentHoleIndex = index;
+      game.strokesThisHole = 0;
+      statusState.base = "Drag back from the ball to shoot. Right-click + drag to orbit the camera.";
+
+      hole.patches.forEach((patch, patchIndex) => createFloorPatchMesh(patch, patchIndex));
+      hole.walls.forEach((wall) => createWallMesh(wall));
+      hole.bumpers.forEach((bumper) => createBumperMesh(bumper));
+      hole.waters.forEach((water) => createWaterMesh(water));
+      hole.accents.forEach((accent) => createAccentMesh(accent));
+      hole.obstacles.forEach((obstacle) => createObstacleMesh(obstacle));
+      createCup(hole);
+
+      resetBall(true);
+      refreshHud();
+    }
+
+    function sampleSurface(x, z, hole = game.course) {
+      if (!hole) return null;
+      let best = null;
+      for (const patch of hole.patches) {
+        const local = worldToLocalXZ(patch, x, z);
+        if (Math.abs(local.x) > patch.w * 0.5 || Math.abs(local.z) > patch.d * 0.5) continue;
+        const sx = Math.tan(patch.slopeX || 0);
+        const sz = Math.tan(patch.slopeZ || 0);
+        const y = patch.y + local.x * sx + local.z * sz + 0.14;
+        const normalLocal = new THREE.Vector3(-sx, 1, -sz).normalize();
+        const cos = Math.cos(patch.rotY || 0);
+        const sin = Math.sin(patch.rotY || 0);
+        const normalWorld = new THREE.Vector3(
+          normalLocal.x * cos - normalLocal.z * sin,
+          normalLocal.y,
+          normalLocal.x * sin + normalLocal.z * cos
+        ).normalize();
+        if (!best || y > best.y) {
+          best = { y, normal: normalWorld, patch };
+        }
+      }
+      return best;
+    }
+
+    function isPointInWater(x, z, hole = game.course) {
+      if (!hole) return null;
+      return hole.waters.find((water) => (
+        Math.abs(x - water.x) <= water.w * 0.5 &&
+        Math.abs(z - water.z) <= water.d * 0.5
+      )) || null;
+    }
+
+    function canAim() {
+      return (
+        game.phase === "playing" &&
+        !ball.sinking &&
+        !ball.resetting &&
+        ball.grounded &&
+        ball.velocity.lengthSq() < SAFE_SPEED * SAFE_SPEED
+      );
+    }
+
+    function resetBall(freshHole = false) {
+      const spawn = game.course.spawn;
+      const surface = sampleSurface(spawn.x, spawn.z);
+      const y = surface ? surface.y + BALL_RADIUS : BALL_RADIUS + 0.2;
+      ball.position.set(spawn.x, y, spawn.z);
+      ball.velocity.set(0, 0, 0);
+      ball.normal.copy(surface?.normal || new THREE.Vector3(0, 1, 0));
+      ball.grounded = true;
+      ball.lastSafe.copy(ball.position);
+      ball.sinking = false;
+      ball.hidden = false;
+      ball.resetting = false;
+      ball.resetTimer = 0;
+      ball.strokeCommitted = false;
+      ball.sinkT = 0;
+      ballMesh.visible = true;
+      ballGlow.visible = true;
+      ballMesh.scale.setScalar(1);
+      ballGlow.scale.setScalar(1.04);
+      cameraRig.smoothedTarget.copy(ball.position).add(new THREE.Vector3(0, 1.2, 0));
+      if (!freshHole) {
+        spawnParticles({
+          position: ball.position.clone(),
+          count: 18,
+          speed: 2.6,
+          color: 0x34f6ff,
+          life: 0.56,
+          spread: 0.9,
+          upward: 0.3
+        });
+      }
+    }
+
+    function triggerHazard(message, penalty = 1) {
+      if (ball.resetting || ball.sinking) return;
+      ball.resetting = true;
+      ball.resetTimer = 1;
+      ball.velocity.set(0, 0, 0);
+      ballMesh.visible = false;
+      ballGlow.visible = false;
+      game.strokesThisHole += penalty;
+      game.totalStrokes += penalty;
+      setStatus(`${message} Penalty +${penalty}. Re-spotting...`, 2.4);
+      refreshHud();
+      spawnParticles({
+        position: ball.position.clone(),
+        count: 22,
+        speed: 2.3,
+        color: 0x34f6ff,
+        life: 0.75,
+        spread: 1.1,
+        upward: 0.45,
+        size: 0.09
+      });
+    }
+
+    function completeHole() {
+      game.phase = "result";
+      const hole = game.course;
+      const delta = game.strokesThisHole - hole.par;
+      game.holeResults.push({
+        hole: game.currentHoleIndex + 1,
+        name: hole.name,
+        strokes: game.strokesThisHole,
+        par: hole.par,
+        delta
+      });
+
+      ui.resultKicker.textContent = `Hole ${game.currentHoleIndex + 1} Complete`;
+      ui.resultTitle.textContent = describeRelativeScore(delta);
+      ui.resultCopy.textContent = `You took ${game.strokesThisHole} stroke${game.strokesThisHole === 1 ? "" : "s"} on a par ${hole.par}.`;
+      ui.resultHole.textContent = `${game.currentHoleIndex + 1}`;
+      ui.resultStrokes.textContent = `${game.strokesThisHole}`;
+      ui.resultPar.textContent = `${hole.par}`;
+      ui.resultScore.textContent = formatRelativeScore(delta);
+      ui.nextHoleButton.textContent = game.currentHoleIndex === holes.length - 1 ? "Final Tally" : "Next Hole";
+      ui.resultOverlay.classList.add("active");
+      refreshHud();
+    }
+
+    function finishGame() {
+      game.phase = "gameover";
+      ui.resultOverlay.classList.remove("active");
+      ui.gameOverOverlay.classList.add("active");
+      const totalRelative = game.totalStrokes - game.totalPar;
+      ui.finalScore.textContent = formatRelativeScore(totalRelative);
+      ui.finalStrokes.textContent = `${game.totalStrokes}`;
+      ui.finalPar.textContent = `${game.totalPar}`;
+      ui.gameOverCopy.textContent = `${describeRelativeScore(totalRelative)} overall across ${holes.length} glowing holes.`;
+      ui.summaryList.innerHTML = "";
+      for (const result of game.holeResults) {
+        const row = document.createElement("div");
+        row.className = "summary-row";
+        row.innerHTML = `<span>Hole ${result.hole} · ${result.name}</span><span>${result.strokes} / ${result.par} (${formatRelativeScore(result.delta)})</span>`;
+        ui.summaryList.appendChild(row);
+      }
+      refreshHud();
+    }
+
+    function nextHole() {
+      ui.resultOverlay.classList.remove("active");
+      if (game.currentHoleIndex >= holes.length - 1) {
+        finishGame();
+        return;
+      }
+      game.phase = "playing";
+      loadHole(game.currentHoleIndex + 1);
+    }
+
+    function startGame() {
+      game.started = true;
+      game.phase = "playing";
+      game.currentHoleIndex = 0;
+      game.strokesThisHole = 0;
+      game.totalStrokes = 0;
+      game.totalPar = holes.reduce((sum, hole) => sum + hole.par, 0);
+      game.holeResults = [];
+      ui.startOverlay.classList.remove("active");
+      ui.resultOverlay.classList.remove("active");
+      ui.gameOverOverlay.classList.remove("active");
+      loadHole(0);
+      setStatus("Read the opening lane and use the center bumpers if you want a bank shot.", 3.2);
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    function updateStatusTimer(dt) {
+      if (statusState.timer > 0) {
+        statusState.timer -= dt;
+        if (statusState.timer <= 0) {
+          statusState.timer = 0;
+          statusState.flash = "";
+          refreshHud();
+        }
+      }
+    }
+
+    function updatePowerUi() {
+      ui.powerShell.classList.toggle("visible", input.aiming);
+      ui.powerFill.style.width = `${Math.round(input.power * 100)}%`;
+      ui.powerValue.textContent = `${Math.round(input.power * 100)}%`;
+      canvas.classList.toggle("aiming", input.aiming);
+      canvas.classList.toggle("orbiting", input.orbiting);
+    }
+
+    function updateAimPreview() {
+      if (!input.aiming) {
+        aimLine.visible = false;
+        aimRing.visible = false;
+        updatePowerUi();
+        return;
+      }
+      const start = ball.position;
+      const direction = input.aimDirection.clone().setY(0).normalize();
+      const maxDistance = 1.4 + input.power * 5.8;
+      const positions = aimLineGeometry.attributes.position.array;
+      for (let i = 0; i < 18; i++) {
+        const t = i / 17;
+        const wobble = Math.sin(t * Math.PI) * 0.18;
+        positions[i * 3] = start.x + direction.x * maxDistance * t;
+        positions[i * 3 + 1] = start.y + 0.16 + wobble * 0.45;
+        positions[i * 3 + 2] = start.z + direction.z * maxDistance * t;
+      }
+      aimLineGeometry.attributes.position.needsUpdate = true;
+      aimLine.visible = true;
+      aimRing.visible = true;
+      aimRing.position.set(
+        start.x + direction.x * maxDistance,
+        start.y + 0.03,
+        start.z + direction.z * maxDistance
+      );
+      aimRing.scale.setScalar(0.8 + input.power * 0.9);
+      updatePowerUi();
+    }
+
+    function getPointerWorldOnBallPlane(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointerNdc, camera);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -ball.position.y);
+      const target = new THREE.Vector3();
+      const hit = raycaster.ray.intersectPlane(plane, target);
+      return hit ? target : null;
+    }
+
+    function getBallScreenDistance(clientX, clientY) {
+      const projected = ball.position.clone().project(camera);
+      const rect = canvas.getBoundingClientRect();
+      const sx = ((projected.x + 1) * 0.5) * rect.width + rect.left;
+      const sy = ((-projected.y + 1) * 0.5) * rect.height + rect.top;
+      return Math.hypot(clientX - sx, clientY - sy);
+    }
+
+    function commitStroke(direction, power) {
+      game.strokesThisHole += 1;
+      game.totalStrokes += 1;
+      const shotSpeed = 4.2 + power * (MAX_SHOT_SPEED - 4.2);
+      ball.velocity.set(direction.x * shotSpeed, 0.7 + power * 1.4, direction.z * shotSpeed);
+      ball.grounded = false;
+      ball.strokeCommitted = true;
+      setStatus(`Stroke ${game.strokesThisHole}: ${power < 0.35 ? "soft touch" : power < 0.68 ? "solid roll" : "full send"}.`, 1.9);
+      spawnParticles({
+        position: ball.position.clone().add(new THREE.Vector3(0, 0.08, 0)),
+        count: 12,
+        speed: 1.8 + power * 2.4,
+        color: 0x00ff66,
+        life: 0.48,
+        spread: 0.6,
+        upward: 0.2
+      });
+      refreshHud();
+    }
+
+    function endAim(shoot) {
+      if (!input.aiming) return;
+      if (shoot && input.power > 0.02) {
+        commitStroke(input.aimDirection, input.power);
+      }
+      input.aiming = false;
+      input.pointerId = null;
+      input.power = 0;
+      updateAimPreview();
+    }
+
+    function beginAim(clientX, clientY, pointerId) {
+      if (!canAim()) return false;
+      if (getBallScreenDistance(clientX, clientY) > 90) return false;
+      const world = getPointerWorldOnBallPlane(clientX, clientY);
+      if (!world) return false;
+      input.aiming = true;
+      input.pointerId = pointerId;
+      input.aimStartWorld.copy(world);
+      input.aimCurrentWorld.copy(world);
+      input.aimDirection.set(1, 0, 0);
+      input.power = 0;
+      updateAimPreview();
+      return true;
+    }
+
+    function updateAim(clientX, clientY) {
+      const world = getPointerWorldOnBallPlane(clientX, clientY);
+      if (!world) return;
+      input.aimCurrentWorld.copy(world);
+      const drag = tempVecA.copy(world).sub(input.aimStartWorld);
+      drag.y = 0;
+      const length = drag.length();
+      if (length > 0.001) {
+        input.aimDirection.copy(drag).multiplyScalar(-1).normalize();
+      }
+      input.power = clamp(length / 4.2, 0, 1);
+      updateAimPreview();
+    }
+
+    function beginOrbit(clientX, clientY, pointerId) {
+      input.orbiting = true;
+      input.orbitPointerId = pointerId;
+      input.lastScreenX = clientX;
+      input.lastScreenY = clientY;
+      updatePowerUi();
+    }
+
+    function updateOrbit(clientX, clientY) {
+      const dx = clientX - input.lastScreenX;
+      const dy = clientY - input.lastScreenY;
+      input.lastScreenX = clientX;
+      input.lastScreenY = clientY;
+      cameraRig.yaw -= dx * 0.008;
+      cameraRig.pitch = clamp(cameraRig.pitch - dy * 0.0065, 0.28, 1.12);
+    }
+
+    function endOrbit() {
+      input.orbiting = false;
+      input.orbitPointerId = null;
+      updatePowerUi();
+    }
+
+    function safeSetPointerCapture(pointerId) {
+      try {
+        canvas.setPointerCapture(pointerId);
+      } catch {
+        // Ignore synthetic-pointer and browser-specific capture failures.
+      }
+    }
+
+    function safeReleasePointerCapture(pointerId) {
+      try {
+        if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+      } catch {
+        // Ignore synthetic-pointer and browser-specific capture failures.
+      }
+    }
+
+    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      cameraRig.targetDistance = clamp(cameraRig.targetDistance + event.deltaY * 0.007, 6.5, 16.5);
+    }, { passive: false });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.button === 2) {
+        beginOrbit(event.clientX, event.clientY, event.pointerId);
+        safeSetPointerCapture(event.pointerId);
+        return;
+      }
+      if (ui.startOverlay.classList.contains("active") || ui.resultOverlay.classList.contains("active") || ui.gameOverOverlay.classList.contains("active")) {
+        return;
+      }
+      if (beginAim(event.clientX, event.clientY, event.pointerId)) {
+        safeSetPointerCapture(event.pointerId);
+      }
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (input.orbiting && event.pointerId === input.orbitPointerId) {
+        updateOrbit(event.clientX, event.clientY);
+        return;
+      }
+      if (input.aiming && event.pointerId === input.pointerId) {
+        updateAim(event.clientX, event.clientY);
+      }
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      if (event.pointerId === input.orbitPointerId) {
+        endOrbit();
+        safeReleasePointerCapture(event.pointerId);
+      }
+      if (event.pointerId === input.pointerId) {
+        endAim(true);
+        safeReleasePointerCapture(event.pointerId);
+      }
+    });
+
+    canvas.addEventListener("pointercancel", (event) => {
+      if (event.pointerId === input.orbitPointerId) {
+        endOrbit();
+        safeReleasePointerCapture(event.pointerId);
+      }
+      if (event.pointerId === input.pointerId) {
+        endAim(false);
+        safeReleasePointerCapture(event.pointerId);
+      }
+    });
+
+    ui.startButton.addEventListener("click", startGame);
+    ui.nextHoleButton.addEventListener("click", nextHole);
+    ui.restartButton.addEventListener("click", restartGame);
+
+    function updateObstacles(time) {
+      if (!game.course) return;
+      for (const obstacle of game.course.obstacles) {
+        if (obstacle.type === "rotor") {
+          const rotation = time * obstacle.speed;
+          obstacle.mesh.rotation.y = rotation;
+          obstacle.collider.rotY = rotation;
+        } else if (obstacle.type === "slider") {
+          const offset = Math.sin(time * obstacle.speed) * obstacle.range;
+          if (obstacle.axis === "x") {
+            obstacle.mesh.position.x = obstacle.x + offset;
+            obstacle.collider.x = obstacle.mesh.position.x;
+          } else {
+            obstacle.mesh.position.z = obstacle.z + offset;
+            obstacle.collider.z = obstacle.mesh.position.z;
+          }
+        }
+      }
+    }
+
+    function collideAgainstBox(collider, restitution = WALL_RESTITUTION) {
+      const pos = ball.position;
+      const local = worldToLocalXZ(collider, pos.x, pos.z);
+      const hx = (collider.length || 1) * 0.5;
+      const hz = (collider.thickness || 1) * 0.5;
+      const cx = clamp(local.x, -hx, hx);
+      const cz = clamp(local.z, -hz, hz);
+      let dx = local.x - cx;
+      let dz = local.z - cz;
+      let distSq = dx * dx + dz * dz;
+
+      if (distSq >= BALL_RADIUS * BALL_RADIUS) return false;
+      if (pos.y > (collider.y || 0) + (collider.height || 1.2) + BALL_RADIUS) return false;
+
+      let dist = Math.sqrt(distSq);
+      if (dist < 0.0001) {
+        if (Math.abs(local.x) - hx > Math.abs(local.z) - hz) {
+          dx = local.x > 0 ? 1 : -1;
+          dz = 0;
+        } else {
+          dx = 0;
+          dz = local.z > 0 ? 1 : -1;
+        }
+        dist = 1;
+      }
+
+      const penetration = BALL_RADIUS - dist;
+      const localNormalX = dx / dist;
+      const localNormalZ = dz / dist;
+      const worldNormal = rotateNormalToWorld(collider, localNormalX, localNormalZ).normalize();
+      pos.x += worldNormal.x * penetration;
+      pos.z += worldNormal.z * penetration;
+
+      const vn = ball.velocity.x * worldNormal.x + ball.velocity.z * worldNormal.z;
+      if (vn < 0) {
+        ball.velocity.x -= (1 + restitution) * vn * worldNormal.x;
+        ball.velocity.z -= (1 + restitution) * vn * worldNormal.z;
+      }
+
+      spawnParticles({
+        position: pos.clone().add(new THREE.Vector3(0, 0.14, 0)),
+        count: 4,
+        speed: 1.1,
+        color: 0x00ff66,
+        life: 0.28,
+        spread: 0.4,
+        upward: 0.16,
+        size: 0.06
+      });
+      return true;
+    }
+
+    function collideAgainstCylinder(collider) {
+      const dx = ball.position.x - collider.x;
+      const dz = ball.position.z - collider.z;
+      const radius = BALL_RADIUS + collider.radius;
+      const distSq = dx * dx + dz * dz;
+      if (distSq >= radius * radius) return false;
+      if (ball.position.y > collider.height + BALL_RADIUS + 0.16) return false;
+
+      let dist = Math.sqrt(distSq);
+      let nx = dx / (dist || 1);
+      let nz = dz / (dist || 1);
+      if (dist < 0.0001) {
+        nx = 1;
+        nz = 0;
+        dist = 1;
+      }
+      const penetration = radius - dist;
+      ball.position.x += nx * penetration;
+      ball.position.z += nz * penetration;
+      const vn = ball.velocity.x * nx + ball.velocity.z * nz;
+      if (vn < 0) {
+        ball.velocity.x -= (1 + BUMPER_RESTITUTION) * vn * nx;
+        ball.velocity.z -= (1 + BUMPER_RESTITUTION) * vn * nz;
+      }
+      ball.velocity.multiplyScalar(1.01);
+      spawnParticles({
+        position: new THREE.Vector3(collider.x, collider.height + 0.12, collider.z),
+        count: 6,
+        speed: 1.3,
+        color: 0x7bffb2,
+        life: 0.32,
+        spread: 0.5,
+        upward: 0.2,
+        size: 0.07
+      });
+      return true;
+    }
+
+    function updateBall(dt, elapsed) {
+      if (!game.course || game.phase === "start" || game.phase === "result" || game.phase === "gameover") return;
+
+      if (ball.resetting) {
+        ball.resetTimer -= dt;
+        if (ball.resetTimer <= 0) {
+          resetBall();
+        }
+        return;
+      }
+
+      if (ball.sinking) {
+        ball.sinkT += dt * 1.8;
+        const cup = game.course.cup;
+        ball.position.x = THREE.MathUtils.lerp(ball.position.x, cup.x, dt * 7);
+        ball.position.z = THREE.MathUtils.lerp(ball.position.z, cup.z, dt * 7);
+        ball.position.y = cup.y + BALL_RADIUS * (1 - ball.sinkT) - ball.sinkT * 0.58;
+        ballMesh.scale.setScalar(Math.max(0.15, 1 - ball.sinkT * 0.72));
+        ballGlow.scale.setScalar(Math.max(0.24, 1.08 - ball.sinkT * 0.5));
+        if (ball.sinkT > 1.12) {
+          ball.sinking = false;
+          ballMesh.visible = false;
+          ballGlow.visible = false;
+          spawnParticles({
+            position: new THREE.Vector3(cup.x, cup.y + 0.1, cup.z),
+            count: 28,
+            speed: 3,
+            color: 0x00ff66,
+            life: 0.8,
+            spread: 1.3,
+            upward: 0.55,
+            size: 0.09
+          });
+          completeHole();
+        }
+        return;
+      }
+
+      ball.velocity.y -= GRAVITY * dt;
+      ball.velocity.multiplyScalar(1 - AIR_DRAG * dt);
+      ball.position.addScaledVector(ball.velocity, dt);
+
+      const surface = sampleSurface(ball.position.x, ball.position.z);
+      ball.grounded = false;
+
+      if (surface) {
+        const groundY = surface.y + BALL_RADIUS;
+        if (ball.position.y <= groundY + 0.08 && ball.velocity.y <= 4.2) {
+          ball.position.y = groundY;
+          ball.grounded = true;
+          ball.normal.copy(surface.normal);
+          const into = ball.velocity.dot(surface.normal);
+          if (into < 0) {
+            ball.velocity.addScaledVector(surface.normal, -into);
+          }
+          const gravityVector = tempVecA.set(0, -GRAVITY, 0);
+          const tangentAccel = tempVecB.copy(surface.normal).multiplyScalar(gravityVector.dot(surface.normal));
+          tangentAccel.sub(gravityVector).multiplyScalar(-0.1);
+          ball.velocity.addScaledVector(tangentAccel, dt);
+
+          const normalComponent = tempVecC.copy(surface.normal).multiplyScalar(ball.velocity.dot(surface.normal));
+          const tangentVelocity = ball.velocity.clone().sub(normalComponent);
+          tangentVelocity.multiplyScalar(Math.exp(-2.35 * dt));
+          if (tangentVelocity.lengthSq() < SAFE_SPEED * SAFE_SPEED) {
+            tangentVelocity.set(0, 0, 0);
+          }
+          ball.velocity.copy(tangentVelocity);
+        }
+      }
+
+      let collided = false;
+      for (const wall of game.course.walls) {
+        collided = collideAgainstBox({
+          x: wall.x,
+          z: wall.z,
+          y: 0.18,
+          length: wall.length,
+          thickness: wall.thickness,
+          height: wall.height,
+          rotY: wall.rotY
+        }) || collided;
+      }
+
+      for (const obstacle of game.course.obstacles) {
+        collided = collideAgainstBox(obstacle.collider, 0.84) || collided;
+      }
+
+      for (const bumper of game.course.bumpers) {
+        collided = collideAgainstCylinder(bumper) || collided;
+      }
+
+      if (ball.grounded && !collided && ball.velocity.lengthSq() < 7.4) {
+        ball.lastSafe.copy(ball.position);
+      }
+
+      const water = isPointInWater(ball.position.x, ball.position.z);
+      if (water && ball.position.y <= water.y + 0.36) {
+        triggerHazard("Splash.", 1);
+        return;
+      }
+
+      if (ball.position.y < -8) {
+        triggerHazard("Out of bounds.", 1);
+        return;
+      }
+
+      const cup = game.course.cup;
+      const dx = ball.position.x - cup.x;
+      const dz = ball.position.z - cup.z;
+      const dist = Math.hypot(dx, dz);
+      const speed = ball.velocity.length();
+      if (ball.grounded && dist < cup.radius * 1.6 && speed < 5.2) {
+        const pull = clamp(1 - dist / (cup.radius * 1.6), 0, 1);
+        ball.velocity.x += (-dx / Math.max(dist, 0.2)) * pull * dt * 14;
+        ball.velocity.z += (-dz / Math.max(dist, 0.2)) * pull * dt * 14;
+      }
+      if (ball.grounded && dist < cup.radius * 0.9 && speed < 2.4) {
+        ball.sinking = true;
+        ball.sinkT = 0;
+        ball.velocity.set(0, 0, 0);
+        setStatus("Cup found. Nice touch.", 2);
+        return;
+      }
+
+      if (ball.grounded && ball.velocity.lengthSq() > 0.02) {
+        if (Math.random() < 0.3) {
+          spawnParticles({
+            position: ball.position.clone().add(new THREE.Vector3(0, 0.02, 0)),
+            count: 1,
+            speed: 0.4,
+            color: 0x00ff66,
+            life: 0.22,
+            spread: 0.3,
+            upward: 0.04,
+            size: 0.05
+          });
+        }
+      }
+
+      if (ball.grounded && ball.velocity.lengthSq() < SAFE_SPEED * SAFE_SPEED) {
+        ball.velocity.set(0, 0, 0);
+      }
+
+      const bob = Math.sin(elapsed * 4.5) * 0.02;
+      ballGlow.scale.setScalar(1.04 + Math.sin(elapsed * 6.4) * 0.06);
+      followLight.position.set(ball.position.x, ball.position.y + 2.4 + bob, ball.position.z + 0.6);
+    }
+
+    function updateCamera(dt) {
+      const desiredDistance = clamp(cameraRig.targetDistance + (input.aiming ? 1.15 : 0), 6.5, 16.5);
+      cameraRig.distance = damp(cameraRig.distance, desiredDistance, 4.8, dt);
+      const rawTarget = ball.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+      cameraRig.smoothedTarget.lerp(rawTarget, 1 - Math.exp(-5.2 * dt));
+      const cp = Math.cos(cameraRig.pitch);
+      const offset = new THREE.Vector3(
+        Math.sin(cameraRig.yaw) * cp,
+        Math.sin(cameraRig.pitch),
+        Math.cos(cameraRig.yaw) * cp
+      ).multiplyScalar(cameraRig.distance);
+      const desired = cameraRig.smoothedTarget.clone().add(offset);
+      camera.position.lerp(desired, 1 - Math.exp(-4.6 * dt));
+      cameraRig.lookAhead.copy(ball.velocity).multiplyScalar(0.12);
+      camera.lookAt(cameraRig.smoothedTarget.clone().add(cameraRig.lookAhead));
+    }
+
+    function animateCourse(elapsed) {
+      if (!game.course) return;
+      stars.rotation.y = elapsed * 0.02;
+      for (const bumper of game.course.bumpers) {
+        if (bumper.ring) {
+          bumper.ring.rotation.z = elapsed * 0.8;
+          const pulse = 0.8 + Math.sin(elapsed * 3.8 + bumper.x) * 0.08;
+          bumper.ring.scale.setScalar(pulse);
+        }
+      }
+      for (const water of game.course.waters) {
+        if (water.mesh) {
+          water.mesh.material.opacity = 0.62 + Math.sin(elapsed * 2.6 + water.x) * 0.12;
+        }
+      }
+      if (game.course.cupRing) {
+        const pulse = 0.92 + Math.sin(elapsed * 4.8) * 0.08;
+        game.course.cupRing.scale.setScalar(pulse);
+        game.course.cupRing.material.opacity = 0.65 + Math.sin(elapsed * 4.8) * 0.15;
+      }
+      if (game.course.flag) {
+        const positions = game.course.flag.geometry.attributes.position.array;
+        positions[1] = 0.22 + Math.sin(elapsed * 5.2) * 0.03;
+        positions[4] = 0.1 + Math.sin(elapsed * 5.2 + 0.8) * 0.08;
+        positions[10] = -0.12 + Math.sin(elapsed * 5.2 + 1.2) * 0.05;
+        game.course.flag.geometry.attributes.position.needsUpdate = true;
+      }
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener("resize", onResize);
+
+    function loop() {
+      const dt = Math.min(clock.getDelta(), 0.033);
+      const elapsed = clock.elapsedTime;
+
+      updateStatusTimer(dt);
+      updateObstacles(elapsed);
+      updateBall(dt, elapsed);
+      updateCamera(dt);
+      animateCourse(elapsed);
+      updateAimPreview();
+      updateParticles(dt);
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    }
+
+    window.__miniGolfTestApi = {
+      startGame,
+      nextHole,
+      restartGame,
+      hitBall(direction = { x: 1, z: 0 }, power = 0.35) {
+        const shot = new THREE.Vector3(direction.x || 0, 0, direction.z || 0);
+        if (shot.lengthSq() < 0.0001) shot.set(1, 0, 0);
+        shot.normalize();
+        commitStroke(shot, clamp(power, 0.05, 1));
+      },
+      sinkCurrentHole() {
+        const cup = game.course?.cup;
+        if (!cup) return;
+        ball.position.set(cup.x, cup.y + BALL_RADIUS * 0.92, cup.z);
+        ball.velocity.set(0, 0, 0);
+        ball.grounded = true;
+        ball.resetting = false;
+        ball.sinking = true;
+        ball.sinkT = 0;
+        ballMesh.visible = true;
+        ballGlow.visible = true;
+      },
+      getState() {
+        return {
+          phase: game.phase,
+          currentHoleIndex: game.currentHoleIndex,
+          strokesThisHole: game.strokesThisHole,
+          totalStrokes: game.totalStrokes,
+          totalPar: game.totalPar,
+          holeResults: game.holeResults.map((result) => ({ ...result })),
+          ball: {
+            x: ball.position.x,
+            y: ball.position.y,
+            z: ball.position.z,
+            vx: ball.velocity.x,
+            vy: ball.velocity.y,
+            vz: ball.velocity.z,
+            grounded: ball.grounded,
+            sinking: ball.sinking,
+            resetting: ball.resetting
+          }
+        };
+      },
+      setBall(x, z, options = {}) {
+        const surface = sampleSurface(x, z);
+        const y = options.y ?? ((surface ? surface.y : 0) + BALL_RADIUS);
+        ball.position.set(x, y, z);
+        ball.velocity.set(options.vx ?? 0, options.vy ?? 0, options.vz ?? 0);
+        ball.grounded = options.grounded ?? true;
+        ball.sinking = false;
+        ball.resetting = false;
+        ball.sinkT = 0;
+        ballMesh.visible = true;
+        ballGlow.visible = true;
+        ballMesh.scale.setScalar(1);
+        ballGlow.scale.setScalar(1.04);
+        ball.lastSafe.copy(ball.position);
+        cameraRig.smoothedTarget.copy(ball.position).add(new THREE.Vector3(0, 1.2, 0));
+      }
+    };
+
+    game.totalPar = holes.reduce((sum, hole) => sum + hole.par, 0);
+    loadHole(0);
+    refreshHud();
+    updatePowerUi();
+    loop();
+  </script>
+</body>
+</html>

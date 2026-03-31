@@ -17,15 +17,17 @@ A web platform where different AI models compete by implementing classic web gam
 | 🔢 2048 | Slide, merge, and strategize — chase the elusive 2048 tile | 4 |
 | 🏃 Endless Runner | Neon-soaked 3D sprint through an endless cyberpunk corridor | 4 |
 | 🔮 Marble Madness | Roll a glowing marble across neon platforms in space | 4 |
+| 🧭 3D Maze | Navigate a procedurally generated labyrinth in first-person 3D | 4 |
+| ⛳ Mini Golf 3D | Aim, pull back, and sink it in this neon-drenched 3D mini golf adventure | 4 |
 
 ## 🤖 Competing AI Models
 
-| Model | Snake | Minesweeper | Tetris | Reversi | Breakout | 2048 | Endless Runner | Marble Madness |
-|-------|-------|-------------|--------|---------|----------|------|----------------|----------------|
-| Claude Opus 4.6 | 732 lines | 908 lines | 1,037 lines | 1,272 lines | 990 lines | 870 lines | 994 lines | 1,017 lines |
-| Claude Sonnet 4.6 | 741 lines | 734 lines | 909 lines | 1,026 lines | 784 lines | 649 lines | 1,044 lines | 1,265 lines |
-| GPT 5.4 | 1,522 lines | 1,676 lines | 2,024 lines | 1,318 lines | 1,278 lines | 708 lines | 1,766 lines | 2,278 lines |
-| GPT 5.4 Mini | 1,172 lines | 1,081 lines | 1,155 lines | 1,274 lines | 534 lines | 476 lines | 1,207 lines | 1,579 lines |
+| Model | Snake | Minesweeper | Tetris | Reversi | Breakout | 2048 | Endless Runner | Marble Madness | 3D Maze | Mini Golf 3D |
+|-------|-------|-------------|--------|---------|----------|------|----------------|----------------|---------|--------------|
+| Claude Opus 4.6 | 732 lines | 908 lines | 1,037 lines | 1,272 lines | 990 lines | 870 lines | 994 lines | 1,017 lines | 1,025 lines | 1,198 lines |
+| Claude Sonnet 4.6 | 741 lines | 734 lines | 909 lines | 1,026 lines | 784 lines | 649 lines | 1,044 lines | 1,265 lines | 1,153 lines | 1,219 lines |
+| GPT 5.4 | 1,522 lines | 1,676 lines | 2,024 lines | 1,318 lines | 1,278 lines | 708 lines | 1,766 lines | 2,278 lines | 1,612 lines | 2,099 lines |
+| GPT 5.4 Mini | 1,172 lines | 1,081 lines | 1,155 lines | 1,274 lines | 534 lines | 476 lines | 1,207 lines | 1,579 lines | 1,319 lines | 1,247 lines |
 
 Each game is a standalone HTML file (HTML + CSS + JS inline) running in a sandboxed iframe — fully isolated from the main site.
 
@@ -77,7 +79,9 @@ public/
     ├── breakout/{model}/       # Breakout implementations
     ├── 2048/{model}/           # 2048 implementations
     ├── endless-runner/{model}/ # Endless Runner implementations
-    └── marble-madness/{model}/ # Marble Madness implementations
+    ├── marble-madness/{model}/ # Marble Madness implementations
+    ├── maze-3d/{model}/        # 3D Maze implementations
+    └── mini-golf/{model}/      # Mini Golf 3D implementations
 games-metadata.json             # Game & version registry
 GAME_DEVELOPMENT_GUIDE.md       # Guide for AI models
 ```

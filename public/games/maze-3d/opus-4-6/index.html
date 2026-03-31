@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D MAZE</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+  }
+  canvas { display: block; }
+  #overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    background: rgba(5,5,5,0.92);
+    backdrop-filter: blur(8px);
+  }
+  #overlay.hidden { display: none; }
+  .screen {
+    text-align: center;
+    max-width: 500px;
+    padding: 40px;
+  }
+  .screen h1 {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: #ff6600;
+    text-shadow: 0 0 30px rgba(255,102,0,0.6), 0 0 60px rgba(255,102,0,0.3);
+    margin-bottom: 10px;
+  }
+  .screen h2 {
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: #ff6600;
+    text-shadow: 0 0 20px rgba(255,102,0,0.5);
+    margin-bottom: 20px;
+  }
+  .screen p {
+    font-size: clamp(0.85rem, 2.5vw, 1.05rem);
+    color: #bbb;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .screen .subtitle {
+    font-size: clamp(0.9rem, 3vw, 1.2rem);
+    color: #ff8833;
+    margin-bottom: 30px;
+  }
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 20px;
+    margin: 20px auto;
+    max-width: 320px;
+    text-align: left;
+  }
+  .controls-grid .key {
+    color: #ff6600;
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 0.95rem;
+    text-align: right;
+  }
+  .controls-grid .desc {
+    color: #999;
+    font-size: 0.9rem;
+  }
+  .btn {
+    display: inline-block;
+    margin-top: 25px;
+    padding: 14px 50px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #000;
+    background: #ff6600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 25px rgba(255,102,0,0.4);
+  }
+  .btn:hover {
+    background: #ff8833;
+    box-shadow: 0 0 40px rgba(255,102,0,0.6);
+    transform: translateY(-2px);
+  }
+  .stat-row {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 15px 0;
+  }
+  .stat { text-align: center; }
+  .stat .label { color: #888; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat .value { color: #ff6600; font-size: 1.8rem; font-weight: 900; }
+  #hud {
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 50;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+  }
+  #hud.hidden { display: none; }
+  .hud-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+    font-weight: 700;
+    color: #ddd;
+  }
+  .hud-item .icon { font-size: 1.2em; }
+  .hud-item .val { color: #ff6600; font-variant-numeric: tabular-nums; }
+  .hud-timer-warn .val { color: #ff2200; animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
+  #minimap-container {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    z-index: 50;
+    border: 2px solid rgba(255,102,0,0.5);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(255,102,0,0.2);
+    background: rgba(0,0,0,0.7);
+  }
+  #minimap-container.hidden { display: none; }
+  #minimap { display: block; }
+  #crosshair {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 50;
+    pointer-events: none;
+    width: 20px; height: 20px;
+  }
+  #crosshair.hidden { display: none; }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,102,0,0.6);
+    border-radius: 1px;
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+  #crosshair::after { width: 100%; height: 2px; top: 50%; transform: translateY(-50%); }
+  #click-hint {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    color: rgba(255,102,0,0.7);
+    font-size: 0.9rem;
+    pointer-events: none;
+    animation: fadeInOut 2s infinite;
+  }
+  #click-hint.hidden { display: none; }
+  @keyframes fadeInOut { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="screen" id="start-screen">
+    <h1>3D MAZE</h1>
+    <p class="subtitle">Find the exit before time runs out</p>
+    <div class="controls-grid">
+      <span class="key">W A S D</span><span class="desc">Move</span>
+      <span class="key">Mouse</span><span class="desc">Look around</span>
+      <span class="key">Shift</span><span class="desc">Sprint</span>
+      <span class="key">M</span><span class="desc">Toggle minimap</span>
+    </div>
+    <p style="color:#666; font-size:0.8rem; margin-top:12px;">Click to lock mouse • Esc to unlock</p>
+    <button class="btn" id="start-btn">ENTER THE MAZE</button>
+  </div>
+  <div class="screen" id="win-screen" style="display:none;">
+    <h2>🏆 ESCAPED!</h2>
+    <p class="subtitle">You found the exit!</p>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Time Left</div><div class="value" id="win-time">0s</div></div>
+      <div class="stat"><div class="label">Gems</div><div class="value" id="win-gems">0</div></div>
+      <div class="stat"><div class="label">Score</div><div class="value" id="win-score">0</div></div>
+    </div>
+    <button class="btn" id="win-btn">PLAY AGAIN</button>
+  </div>
+  <div class="screen" id="gameover-screen" style="display:none;">
+    <h2>💀 TIME'S UP</h2>
+    <p class="subtitle">The maze consumed you</p>
+    <div class="stat-row">
+      <div class="stat"><div class="label">Gems Found</div><div class="value" id="go-gems">0</div></div>
+      <div class="stat"><div class="label">Score</div><div class="value" id="go-score">0</div></div>
+    </div>
+    <button class="btn" id="gameover-btn">TRY AGAIN</button>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="hud-item" id="hud-timer"><span class="icon">⏱</span><span class="val" id="timer-val">120</span></div>
+  <div class="hud-item"><span class="icon">💎</span><span class="val" id="gems-val">0/0</span></div>
+  <div class="hud-item"><span class="icon">⭐</span><span class="val" id="score-val">0</span></div>
+</div>
+
+<div id="minimap-container" class="hidden">
+  <canvas id="minimap" width="160" height="160"></canvas>
+</div>
+
+<div id="crosshair" class="hidden"></div>
+<div id="click-hint" class="hidden">Click to lock mouse</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ── Constants ──
+const CELL = 4;
+const WALL_H = 3.5;
+const WALL_T = 0.3;
+const PLAYER_R = 0.35;
+const PLAYER_H = 1.6;
+const MOVE_SPEED = 4.5;
+const SPRINT_MULT = 1.6;
+const MOUSE_SENS = 0.002;
+const TOTAL_TIME = 120;
+const MAZE_W = 15;
+const MAZE_H = 15;
+const GEM_COUNT = 12;
+const GEM_COLLECT_DIST = 1.5;
+const FOG_NEAR = 4;
+const FOG_FAR = 30;
+
+// ── DOM refs ──
+const overlay = document.getElementById('overlay');
+const startScreen = document.getElementById('start-screen');
+const winScreen = document.getElementById('win-screen');
+const gameoverScreen = document.getElementById('gameover-screen');
+const hud = document.getElementById('hud');
+const minimapContainer = document.getElementById('minimap-container');
+const crosshair = document.getElementById('crosshair');
+const clickHint = document.getElementById('click-hint');
+const minimapCanvas = document.getElementById('minimap');
+const minimapCtx = minimapCanvas.getContext('2d');
+const timerVal = document.getElementById('timer-val');
+const gemsVal = document.getElementById('gems-val');
+const scoreVal = document.getElementById('score-val');
+const hudTimer = document.getElementById('hud-timer');
+
+// ── State ──
+let gameState = 'menu';
+let timeLeft = TOTAL_TIME;
+let score = 0;
+let gemsCollected = 0;
+let totalGems = 0;
+let maze = [];
+let visited = [];
+let playerPos = new THREE.Vector3();
+let playerYaw = 0;
+let playerPitch = 0;
+let keys = {};
+let pointerLocked = false;
+let showMinimap = true;
+let clock = new THREE.Clock();
+let gems = [];
+let gemMeshes = [];
+let torchLights = [];
+let exitPos = new THREE.Vector2();
+let exitMesh = null;
+let exitLight = null;
+let particleSystem = null;
+let exitParticles = null;
+
+// ── Three.js setup ──
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050505);
+scene.fog = new THREE.Fog(0x050505, FOG_NEAR, FOG_FAR);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+
+// ── Maze Generation (Recursive Backtracker) ──
+function generateMaze(w, h) {
+  const grid = Array.from({ length: h }, () =>
+    Array.from({ length: w }, () => ({ n: true, s: true, e: true, w: true, visited: false }))
+  );
+
+  const stack = [];
+  const startR = 0, startC = 0;
+  grid[startR][startC].visited = true;
+  stack.push([startR, startC]);
+
+  const dirs = [
+    ['n', -1, 0, 's'],
+    ['s', 1, 0, 'n'],
+    ['e', 0, 1, 'w'],
+    ['w', 0, -1, 'e']
+  ];
+
+  while (stack.length > 0) {
+    const [r, c] = stack[stack.length - 1];
+    const neighbors = dirs.filter(([, dr, dc]) => {
+      const nr = r + dr, nc = c + dc;
+      return nr >= 0 && nr < h && nc >= 0 && nc < w && !grid[nr][nc].visited;
+    });
+
+    if (neighbors.length === 0) {
+      stack.pop();
+    } else {
+      const [dir, dr, dc, opp] = neighbors[Math.floor(Math.random() * neighbors.length)];
+      const nr = r + dr, nc = c + dc;
+      grid[r][c][dir] = false;
+      grid[nr][nc][opp] = false;
+      grid[nr][nc].visited = true;
+      stack.push([nr, nc]);
+    }
+  }
+
+  return grid;
+}
+
+// ── Build 3D Maze ──
+let wallMeshes = [];
+let floorMesh = null;
+let ceilingMesh = null;
+
+function buildMaze3D() {
+  // Clear previous
+  wallMeshes.forEach(m => scene.remove(m));
+  wallMeshes = [];
+  gemMeshes.forEach(m => scene.remove(m));
+  gemMeshes = [];
+  torchLights.forEach(l => { scene.remove(l); if (l.target) scene.remove(l.target); });
+  torchLights = [];
+  if (floorMesh) scene.remove(floorMesh);
+  if (ceilingMesh) scene.remove(ceilingMesh);
+  if (exitMesh) scene.remove(exitMesh);
+  if (exitLight) scene.remove(exitLight);
+  if (particleSystem) scene.remove(particleSystem);
+  if (exitParticles) scene.remove(exitParticles);
+
+  // Remove old scene children except camera
+  while (scene.children.length > 0) scene.remove(scene.children[0]);
+
+  const totalW = MAZE_W * CELL;
+  const totalH = MAZE_H * CELL;
+
+  // Materials
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0x2a2a44,
+    roughness: 0.85,
+    metalness: 0.1,
+    emissive: 0x0a0a18,
+    emissiveIntensity: 0.4,
+    side: THREE.DoubleSide
+  });
+
+  const wallAccentMat = new THREE.MeshStandardMaterial({
+    color: 0x1e1e32,
+    roughness: 0.9,
+    metalness: 0.05,
+    emissive: 0x080814,
+    emissiveIntensity: 0.3,
+    side: THREE.DoubleSide
+  });
+
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x1a1a28,
+    roughness: 0.95,
+    metalness: 0.0,
+    emissive: 0x060610,
+    emissiveIntensity: 0.2
+  });
+
+  const ceilMat = new THREE.MeshStandardMaterial({
+    color: 0x12121e,
+    roughness: 1.0,
+    metalness: 0.0,
+    emissive: 0x04040a,
+    emissiveIntensity: 0.15
+  });
+
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(totalW + CELL, totalH + CELL);
+  floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.position.set(totalW / 2, 0, totalH / 2);
+  floorMesh.receiveShadow = true;
+  scene.add(floorMesh);
+
+  // Ceiling
+  const ceilGeo = new THREE.PlaneGeometry(totalW + CELL, totalH + CELL);
+  ceilingMesh = new THREE.Mesh(ceilGeo, ceilMat);
+  ceilingMesh.rotation.x = Math.PI / 2;
+  ceilingMesh.position.set(totalW / 2, WALL_H, totalH / 2);
+  scene.add(ceilingMesh);
+
+  // Floor grid lines for visual detail
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x151525, transparent: true, opacity: 0.5 });
+  for (let i = 0; i <= MAZE_W; i++) {
+    const points = [new THREE.Vector3(i * CELL, 0.01, 0), new THREE.Vector3(i * CELL, 0.01, totalH)];
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geo, gridMat);
+    scene.add(line);
+  }
+  for (let j = 0; j <= MAZE_H; j++) {
+    const points = [new THREE.Vector3(0, 0.01, j * CELL), new THREE.Vector3(totalW, 0.01, j * CELL)];
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geo, gridMat);
+    scene.add(line);
+  }
+
+  // Helper: create wall segment
+  function addWall(x, z, w, d) {
+    const geo = new THREE.BoxGeometry(w, WALL_H, d);
+    const mat = Math.random() > 0.3 ? wallMat : wallAccentMat;
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, WALL_H / 2, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    wallMeshes.push(mesh);
+  }
+
+  // Build walls from maze grid
+  for (let r = 0; r < MAZE_H; r++) {
+    for (let c = 0; c < MAZE_W; c++) {
+      const cell = maze[r][c];
+      const cx = c * CELL + CELL / 2;
+      const cz = r * CELL + CELL / 2;
+
+      // North wall
+      if (cell.n) {
+        addWall(cx, cz - CELL / 2, CELL + WALL_T, WALL_T);
+      }
+      // West wall
+      if (cell.w) {
+        addWall(cx - CELL / 2, cz, WALL_T, CELL + WALL_T);
+      }
+    }
+  }
+
+  // South boundary
+  for (let c = 0; c < MAZE_W; c++) {
+    if (maze[MAZE_H - 1][c].s) {
+      addWall(c * CELL + CELL / 2, MAZE_H * CELL, CELL + WALL_T, WALL_T);
+    }
+  }
+  // East boundary
+  for (let r = 0; r < MAZE_H; r++) {
+    if (maze[r][MAZE_W - 1].e) {
+      addWall(MAZE_W * CELL, r * CELL + CELL / 2, WALL_T, CELL + WALL_T);
+    }
+  }
+
+  // Outer boundary walls (ensure enclosed)
+  addWall(totalW / 2, -WALL_T / 2, totalW + WALL_T * 2, WALL_T);
+  addWall(totalW / 2, totalH + WALL_T / 2, totalW + WALL_T * 2, WALL_T);
+  addWall(-WALL_T / 2, totalH / 2, WALL_T, totalH + WALL_T * 2);
+  addWall(totalW + WALL_T / 2, totalH / 2, WALL_T, totalH + WALL_T * 2);
+
+  // ── Lighting ──
+  const ambient = new THREE.AmbientLight(0x334466, 0.5);
+  scene.add(ambient);
+
+  const hemiLight = new THREE.HemisphereLight(0x6688cc, 0x223344, 0.4);
+  scene.add(hemiLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  dirLight.position.set(0, WALL_H + 2, 0);
+  scene.add(dirLight);
+
+  // Player light (attached to camera later)
+  const playerLight = new THREE.PointLight(0xff6600, 2.0, 16, 1.5);
+  playerLight.position.set(0, 0, 0);
+  camera.add(playerLight);
+  scene.add(camera);
+
+  // Subtle warm fill
+  const fillLight = new THREE.PointLight(0xff4400, 0.5, 10, 2);
+  fillLight.position.copy(camera.position);
+  camera.add(fillLight);
+  fillLight.position.set(0, -0.5, 0.5);
+
+  // ── Torches/Glow markers on walls ──
+  const torchPositions = [];
+  for (let r = 0; r < MAZE_H; r++) {
+    for (let c = 0; c < MAZE_W; c++) {
+      if (Math.random() < 0.12) {
+        const cx = c * CELL + CELL / 2;
+        const cz = r * CELL + CELL / 2;
+        torchPositions.push(new THREE.Vector3(cx, WALL_H * 0.65, cz));
+      }
+    }
+  }
+
+  torchPositions.forEach(pos => {
+    const light = new THREE.PointLight(0xff4400, 1.5, 10, 2);
+    light.position.copy(pos);
+    scene.add(light);
+    torchLights.push(light);
+
+    // Torch glow sprite
+    const spriteMat = new THREE.SpriteMaterial({
+      color: 0xff6600,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending
+    });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.scale.set(0.4, 0.4, 0.4);
+    sprite.position.copy(pos);
+    scene.add(sprite);
+
+    // Small emissive sphere
+    const glowGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+    const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+    glowMesh.position.copy(pos);
+    scene.add(glowMesh);
+  });
+
+  // ── Gems (Collectibles) ──
+  gems = [];
+  const gemGeo = new THREE.OctahedronGeometry(0.2, 0);
+  const gemMat = new THREE.MeshStandardMaterial({
+    color: 0x00ffaa,
+    emissive: 0x00ff88,
+    emissiveIntensity: 0.8,
+    roughness: 0.1,
+    metalness: 0.9
+  });
+
+  const usedCells = new Set();
+  usedCells.add('0,0');
+  usedCells.add(`${MAZE_H - 1},${MAZE_W - 1}`);
+
+  let placed = 0;
+  while (placed < GEM_COUNT) {
+    const gr = Math.floor(Math.random() * MAZE_H);
+    const gc = Math.floor(Math.random() * MAZE_W);
+    const key = `${gr},${gc}`;
+    if (usedCells.has(key)) continue;
+    usedCells.add(key);
+
+    const gx = gc * CELL + CELL / 2;
+    const gz = gr * CELL + CELL / 2;
+    const gemMesh = new THREE.Mesh(gemGeo, gemMat.clone());
+    gemMesh.position.set(gx, 1.0, gz);
+    gemMesh.castShadow = true;
+    scene.add(gemMesh);
+    gemMeshes.push(gemMesh);
+
+    // Gem glow light
+    const gemLight = new THREE.PointLight(0x00ff88, 0.4, 5, 2);
+    gemLight.position.set(gx, 1.2, gz);
+    scene.add(gemLight);
+
+    gems.push({ mesh: gemMesh, light: gemLight, collected: false, r: gr, c: gc });
+    placed++;
+  }
+  totalGems = gems.length;
+
+  // ── Exit Portal ──
+  const exitR = MAZE_H - 1;
+  const exitC = MAZE_W - 1;
+  exitPos.set(exitC, exitR);
+  const ex = exitC * CELL + CELL / 2;
+  const ez = exitR * CELL + CELL / 2;
+
+  // Portal ring
+  const portalGeo = new THREE.TorusGeometry(0.8, 0.12, 16, 32);
+  const portalMat = new THREE.MeshStandardMaterial({
+    color: 0xff6600,
+    emissive: 0xff6600,
+    emissiveIntensity: 1.5,
+    roughness: 0.0,
+    metalness: 1.0
+  });
+  exitMesh = new THREE.Mesh(portalGeo, portalMat);
+  exitMesh.position.set(ex, WALL_H / 2, ez);
+  exitMesh.rotation.x = Math.PI / 2;
+  scene.add(exitMesh);
+
+  // Inner portal glow
+  const innerGeo = new THREE.CircleGeometry(0.7, 32);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0xff8800,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
+  const innerMesh = new THREE.Mesh(innerGeo, innerMat);
+  innerMesh.position.set(ex, WALL_H / 2, ez);
+  innerMesh.rotation.x = Math.PI / 2;
+  scene.add(innerMesh);
+
+  // Portal beacon light
+  exitLight = new THREE.PointLight(0xff6600, 3, 15, 1.5);
+  exitLight.position.set(ex, WALL_H * 0.8, ez);
+  scene.add(exitLight);
+
+  // Second portal ring (outer)
+  const outerRingGeo = new THREE.TorusGeometry(1.0, 0.05, 12, 32);
+  const outerRingMat = new THREE.MeshBasicMaterial({
+    color: 0xff4400,
+    transparent: true,
+    opacity: 0.4,
+    blending: THREE.AdditiveBlending
+  });
+  const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
+  outerRing.position.set(ex, WALL_H / 2, ez);
+  outerRing.rotation.x = Math.PI / 2;
+  scene.add(outerRing);
+
+  // ── Exit Particles ──
+  const exitPartCount = 80;
+  const exitPartGeo = new THREE.BufferGeometry();
+  const exitPartPositions = new Float32Array(exitPartCount * 3);
+  const exitPartVelocities = [];
+  for (let i = 0; i < exitPartCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 0.3 + Math.random() * 0.8;
+    exitPartPositions[i * 3] = ex + Math.cos(angle) * radius;
+    exitPartPositions[i * 3 + 1] = 0.5 + Math.random() * (WALL_H - 1);
+    exitPartPositions[i * 3 + 2] = ez + Math.sin(angle) * radius;
+    exitPartVelocities.push({
+      angle: angle,
+      radius: radius,
+      speed: 0.5 + Math.random() * 1.5,
+      ySpeed: 0.3 + Math.random() * 0.7
+    });
+  }
+  exitPartGeo.setAttribute('position', new THREE.BufferAttribute(exitPartPositions, 3));
+  const exitPartMat = new THREE.PointsMaterial({
+    color: 0xff6600,
+    size: 0.08,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  exitParticles = new THREE.Points(exitPartGeo, exitPartMat);
+  exitParticles.userData.velocities = exitPartVelocities;
+  exitParticles.userData.baseX = ex;
+  exitParticles.userData.baseZ = ez;
+  scene.add(exitParticles);
+
+  // ── Ambient floating dust ──
+  const dustCount = 200;
+  const dustGeo = new THREE.BufferGeometry();
+  const dustPositions = new Float32Array(dustCount * 3);
+  for (let i = 0; i < dustCount; i++) {
+    dustPositions[i * 3] = Math.random() * totalW;
+    dustPositions[i * 3 + 1] = Math.random() * WALL_H;
+    dustPositions[i * 3 + 2] = Math.random() * totalH;
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+  const dustMat = new THREE.PointsMaterial({
+    color: 0x554422,
+    size: 0.04,
+    transparent: true,
+    opacity: 0.4,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  particleSystem = new THREE.Points(dustGeo, dustMat);
+  scene.add(particleSystem);
+}
+
+// ── Visited cells for minimap fog of war ──
+function initVisited() {
+  visited = Array.from({ length: MAZE_H }, () => Array(MAZE_W).fill(false));
+}
+
+function markVisited(px, pz) {
+  const c = Math.floor(px / CELL);
+  const r = Math.floor(pz / CELL);
+  const radius = 1;
+  for (let dr = -radius; dr <= radius; dr++) {
+    for (let dc = -radius; dc <= radius; dc++) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < MAZE_H && nc >= 0 && nc < MAZE_W) {
+        visited[nr][nc] = true;
+      }
+    }
+  }
+}
+
+// ── Minimap Drawing ──
+function drawMinimap() {
+  const size = minimapCanvas.width;
+  const cellSize = size / Math.max(MAZE_W, MAZE_H);
+  minimapCtx.clearRect(0, 0, size, size);
+  minimapCtx.fillStyle = 'rgba(0,0,0,0.8)';
+  minimapCtx.fillRect(0, 0, size, size);
+
+  for (let r = 0; r < MAZE_H; r++) {
+    for (let c = 0; c < MAZE_W; c++) {
+      const x = c * cellSize;
+      const y = r * cellSize;
+
+      if (!visited[r][c]) {
+        minimapCtx.fillStyle = 'rgba(20,20,30,0.9)';
+        minimapCtx.fillRect(x, y, cellSize, cellSize);
+        continue;
+      }
+
+      // Floor
+      minimapCtx.fillStyle = '#1a1a2e';
+      minimapCtx.fillRect(x, y, cellSize, cellSize);
+
+      // Walls
+      minimapCtx.strokeStyle = '#ff6600';
+      minimapCtx.lineWidth = 1.5;
+      const cell = maze[r][c];
+
+      if (cell.n) {
+        minimapCtx.beginPath();
+        minimapCtx.moveTo(x, y);
+        minimapCtx.lineTo(x + cellSize, y);
+        minimapCtx.stroke();
+      }
+      if (cell.s) {
+        minimapCtx.beginPath();
+        minimapCtx.moveTo(x, y + cellSize);
+        minimapCtx.lineTo(x + cellSize, y + cellSize);
+        minimapCtx.stroke();
+      }
+      if (cell.w) {
+        minimapCtx.beginPath();
+        minimapCtx.moveTo(x, y);
+        minimapCtx.lineTo(x, y + cellSize);
+        minimapCtx.stroke();
+      }
+      if (cell.e) {
+        minimapCtx.beginPath();
+        minimapCtx.moveTo(x + cellSize, y);
+        minimapCtx.lineTo(x + cellSize, y + cellSize);
+        minimapCtx.stroke();
+      }
+
+      // Gems
+      gems.forEach(g => {
+        if (!g.collected && g.r === r && g.c === c) {
+          minimapCtx.fillStyle = '#00ff88';
+          minimapCtx.beginPath();
+          minimapCtx.arc(x + cellSize / 2, y + cellSize / 2, 2, 0, Math.PI * 2);
+          minimapCtx.fill();
+        }
+      });
+    }
+  }
+
+  // Exit marker
+  if (visited[exitPos.y][exitPos.x]) {
+    const ex = exitPos.x * cellSize + cellSize / 2;
+    const ey = exitPos.y * cellSize + cellSize / 2;
+    minimapCtx.fillStyle = '#ff6600';
+    minimapCtx.shadowColor = '#ff6600';
+    minimapCtx.shadowBlur = 6;
+    minimapCtx.beginPath();
+    minimapCtx.arc(ex, ey, 3.5, 0, Math.PI * 2);
+    minimapCtx.fill();
+    minimapCtx.shadowBlur = 0;
+  }
+
+  // Player marker
+  const pc = playerPos.x / CELL;
+  const pr = playerPos.z / CELL;
+  const px = pc * cellSize;
+  const py = pr * cellSize;
+  minimapCtx.fillStyle = '#ffffff';
+  minimapCtx.shadowColor = '#ffffff';
+  minimapCtx.shadowBlur = 4;
+  minimapCtx.beginPath();
+  minimapCtx.arc(px, py, 3, 0, Math.PI * 2);
+  minimapCtx.fill();
+  minimapCtx.shadowBlur = 0;
+
+  // Direction indicator
+  const dirLen = cellSize * 0.8;
+  const dx = px + Math.sin(playerYaw) * dirLen;
+  const dy = py - Math.cos(playerYaw) * dirLen;
+  minimapCtx.strokeStyle = '#ffffff';
+  minimapCtx.lineWidth = 1.5;
+  minimapCtx.beginPath();
+  minimapCtx.moveTo(px, py);
+  minimapCtx.lineTo(dx, dy);
+  minimapCtx.stroke();
+
+  // Border
+  minimapCtx.strokeStyle = 'rgba(255,102,0,0.4)';
+  minimapCtx.lineWidth = 1;
+  minimapCtx.strokeRect(0, 0, size, size);
+}
+
+// ── Collision Detection ──
+function canMove(nx, nz) {
+  const totalW = MAZE_W * CELL;
+  const totalH = MAZE_H * CELL;
+  const pad = PLAYER_R;
+
+  if (nx - pad < 0 || nx + pad > totalW || nz - pad < 0 || nz + pad > totalH) return false;
+
+  // Check against maze walls
+  const checkPoints = [
+    [nx - pad, nz - pad],
+    [nx + pad, nz - pad],
+    [nx - pad, nz + pad],
+    [nx + pad, nz + pad],
+    [nx, nz - pad],
+    [nx, nz + pad],
+    [nx - pad, nz],
+    [nx + pad, nz]
+  ];
+
+  for (const [cpx, cpz] of checkPoints) {
+    const c = Math.floor(cpx / CELL);
+    const r = Math.floor(cpz / CELL);
+    if (r < 0 || r >= MAZE_H || c < 0 || c >= MAZE_W) return false;
+
+    const cell = maze[r][c];
+    const localX = cpx - c * CELL;
+    const localZ = cpz - r * CELL;
+
+    // Check wall proximity
+    const wallZone = WALL_T + pad * 0.3;
+
+    if (cell.n && localZ < wallZone) return false;
+    if (cell.s && localZ > CELL - wallZone) return false;
+    if (cell.w && localX < wallZone) return false;
+    if (cell.e && localX > CELL - wallZone) return false;
+  }
+
+  return true;
+}
+
+// ── Game Init ──
+function initGame() {
+  maze = generateMaze(MAZE_W, MAZE_H);
+  initVisited();
+  buildMaze3D();
+
+  playerPos.set(CELL / 2, PLAYER_H, CELL / 2);
+  playerYaw = Math.PI / 4;
+  playerPitch = 0;
+  timeLeft = TOTAL_TIME;
+  score = 0;
+  gemsCollected = 0;
+  keys = {};
+
+  camera.position.copy(playerPos);
+  updateCameraRotation();
+  markVisited(playerPos.x, playerPos.z);
+}
+
+function updateCameraRotation() {
+  playerPitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, playerPitch));
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = playerYaw;
+  camera.rotation.x = playerPitch;
+}
+
+// ── Input Handling ──
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'KeyM' && gameState === 'playing') {
+    showMinimap = !showMinimap;
+    minimapContainer.classList.toggle('hidden', !showMinimap);
+  }
+});
+
+document.addEventListener('keyup', e => {
+  keys[e.code] = false;
+});
+
+document.addEventListener('mousemove', e => {
+  if (!pointerLocked || gameState !== 'playing') return;
+  playerYaw -= e.movementX * MOUSE_SENS;
+  playerPitch -= e.movementY * MOUSE_SENS;
+  updateCameraRotation();
+});
+
+document.addEventListener('click', () => {
+  if (gameState === 'playing' && !pointerLocked) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+  clickHint.classList.toggle('hidden', pointerLocked || gameState !== 'playing');
+});
+
+// ── Screen management ──
+function showScreen(screenId) {
+  [startScreen, winScreen, gameoverScreen].forEach(s => s.style.display = 'none');
+  document.getElementById(screenId).style.display = 'block';
+  overlay.classList.remove('hidden');
+  hud.classList.add('hidden');
+  minimapContainer.classList.add('hidden');
+  crosshair.classList.add('hidden');
+  clickHint.classList.add('hidden');
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+function hideOverlay() {
+  overlay.classList.add('hidden');
+  hud.classList.remove('hidden');
+  if (showMinimap) minimapContainer.classList.remove('hidden');
+  crosshair.classList.remove('hidden');
+  clickHint.classList.remove('hidden');
+}
+
+// ── Buttons ──
+document.getElementById('start-btn').addEventListener('click', () => {
+  initGame();
+  gameState = 'playing';
+  hideOverlay();
+  clock.start();
+  renderer.domElement.requestPointerLock();
+});
+
+document.getElementById('win-btn').addEventListener('click', () => {
+  initGame();
+  gameState = 'playing';
+  hideOverlay();
+  clock.start();
+  renderer.domElement.requestPointerLock();
+});
+
+document.getElementById('gameover-btn').addEventListener('click', () => {
+  initGame();
+  gameState = 'playing';
+  hideOverlay();
+  clock.start();
+  renderer.domElement.requestPointerLock();
+});
+
+// ── Update ──
+function update(dt) {
+  if (gameState !== 'playing') return;
+
+  // Timer
+  timeLeft -= dt;
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    gameState = 'gameover';
+    document.getElementById('go-gems').textContent = gemsCollected;
+    document.getElementById('go-score').textContent = score;
+    showScreen('gameover-screen');
+    return;
+  }
+
+  // Movement
+  const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
+  const speed = MOVE_SPEED * (sprint ? SPRINT_MULT : 1) * dt;
+
+  let moveX = 0, moveZ = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) { moveX += Math.sin(playerYaw); moveZ += Math.cos(playerYaw); }
+  if (keys['KeyS'] || keys['ArrowDown']) { moveX -= Math.sin(playerYaw); moveZ -= Math.cos(playerYaw); }
+  if (keys['KeyA'] || keys['ArrowLeft']) { moveX += Math.sin(playerYaw + Math.PI / 2); moveZ += Math.cos(playerYaw + Math.PI / 2); }
+  if (keys['KeyD'] || keys['ArrowRight']) { moveX -= Math.sin(playerYaw + Math.PI / 2); moveZ -= Math.cos(playerYaw + Math.PI / 2); }
+
+  if (moveX !== 0 || moveZ !== 0) {
+    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+    moveX = (moveX / len) * speed;
+    moveZ = (moveZ / len) * speed;
+
+    // Try full move, then axis-separated
+    const nx = playerPos.x + moveX;
+    const nz = playerPos.z - moveZ;
+
+    if (canMove(nx, nz)) {
+      playerPos.x = nx;
+      playerPos.z = nz;
+    } else if (canMove(nx, playerPos.z)) {
+      playerPos.x = nx;
+    } else if (canMove(playerPos.x, nz)) {
+      playerPos.z = nz;
+    }
+  }
+
+  camera.position.set(playerPos.x, playerPos.y, playerPos.z);
+  markVisited(playerPos.x, playerPos.z);
+
+  // Gem collection
+  gems.forEach(g => {
+    if (g.collected) return;
+    const dx = playerPos.x - g.mesh.position.x;
+    const dz = playerPos.z - g.mesh.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist < GEM_COLLECT_DIST) {
+      g.collected = true;
+      scene.remove(g.mesh);
+      scene.remove(g.light);
+      gemsCollected++;
+      score += 100;
+    }
+  });
+
+  // Exit check
+  const exitWorldX = exitPos.x * CELL + CELL / 2;
+  const exitWorldZ = exitPos.y * CELL + CELL / 2;
+  const eDx = playerPos.x - exitWorldX;
+  const eDz = playerPos.z - exitWorldZ;
+  const exitDist = Math.sqrt(eDx * eDx + eDz * eDz);
+  if (exitDist < 1.5) {
+    const timeBonus = Math.floor(timeLeft * 10);
+    score += timeBonus;
+    gameState = 'win';
+    document.getElementById('win-time').textContent = Math.ceil(timeLeft) + 's';
+    document.getElementById('win-gems').textContent = `${gemsCollected}/${totalGems}`;
+    document.getElementById('win-score').textContent = score;
+    showScreen('win-screen');
+    return;
+  }
+
+  // Update HUD
+  timerVal.textContent = Math.ceil(timeLeft);
+  gemsVal.textContent = `${gemsCollected}/${totalGems}`;
+  scoreVal.textContent = score;
+  hudTimer.classList.toggle('hud-timer-warn', timeLeft < 20);
+
+  // Animate gems
+  const time = performance.now() * 0.001;
+  gemMeshes.forEach((m, i) => {
+    if (gems[i] && !gems[i].collected) {
+      m.rotation.y = time * 2 + i;
+      m.rotation.x = Math.sin(time * 1.5 + i) * 0.3;
+      m.position.y = 1.0 + Math.sin(time * 2 + i * 0.7) * 0.15;
+    }
+  });
+
+  // Animate exit portal
+  if (exitMesh) {
+    exitMesh.rotation.z = time * 1.5;
+    const pulse = 0.8 + Math.sin(time * 3) * 0.4;
+    exitMesh.material.emissiveIntensity = pulse + 0.7;
+    if (exitLight) exitLight.intensity = 2 + Math.sin(time * 2) * 1;
+  }
+
+  // Animate exit particles
+  if (exitParticles) {
+    const positions = exitParticles.geometry.attributes.position.array;
+    const vels = exitParticles.userData.velocities;
+    const bx = exitParticles.userData.baseX;
+    const bz = exitParticles.userData.baseZ;
+
+    for (let i = 0; i < vels.length; i++) {
+      const v = vels[i];
+      v.angle += v.speed * dt;
+      positions[i * 3] = bx + Math.cos(v.angle) * v.radius;
+      positions[i * 3 + 1] += v.ySpeed * dt;
+      positions[i * 3 + 2] = bz + Math.sin(v.angle) * v.radius;
+
+      if (positions[i * 3 + 1] > WALL_H) {
+        positions[i * 3 + 1] = 0.2;
+      }
+    }
+    exitParticles.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // Animate dust particles
+  if (particleSystem) {
+    const positions = particleSystem.geometry.attributes.position.array;
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i + 1] += Math.sin(time + positions[i]) * 0.002;
+      positions[i] += Math.cos(time * 0.3 + positions[i + 2]) * 0.001;
+    }
+    particleSystem.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // Flicker torches
+  torchLights.forEach((l, i) => {
+    l.intensity = 1.2 + Math.sin(time * 5 + i * 2.3) * 0.3 + Math.sin(time * 7.7 + i) * 0.2;
+  });
+
+  // Draw minimap
+  if (showMinimap) drawMinimap();
+}
+
+// ── Resize ──
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── Game Loop ──
+function gameLoop() {
+  requestAnimationFrame(gameLoop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(dt);
+  renderer.render(scene, camera);
+}
+
+// Start render loop (renders menu background too)
+initGame();
+gameState = 'menu';
+showScreen('start-screen');
+clock.start();
+gameLoop();
+</script>
+</body>
+</html>

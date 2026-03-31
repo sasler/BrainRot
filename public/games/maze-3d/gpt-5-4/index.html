@@ -1,0 +1,1822 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D MAZE</title>
+  <style>
+    :root {
+      --bg: #050507;
+      --panel: rgba(12, 10, 10, 0.84);
+      --panel-strong: rgba(6, 6, 8, 0.94);
+      --text: #fff3e8;
+      --muted: #d7b8a0;
+      --accent: #ff6600;
+      --accent-bright: #ff9a45;
+      --line: rgba(255, 120, 40, 0.18);
+      --shadow: 0 0 0 1px rgba(255, 120, 40, 0.12) inset, 0 18px 54px rgba(0, 0, 0, 0.5), 0 0 36px rgba(255, 102, 0, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      min-width: 320px;
+      min-height: 480px;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 14%, rgba(255, 102, 0, 0.13), transparent 22%),
+        radial-gradient(circle at 18% 76%, rgba(255, 140, 70, 0.09), transparent 28%),
+        radial-gradient(circle at 82% 72%, rgba(255, 102, 0, 0.06), transparent 24%),
+        linear-gradient(180deg, #050507 0%, #08080a 58%, #030304 100%);
+      color: var(--text);
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.12;
+      background:
+        linear-gradient(rgba(255, 102, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 102, 0, 0.03) 1px, transparent 1px);
+      background-size: 100% 2px, 2px 100%;
+      mix-blend-mode: screen;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      min-width: 320px;
+      min-height: 480px;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #hud,
+    #status-line,
+    #minimap-wrap,
+    #crosshair,
+    #hint-chip {
+      position: fixed;
+      z-index: 4;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
+    }
+
+    #hud {
+      top: 16px;
+      left: 16px;
+      display: grid;
+      gap: 10px;
+      max-width: calc(100vw - 32px);
+      opacity: 0;
+    }
+
+    .hud-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      min-width: 116px;
+      padding: 10px 12px 9px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      background: linear-gradient(180deg, rgba(32, 18, 12, 0.84), rgba(8, 8, 10, 0.92));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      color: #f6ddcd;
+    }
+
+    .pill strong {
+      display: block;
+      margin-top: 4px;
+      color: #fff;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 18px rgba(255, 102, 0, 0.32);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .danger strong {
+      color: #ff8751;
+      animation: flash 0.7s ease-in-out infinite alternate;
+    }
+
+    @keyframes flash {
+      from { opacity: 1; }
+      to { opacity: 0.48; }
+    }
+
+    #status-line {
+      top: 18px;
+      right: 16px;
+      max-width: min(42vw, 480px);
+      text-align: right;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0;
+    }
+
+    #status-line strong {
+      color: var(--accent-bright);
+      text-shadow: 0 0 16px rgba(255, 102, 0, 0.42);
+    }
+
+    #minimap-wrap {
+      left: 16px;
+      bottom: 16px;
+      width: min(30vw, 220px);
+      min-width: 132px;
+      aspect-ratio: 1 / 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      background: linear-gradient(180deg, rgba(20, 12, 10, 0.84), rgba(6, 6, 8, 0.94));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+    }
+
+    #minimap {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    #crosshair {
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 14px rgba(255, 102, 0, 0.7);
+    }
+
+    #crosshair::before {
+      width: 18px;
+      height: 2px;
+      transform: translate(-50%, -50%);
+    }
+
+    #crosshair::after {
+      width: 2px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+    }
+
+    #hint-chip {
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      background: rgba(10, 8, 8, 0.72);
+      box-shadow: var(--shadow);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #ffd3b3;
+      opacity: 0;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255, 102, 0, 0.14), transparent 26%),
+        linear-gradient(180deg, rgba(4, 4, 5, 0.78), rgba(4, 4, 5, 0.94));
+    }
+
+    .panel {
+      width: min(860px, calc(100vw - 28px));
+      max-height: min(88vh, 860px);
+      overflow: auto;
+      padding: clamp(20px, 4vw, 34px);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 140, 70, 0.2);
+      background:
+        radial-gradient(circle at top, rgba(255, 102, 0, 0.14), transparent 42%),
+        linear-gradient(180deg, rgba(18, 10, 8, 0.9), rgba(6, 6, 8, 0.96));
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.56), 0 0 44px rgba(255, 102, 0, 0.14);
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent-bright);
+      font-size: 12px;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(44px, 10vw, 112px);
+      line-height: 0.9;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(255, 102, 0, 0.22), 0 0 50px rgba(255, 102, 0, 0.18);
+    }
+
+    .lead {
+      max-width: 60ch;
+      margin: 18px 0 0;
+      color: #e4ccbd;
+      line-height: 1.7;
+      font-size: clamp(14px, 1.8vw, 17px);
+      letter-spacing: 0.03em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .card {
+      padding: 14px 15px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 140, 70, 0.14);
+      background: linear-gradient(180deg, rgba(28, 16, 11, 0.84), rgba(8, 8, 10, 0.92));
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .card p {
+      margin: 0;
+      color: #ceb9aa;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      align-items: center;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      color: #140700;
+      background: linear-gradient(180deg, #ff8b2f, #ff6600);
+      padding: 14px 20px;
+      border-radius: 16px;
+      font: inherit;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      box-shadow: 0 14px 26px rgba(255, 102, 0, 0.24), 0 0 28px rgba(255, 102, 0, 0.24);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 30px rgba(255, 102, 0, 0.28), 0 0 34px rgba(255, 102, 0, 0.3);
+      filter: brightness(1.06);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.99);
+    }
+
+    .secondary {
+      color: #ffd6b8;
+      background: transparent;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      box-shadow: var(--shadow);
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      min-width: 140px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 140, 70, 0.14);
+      background: linear-gradient(180deg, rgba(28, 16, 11, 0.84), rgba(8, 8, 10, 0.92));
+    }
+
+    .stat span {
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      color: #d3b09c;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 28px;
+      color: #fff;
+      text-shadow: 0 0 16px rgba(255, 102, 0, 0.26);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    @media (max-width: 720px) {
+      #hud {
+        top: 12px;
+        left: 12px;
+        gap: 8px;
+      }
+
+      .pill {
+        min-width: 96px;
+        padding: 8px 10px 8px;
+      }
+
+      .pill strong {
+        font-size: 15px;
+      }
+
+      #status-line {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        max-width: 52vw;
+        font-size: 10px;
+      }
+
+      #minimap-wrap {
+        left: auto;
+        right: 12px;
+        bottom: 48px;
+        width: min(38vw, 180px);
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud" aria-hidden="true">
+    <div class="hud-row">
+      <div class="pill" id="timer-pill">Time<strong id="time-value">120.0</strong></div>
+      <div class="pill">Score<strong id="score-value">0</strong></div>
+      <div class="pill">Collectibles<strong id="collect-value">0 / 0</strong></div>
+    </div>
+  </div>
+
+  <div id="status-line">Click to begin. <strong>Pointer lock</strong> will be attempted automatically.</div>
+
+  <div id="minimap-wrap" aria-hidden="true">
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <div id="crosshair" aria-hidden="true"></div>
+  <div id="hint-chip" aria-hidden="true">Click or drag to look around</div>
+
+  <div id="overlay" class="overlay">
+    <div class="panel">
+      <p class="eyebrow">Neon labyrinth challenge</p>
+      <h1>3D MAZE</h1>
+      <p class="lead">
+        Descend into a procedurally generated neon labyrinth, sweep up glowing relics, and follow the beacon to the exit portal before the clock burns out.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Controls</h3>
+          <p>WASD or arrow keys move. Move the mouse to look. Click the scene to request pointer lock; if it is unavailable, hold and drag to aim.</p>
+        </div>
+        <div class="card">
+          <h3>Objective</h3>
+          <p>Reach the bright exit portal before time expires. Collect relic shards for score and watch the minimap reveal only the cells you have actually explored.</p>
+        </div>
+        <div class="card">
+          <h3>Movement feel</h3>
+          <p>Smooth wall sliding keeps movement flowing through corners. Shift boosts your speed, but you still need sharp pathfinding to win consistently.</p>
+        </div>
+        <div class="card">
+          <h3>Atmosphere</h3>
+          <p>Fog, embers, torch beacons, patterned floor tiles, and a blazing portal create a moody orange-on-black arcade maze aesthetic tuned for fast play.</p>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <button id="start-button" type="button">Enter Maze</button>
+        <button id="restart-button" class="secondary hide" type="button">Play Again</button>
+      </div>
+
+      <div class="stats hide" id="result-stats">
+        <div class="stat">
+          <span>Outcome</span>
+          <strong id="result-title">Ready</strong>
+        </div>
+        <div class="stat">
+          <span>Time Left</span>
+          <strong id="result-time">120.0s</strong>
+        </div>
+        <div class="stat">
+          <span>Score</span>
+          <strong id="result-score">0</strong>
+        </div>
+        <div class="stat">
+          <span>Relics</span>
+          <strong id="result-collect">0 / 0</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    const CELL_SIZE = 4;
+    const WALL_HEIGHT = 3.35;
+    const WALL_THICKNESS = 0.28;
+    const PLAYER_RADIUS = 0.34;
+    const PLAYER_HEIGHT = 1.5;
+    const WALK_SPEED = 4.25;
+    const SPRINT_MULTIPLIER = 1.45;
+    const LOOK_SENSITIVITY = 0.0022;
+    const TOTAL_TIME = 120;
+    const COLS = 15;
+    const ROWS = 15;
+    const COLLECTIBLE_COUNT = 11;
+    const PORTAL_RADIUS = 1.05;
+
+    const app = document.getElementById("app");
+    const overlay = document.getElementById("overlay");
+    const hud = document.getElementById("hud");
+    const statusLine = document.getElementById("status-line");
+    const minimapWrap = document.getElementById("minimap-wrap");
+    const minimapCanvas = document.getElementById("minimap");
+    const minimapCtx = minimapCanvas.getContext("2d");
+    const crosshair = document.getElementById("crosshair");
+    const hintChip = document.getElementById("hint-chip");
+    const timeValue = document.getElementById("time-value");
+    const scoreValue = document.getElementById("score-value");
+    const collectValue = document.getElementById("collect-value");
+    const timerPill = document.getElementById("timer-pill");
+    const startButton = document.getElementById("start-button");
+    const restartButton = document.getElementById("restart-button");
+    const resultStats = document.getElementById("result-stats");
+    const resultTitle = document.getElementById("result-title");
+    const resultTime = document.getElementById("result-time");
+    const resultScore = document.getElementById("result-score");
+    const resultCollect = document.getElementById("result-collect");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050507);
+    scene.fog = new THREE.Fog(0x050507, 12, 84);
+
+    const camera = new THREE.PerspectiveCamera(76, 1, 0.05, 140);
+    camera.rotation.order = "YXZ";
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    app.appendChild(renderer.domElement);
+
+    const clock = new THREE.Clock();
+    const keys = new Map();
+    const moveInput = new THREE.Vector3();
+    const lateralVector = new THREE.Vector3();
+    const forwardVector = new THREE.Vector3();
+    const reusableVector = new THREE.Vector3();
+
+    const world = {
+      grid: [],
+      wallColliders: [],
+      levelGroup: new THREE.Group(),
+      collectibles: [],
+      torches: [],
+      portal: null,
+      portalLight: null,
+      dust: null,
+      solutionPath: [],
+      exitCell: { x: COLS - 1, y: ROWS - 1 },
+      startCell: { x: 0, y: 0 },
+      halfWidth: (COLS * CELL_SIZE) / 2,
+      halfHeight: (ROWS * CELL_SIZE) / 2
+    };
+    scene.add(world.levelGroup);
+
+    const state = {
+      phase: "menu",
+      timeLeft: TOTAL_TIME,
+      score: 0,
+      collected: 0,
+      totalCollectibles: 0,
+      yaw: 0,
+      pitch: -0.02,
+      pointerLocked: false,
+      dragLooking: false,
+      dragging: false,
+      draggingId: null,
+      lastPointerX: 0,
+      lastPointerY: 0,
+      showHintUntil: 0,
+      headBob: 0,
+      player: new THREE.Vector3(),
+      currentCell: { x: 0, y: 0 },
+      exitKnown: false
+    };
+
+    const ambientLight = new THREE.HemisphereLight(0xfff1de, 0x3a2e22, 0.46);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffc08a, 0.28);
+    sunLight.position.set(16, 28, 8);
+    scene.add(sunLight);
+
+    const glowTexture = makeGlowTexture();
+    const floorTexture = makeFloorTexture();
+    const ceilingTexture = makeCeilingTexture();
+    const wallTexture = makeWallTexture();
+
+    function makeGlowTexture() {
+      const size = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createRadialGradient(size / 2, size / 2, 4, size / 2, size / 2, size / 2);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.18, "rgba(255,224,196,1)");
+      gradient.addColorStop(0.42, "rgba(255,122,24,0.88)");
+      gradient.addColorStop(0.72, "rgba(255,102,0,0.24)");
+      gradient.addColorStop(1, "rgba(255,102,0,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function makeFloorTexture() {
+      const size = 512;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0a0909";
+      ctx.fillRect(0, 0, size, size);
+
+      for (let y = 0; y < size; y += 32) {
+        for (let x = 0; x < size; x += 32) {
+          ctx.fillStyle = ((x + y) / 32) % 2 === 0 ? "#141212" : "#0e0d0d";
+          ctx.fillRect(x, y, 32, 32);
+          ctx.strokeStyle = "rgba(255,120,30,0.12)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, y + 1, 30, 30);
+        }
+      }
+
+      for (let i = 0; i < 120; i += 1) {
+        ctx.strokeStyle = `rgba(255, ${110 + Math.floor(Math.random() * 30)}, 20, ${0.05 + Math.random() * 0.1})`;
+        ctx.lineWidth = 1 + Math.random() * 2;
+        ctx.beginPath();
+        const sx = Math.random() * size;
+        const sy = Math.random() * size;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + Math.random() * 30 - 15, sy + Math.random() * 30 - 15);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(COLS * 0.7, ROWS * 0.7);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function makeCeilingTexture() {
+      const size = 512;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#090809";
+      ctx.fillRect(0, 0, size, size);
+
+      for (let i = 0; i < 1800; i += 1) {
+        const value = 20 + Math.floor(Math.random() * 24);
+        ctx.fillStyle = `rgba(${value}, ${value - 4}, ${value - 4}, 0.12)`;
+        ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+      }
+
+      for (let i = 0; i < size; i += 42) {
+        ctx.strokeStyle = "rgba(255,102,0,0.05)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(size, i);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(COLS * 0.65, ROWS * 0.65);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function makeWallTexture() {
+      const width = 512;
+      const height = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, "#2a211d");
+      gradient.addColorStop(0.4, "#1a1412");
+      gradient.addColorStop(1, "#120f10");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 14; i += 1) {
+        const x = i * 36 + 8;
+        ctx.strokeStyle = "rgba(255,130,40,0.22)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, 14);
+        ctx.lineTo(x + 8, 36);
+        ctx.lineTo(x - 4, 62);
+        ctx.lineTo(x + 10, 92);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 56; i += 1) {
+        ctx.strokeStyle = `rgba(255, ${120 + Math.floor(Math.random() * 40)}, 40, ${0.05 + Math.random() * 0.1})`;
+        ctx.lineWidth = 1 + Math.random() * 1.5;
+        ctx.beginPath();
+        const sx = Math.random() * width;
+        const sy = Math.random() * height;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + Math.random() * 18 - 9, sy + Math.random() * 18 - 9);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(1.4, 1);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function randInt(max) {
+      return Math.floor(Math.random() * max);
+    }
+
+    function shuffle(list) {
+      for (let i = list.length - 1; i > 0; i -= 1) {
+        const j = randInt(i + 1);
+        [list[i], list[j]] = [list[j], list[i]];
+      }
+      return list;
+    }
+
+    function worldToCell(x, z) {
+      const cellX = clamp(Math.floor((x + world.halfWidth) / CELL_SIZE), 0, COLS - 1);
+      const cellY = clamp(Math.floor((z + world.halfHeight) / CELL_SIZE), 0, ROWS - 1);
+      return { x: cellX, y: cellY };
+    }
+
+    function cellCenter(cellX, cellY) {
+      return new THREE.Vector3(
+        -world.halfWidth + cellX * CELL_SIZE + CELL_SIZE / 2,
+        0,
+        -world.halfHeight + cellY * CELL_SIZE + CELL_SIZE / 2
+      );
+    }
+
+    function createCellGrid() {
+      return Array.from({ length: ROWS }, (_, y) =>
+        Array.from({ length: COLS }, (_, x) => ({
+          x,
+          y,
+          visited: false,
+          explored: false,
+          collectible: false,
+          walls: { n: true, e: true, s: true, w: true }
+        }))
+      );
+    }
+
+    function removeWall(a, b, direction) {
+      if (direction === "n") {
+        a.walls.n = false;
+        b.walls.s = false;
+      } else if (direction === "e") {
+        a.walls.e = false;
+        b.walls.w = false;
+      } else if (direction === "s") {
+        a.walls.s = false;
+        b.walls.n = false;
+      } else if (direction === "w") {
+        a.walls.w = false;
+        b.walls.e = false;
+      }
+    }
+
+    function generateMaze() {
+      const grid = createCellGrid();
+      const stack = [];
+      let current = grid[0][0];
+      current.visited = true;
+      let visitedCount = 1;
+
+      while (visitedCount < COLS * ROWS) {
+        const neighbors = [];
+        const { x, y } = current;
+
+        if (y > 0 && !grid[y - 1][x].visited) neighbors.push({ cell: grid[y - 1][x], direction: "n" });
+        if (x < COLS - 1 && !grid[y][x + 1].visited) neighbors.push({ cell: grid[y][x + 1], direction: "e" });
+        if (y < ROWS - 1 && !grid[y + 1][x].visited) neighbors.push({ cell: grid[y + 1][x], direction: "s" });
+        if (x > 0 && !grid[y][x - 1].visited) neighbors.push({ cell: grid[y][x - 1], direction: "w" });
+
+        if (neighbors.length > 0) {
+          const next = neighbors[randInt(neighbors.length)];
+          stack.push(current);
+          removeWall(current, next.cell, next.direction);
+          current = next.cell;
+          current.visited = true;
+          visitedCount += 1;
+        } else {
+          current = stack.pop();
+        }
+      }
+
+      for (const row of grid) {
+        for (const cell of row) {
+          cell.visited = false;
+        }
+      }
+
+      return grid;
+    }
+
+    function bfsFrom(start) {
+      const queue = [start];
+      const distances = new Map([[`${start.x},${start.y}`, 0]]);
+      const parents = new Map();
+      let farthest = start;
+
+      while (queue.length > 0) {
+        const cell = queue.shift();
+        const key = `${cell.x},${cell.y}`;
+        const distance = distances.get(key) || 0;
+        if (distance > (distances.get(`${farthest.x},${farthest.y}`) || 0)) {
+          farthest = cell;
+        }
+
+        const candidates = [];
+        if (!cell.walls.n) candidates.push(world.grid[cell.y - 1]?.[cell.x]);
+        if (!cell.walls.e) candidates.push(world.grid[cell.y]?.[cell.x + 1]);
+        if (!cell.walls.s) candidates.push(world.grid[cell.y + 1]?.[cell.x]);
+        if (!cell.walls.w) candidates.push(world.grid[cell.y]?.[cell.x - 1]);
+
+        for (const neighbor of candidates) {
+          if (!neighbor) continue;
+          const neighborKey = `${neighbor.x},${neighbor.y}`;
+          if (distances.has(neighborKey)) continue;
+          distances.set(neighborKey, distance + 1);
+          parents.set(neighborKey, cell);
+          queue.push(neighbor);
+        }
+      }
+
+      return { distances, parents, farthest };
+    }
+
+    function getPathTo(target, parents) {
+      const path = [];
+      let cursor = target;
+      while (cursor) {
+        path.push(cursor);
+        cursor = parents.get(`${cursor.x},${cursor.y}`) || null;
+      }
+      return path.reverse();
+    }
+
+    function revealAround(cellX, cellY) {
+      const cell = world.grid[cellY]?.[cellX];
+      if (!cell) return;
+      cell.explored = true;
+      const neighbors = [];
+      if (!cell.walls.n) neighbors.push(world.grid[cellY - 1]?.[cellX]);
+      if (!cell.walls.e) neighbors.push(world.grid[cellY]?.[cellX + 1]);
+      if (!cell.walls.s) neighbors.push(world.grid[cellY + 1]?.[cellX]);
+      if (!cell.walls.w) neighbors.push(world.grid[cellY]?.[cellX - 1]);
+      for (const neighbor of neighbors) {
+        if (neighbor) neighbor.explored = true;
+      }
+      if (world.exitCell.x === cellX && world.exitCell.y === cellY) {
+        state.exitKnown = true;
+      }
+    }
+
+    function disposeObject(root) {
+      root.traverse((object) => {
+        if (object.geometry) {
+          object.geometry.dispose();
+        }
+        if (object.material) {
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          for (const material of materials) {
+            for (const key of Object.keys(material)) {
+              const value = material[key];
+              if (value && value.isTexture && value !== glowTexture && value !== floorTexture && value !== ceilingTexture && value !== wallTexture) {
+                value.dispose();
+              }
+            }
+            material.dispose();
+          }
+        }
+      });
+    }
+
+    function resetLevelGroup() {
+      for (let i = world.levelGroup.children.length - 1; i >= 0; i -= 1) {
+        const child = world.levelGroup.children[i];
+        world.levelGroup.remove(child);
+        disposeObject(child);
+      }
+      world.collectibles = [];
+      world.torches = [];
+      world.portal = null;
+      world.portalLight = null;
+      world.dust = null;
+      world.wallColliders = [];
+      world.solutionPath = [];
+      state.exitKnown = false;
+    }
+
+    function addWallCollider(centerX, centerZ, sizeX, sizeZ) {
+      world.wallColliders.push({
+        minX: centerX - sizeX / 2,
+        maxX: centerX + sizeX / 2,
+        minZ: centerZ - sizeZ / 2,
+        maxZ: centerZ + sizeZ / 2
+      });
+    }
+
+    function createPortal(position) {
+      const group = new THREE.Group();
+      group.position.copy(position);
+      group.position.y = 0.2;
+
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(PORTAL_RADIUS * 1.15, PORTAL_RADIUS * 1.35, 0.2, 32),
+        new THREE.MeshStandardMaterial({
+          color: 0x1f1008,
+          emissive: 0x2b1205,
+          metalness: 0.18,
+          roughness: 0.64
+        })
+      );
+      base.position.y = -0.12;
+      group.add(base);
+
+      const ringMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffb680,
+        emissive: 0xff6600,
+        emissiveIntensity: 1.35,
+        metalness: 0.22,
+        roughness: 0.18
+      });
+      const outerRing = new THREE.Mesh(new THREE.TorusGeometry(PORTAL_RADIUS, 0.14, 16, 64), ringMaterial);
+      outerRing.rotation.x = Math.PI / 2;
+      outerRing.position.y = 1.1;
+      group.add(outerRing);
+
+      const innerRing = new THREE.Mesh(new THREE.TorusGeometry(PORTAL_RADIUS * 0.66, 0.08, 12, 48), ringMaterial.clone());
+      innerRing.rotation.set(Math.PI / 2, 0, Math.PI / 4);
+      innerRing.position.y = 1.1;
+      innerRing.material.emissiveIntensity = 1.8;
+      group.add(innerRing);
+
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(PORTAL_RADIUS * 0.78, PORTAL_RADIUS * 0.52, 3.8, 22, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0xff7a1a,
+          transparent: true,
+          opacity: 0.22,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        })
+      );
+      beam.position.y = 1.85;
+      group.add(beam);
+
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTexture,
+          color: 0xff7a1a,
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      sprite.position.set(0, 1.2, 0);
+      sprite.scale.set(3.4, 4.6, 1);
+      group.add(sprite);
+
+      const beacon = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 3.6, 10),
+        new THREE.MeshBasicMaterial({
+          color: 0xffa14d,
+          transparent: true,
+          opacity: 0.7,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      beacon.position.y = 1.8;
+      group.add(beacon);
+
+      world.portalLight = new THREE.PointLight(0xff7b22, 7.5, 18, 2);
+      world.portalLight.position.copy(position).add(new THREE.Vector3(0, 2.2, 0));
+      world.levelGroup.add(world.portalLight);
+
+      group.userData = { outerRing, innerRing, beam, sprite, beacon, baseY: group.position.y };
+      world.levelGroup.add(group);
+      world.portal = group;
+    }
+
+    function createTorch(position) {
+      const group = new THREE.Group();
+      group.position.copy(position);
+
+      const bracket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.6, 0.18),
+        new THREE.MeshStandardMaterial({
+          color: 0x2a1b12,
+          emissive: 0x120803,
+          roughness: 0.84,
+          metalness: 0.12
+        })
+      );
+      bracket.position.y = -0.18;
+      group.add(bracket);
+
+      const flame = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 12, 12),
+        new THREE.MeshBasicMaterial({
+          color: 0xff9f4d,
+          transparent: true,
+          opacity: 0.96,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      flame.position.y = 0.14;
+      group.add(flame);
+
+      const flare = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTexture,
+          color: 0xff7d24,
+          transparent: true,
+          opacity: 0.55,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      flare.position.y = 0.12;
+      flare.scale.set(1.2, 1.7, 1);
+      group.add(flare);
+
+      const light = new THREE.PointLight(0xff6600, 1.5, 10, 2);
+      light.position.y = 0.18;
+      group.add(light);
+
+      group.userData = { flame, flare, light, phase: Math.random() * Math.PI * 2 };
+      world.torches.push(group);
+      world.levelGroup.add(group);
+    }
+
+    function createCollectible(position) {
+      const group = new THREE.Group();
+      group.position.copy(position);
+      group.position.y = 0.72;
+
+      const relic = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.24, 0),
+        new THREE.MeshStandardMaterial({
+          color: 0xffe3c8,
+          emissive: 0xff6600,
+          emissiveIntensity: 1.15,
+          metalness: 0.3,
+          roughness: 0.18
+        })
+      );
+      group.add(relic);
+
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.32, 0.03, 12, 28),
+        new THREE.MeshBasicMaterial({
+          color: 0xff8e3e,
+          transparent: true,
+          opacity: 0.7,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+
+      const flare = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTexture,
+          color: 0xff7b1e,
+          transparent: true,
+          opacity: 0.4,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      flare.scale.set(1.2, 1.2, 1);
+      group.add(flare);
+
+      group.userData = {
+        relic,
+        ring,
+        flare,
+        homeY: group.position.y,
+        phase: Math.random() * Math.PI * 2,
+        collected: false,
+        cell: worldToCell(position.x, position.z)
+      };
+
+      world.collectibles.push(group);
+      world.levelGroup.add(group);
+    }
+
+    function buildDustField() {
+      const count = 260;
+      const positions = new Float32Array(count * 3);
+      const sizes = new Float32Array(count);
+      const phases = new Float32Array(count);
+      const spanX = COLS * CELL_SIZE;
+      const spanZ = ROWS * CELL_SIZE;
+
+      for (let i = 0; i < count; i += 1) {
+        positions[i * 3] = Math.random() * spanX - spanX / 2;
+        positions[i * 3 + 1] = 0.4 + Math.random() * 2.6;
+        positions[i * 3 + 2] = Math.random() * spanZ - spanZ / 2;
+        sizes[i] = 0.4 + Math.random() * 1.2;
+        phases[i] = Math.random() * Math.PI * 2;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+      geometry.setAttribute("phase", new THREE.BufferAttribute(phases, 1));
+
+      const material = new THREE.PointsMaterial({
+        color: 0xff8b3a,
+        size: 0.08,
+        transparent: true,
+        opacity: 0.26,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+      });
+
+      world.dust = new THREE.Points(geometry, material);
+      world.levelGroup.add(world.dust);
+    }
+
+    function buildLevel() {
+      resetLevelGroup();
+
+      world.grid = generateMaze();
+      const startCell = world.grid[0][0];
+      const { parents, farthest } = bfsFrom(startCell);
+      world.exitCell = { x: farthest.x, y: farthest.y };
+      world.solutionPath = getPathTo(farthest, parents);
+
+      const floorMaterial = new THREE.MeshStandardMaterial({
+        map: floorTexture,
+        color: 0xffffff,
+        roughness: 0.98,
+        metalness: 0.01
+      });
+      const ceilingMaterial = new THREE.MeshStandardMaterial({
+        map: ceilingTexture,
+        color: 0xc7b19c,
+        roughness: 0.98,
+        metalness: 0.01,
+        emissive: 0x120804
+      });
+      const wallMaterial = new THREE.MeshStandardMaterial({
+        map: wallTexture,
+        color: 0xf2d0b4,
+        roughness: 0.94,
+        metalness: 0.03,
+        emissive: 0x1d0f07,
+        emissiveIntensity: 0.24
+      });
+
+      const totalWidth = COLS * CELL_SIZE;
+      const totalHeight = ROWS * CELL_SIZE;
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(totalWidth + 2, totalHeight + 2),
+        floorMaterial
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0;
+      world.levelGroup.add(floor);
+
+      const ceiling = new THREE.Mesh(
+        new THREE.PlaneGeometry(totalWidth + 2, totalHeight + 2),
+        ceilingMaterial
+      );
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.y = WALL_HEIGHT;
+      world.levelGroup.add(ceiling);
+
+      const wallGeometryNorth = new THREE.BoxGeometry(CELL_SIZE + WALL_THICKNESS, WALL_HEIGHT, WALL_THICKNESS);
+      const wallGeometryWest = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE + WALL_THICKNESS);
+
+      const torchCandidates = [];
+
+      for (let y = 0; y < ROWS; y += 1) {
+        for (let x = 0; x < COLS; x += 1) {
+          const cell = world.grid[y][x];
+          const center = cellCenter(x, y);
+
+          if (cell.walls.n) {
+            const mesh = new THREE.Mesh(wallGeometryNorth, wallMaterial);
+            mesh.position.set(center.x, WALL_HEIGHT / 2, center.z - CELL_SIZE / 2);
+            world.levelGroup.add(mesh);
+            addWallCollider(mesh.position.x, mesh.position.z, CELL_SIZE + WALL_THICKNESS, WALL_THICKNESS);
+          }
+
+          if (cell.walls.w) {
+            const mesh = new THREE.Mesh(wallGeometryWest, wallMaterial);
+            mesh.position.set(center.x - CELL_SIZE / 2, WALL_HEIGHT / 2, center.z);
+            world.levelGroup.add(mesh);
+            addWallCollider(mesh.position.x, mesh.position.z, WALL_THICKNESS, CELL_SIZE + WALL_THICKNESS);
+          }
+
+          if (y === ROWS - 1 && cell.walls.s) {
+            const mesh = new THREE.Mesh(wallGeometryNorth, wallMaterial);
+            mesh.position.set(center.x, WALL_HEIGHT / 2, center.z + CELL_SIZE / 2);
+            world.levelGroup.add(mesh);
+            addWallCollider(mesh.position.x, mesh.position.z, CELL_SIZE + WALL_THICKNESS, WALL_THICKNESS);
+          }
+
+          if (x === COLS - 1 && cell.walls.e) {
+            const mesh = new THREE.Mesh(wallGeometryWest, wallMaterial);
+            mesh.position.set(center.x + CELL_SIZE / 2, WALL_HEIGHT / 2, center.z);
+            world.levelGroup.add(mesh);
+            addWallCollider(mesh.position.x, mesh.position.z, WALL_THICKNESS, CELL_SIZE + WALL_THICKNESS);
+          }
+
+          const closedWalls = ["n", "e", "s", "w"].filter((dir) => cell.walls[dir]);
+          const openCount = 4 - closedWalls.length;
+          const intersectionBias = openCount >= 3 ? 2 : openCount === 2 ? 1 : 0;
+          if (closedWalls.length > 0 && (x + y) % 2 === 0) {
+            torchCandidates.push({ x, y, closedWalls, openCount, intersectionBias });
+          }
+        }
+      }
+
+      const torchCells = [];
+      const pathTorchFallback = [];
+      for (let i = 2; i < world.solutionPath.length - 2; i += 3) {
+        const cell = world.solutionPath[i];
+        const closedWalls = ["n", "e", "s", "w"].filter((dir) => world.grid[cell.y][cell.x].walls[dir]);
+        const torchInfo = {
+          x: cell.x,
+          y: cell.y,
+          closedWalls,
+          openCount: 4 - closedWalls.length
+        };
+        if (torchInfo.openCount >= 3) {
+          torchCells.push(torchInfo);
+        } else {
+          pathTorchFallback.push(torchInfo);
+        }
+      }
+      torchCells.push(...pathTorchFallback);
+
+      const intersectionTorchCandidates = torchCandidates.filter((candidate) => candidate.openCount >= 3);
+      const fallbackTorchCandidates = torchCandidates.filter((candidate) => candidate.openCount < 3);
+      shuffle(intersectionTorchCandidates);
+      shuffle(fallbackTorchCandidates);
+      intersectionTorchCandidates.sort((a, b) => b.intersectionBias - a.intersectionBias);
+      fallbackTorchCandidates.sort((a, b) => b.intersectionBias - a.intersectionBias);
+      while (torchCells.length < 10 && intersectionTorchCandidates.length > 0) {
+        torchCells.push(intersectionTorchCandidates.shift());
+      }
+      while (torchCells.length < 10 && fallbackTorchCandidates.length > 0) {
+        torchCells.push(fallbackTorchCandidates.shift());
+      }
+
+      const usedTorchCells = new Set();
+      for (const info of torchCells) {
+        if (!info || info.closedWalls.length === 0) continue;
+        const key = `${info.x},${info.y}`;
+        if (usedTorchCells.has(key)) continue;
+        usedTorchCells.add(key);
+        const center = cellCenter(info.x, info.y);
+        const cell = world.grid[info.y][info.x];
+        const preferred = info.openCount >= 3
+          ? (cell.walls.n ? "n" : cell.walls.e ? "e" : cell.walls.s ? "s" : "w")
+          : info.closedWalls[0];
+        let position = new THREE.Vector3(center.x, 1.9, center.z);
+        if (preferred === "n") position.z -= CELL_SIZE * 0.33;
+        if (preferred === "s") position.z += CELL_SIZE * 0.33;
+        if (preferred === "w") position.x -= CELL_SIZE * 0.33;
+        if (preferred === "e") position.x += CELL_SIZE * 0.33;
+        createTorch(position);
+      }
+
+      const reserved = new Set(["0,0", `${world.exitCell.x},${world.exitCell.y}`]);
+      const pathCells = world.solutionPath.slice(1, -1);
+      shuffle(pathCells);
+      let placed = 0;
+      for (const cell of pathCells) {
+        if (placed >= COLLECTIBLE_COUNT) break;
+        const key = `${cell.x},${cell.y}`;
+        if (reserved.has(key)) continue;
+        reserved.add(key);
+        const position = cellCenter(cell.x, cell.y);
+        position.x += (Math.random() - 0.5) * 0.8;
+        position.z += (Math.random() - 0.5) * 0.8;
+        createCollectible(position);
+        placed += 1;
+      }
+
+      const allCells = [];
+      for (let y = 0; y < ROWS; y += 1) {
+        for (let x = 0; x < COLS; x += 1) {
+          allCells.push(world.grid[y][x]);
+        }
+      }
+      shuffle(allCells);
+      for (const cell of allCells) {
+        if (placed >= COLLECTIBLE_COUNT) break;
+        const key = `${cell.x},${cell.y}`;
+        if (reserved.has(key)) continue;
+        reserved.add(key);
+        const position = cellCenter(cell.x, cell.y);
+        position.x += (Math.random() - 0.5) * 0.9;
+        position.z += (Math.random() - 0.5) * 0.9;
+        createCollectible(position);
+        placed += 1;
+      }
+
+      state.totalCollectibles = world.collectibles.length;
+
+      const portalPosition = cellCenter(world.exitCell.x, world.exitCell.y);
+      createPortal(portalPosition);
+      buildDustField();
+    }
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+      const size = Math.max(160, Math.floor(Math.min(minimapWrap.clientWidth || 180, minimapWrap.clientHeight || 180) * (window.devicePixelRatio || 1)));
+      minimapCanvas.width = size;
+      minimapCanvas.height = size;
+    }
+
+    function updateHud() {
+      timeValue.textContent = `${state.timeLeft.toFixed(1)}s`;
+      scoreValue.textContent = `${state.score}`;
+      collectValue.textContent = `${state.collected} / ${state.totalCollectibles}`;
+      timerPill.classList.toggle("danger", state.timeLeft < 20);
+    }
+
+    function showGameUi(show) {
+      hud.style.opacity = show ? "1" : "0";
+      minimapWrap.style.opacity = show ? "1" : "0";
+      crosshair.style.opacity = show ? "1" : "0";
+      statusLine.style.opacity = show ? "1" : "0.95";
+      hintChip.style.opacity = show ? "0.95" : "0";
+    }
+
+    function setStatus(text) {
+      statusLine.innerHTML = text;
+    }
+
+    function syncCamera() {
+      const bobOffset = Math.sin(state.headBob) * 0.04;
+      camera.position.set(state.player.x, PLAYER_HEIGHT + bobOffset, state.player.z);
+      camera.rotation.y = state.yaw;
+      camera.rotation.x = state.pitch;
+    }
+
+    function setPointerLocked(locked) {
+      state.pointerLocked = locked;
+      if (locked) {
+        state.dragLooking = false;
+        state.dragging = false;
+        hintChip.style.opacity = "0";
+        setStatus("Maze active. <strong>Pointer lock</strong> engaged.");
+      } else if (state.phase === "playing") {
+        state.showHintUntil = performance.now() + 2200;
+        hintChip.style.opacity = "0.92";
+        setStatus("Click for <strong>pointer lock</strong> or hold and drag to look.");
+      }
+    }
+
+    function tryPointerLock() {
+      if (state.phase !== "playing") return;
+      const request = renderer.domElement.requestPointerLock;
+      if (!request) {
+        setStatus("Pointer lock unavailable. <strong>Drag look</strong> is active.");
+        return;
+      }
+      try {
+        request.call(renderer.domElement);
+      } catch {
+        setStatus("Pointer lock blocked. <strong>Drag look</strong> is active.");
+      }
+    }
+
+    function updateLook(deltaX, deltaY) {
+      state.yaw -= deltaX * LOOK_SENSITIVITY;
+      state.pitch = clamp(state.pitch - deltaY * LOOK_SENSITIVITY, -1.45, 1.45);
+    }
+
+    function resetInput() {
+      keys.clear();
+      state.dragLooking = false;
+      state.dragging = false;
+      state.draggingId = null;
+    }
+
+    function beginRun() {
+      resetInput();
+      buildLevel();
+      state.phase = "playing";
+      state.timeLeft = TOTAL_TIME;
+      state.score = 0;
+      state.collected = 0;
+      state.yaw = 0;
+      state.pitch = -0.04;
+      state.headBob = 0;
+      const startPosition = cellCenter(0, 0);
+      state.player.set(startPosition.x, 0, startPosition.z);
+      state.currentCell = { x: 0, y: 0 };
+      for (const row of world.grid) {
+        for (const cell of row) {
+          cell.explored = false;
+        }
+      }
+      revealAround(0, 0);
+      updateHud();
+      syncCamera();
+      overlay.classList.add("hide");
+      restartButton.classList.add("hide");
+      startButton.classList.remove("hide");
+      resultStats.classList.add("hide");
+      showGameUi(true);
+      setStatus("Maze loaded. <strong>Find the portal</strong> before time expires.");
+      state.showHintUntil = performance.now() + 2600;
+      tryPointerLock();
+    }
+
+    function finishRun(outcome) {
+      state.phase = outcome;
+      if (document.pointerLockElement === renderer.domElement && document.exitPointerLock) {
+        document.exitPointerLock();
+      }
+
+      if (outcome === "won") {
+        const bonus = Math.round(state.timeLeft * 6);
+        state.score += bonus;
+        resultTitle.textContent = "Escaped";
+      } else {
+        resultTitle.textContent = "Time Up";
+      }
+
+      resultTime.textContent = `${Math.max(state.timeLeft, 0).toFixed(1)}s`;
+      resultScore.textContent = `${state.score}`;
+      resultCollect.textContent = `${state.collected} / ${state.totalCollectibles}`;
+      resultStats.classList.remove("hide");
+      restartButton.classList.remove("hide");
+      startButton.classList.add("hide");
+      overlay.classList.remove("hide");
+
+      setStatus(
+        outcome === "won"
+          ? "Portal reached. <strong>Run cleared</strong> — play again for a new maze."
+          : "Time expired. <strong>The maze resets</strong> on restart."
+      );
+      showGameUi(false);
+    }
+
+    function resolveCollisions(axis) {
+      for (const wall of world.wallColliders) {
+        const nearestX = clamp(state.player.x, wall.minX, wall.maxX);
+        const nearestZ = clamp(state.player.z, wall.minZ, wall.maxZ);
+        const deltaX = state.player.x - nearestX;
+        const deltaZ = state.player.z - nearestZ;
+        const distanceSq = deltaX * deltaX + deltaZ * deltaZ;
+        if (distanceSq >= PLAYER_RADIUS * PLAYER_RADIUS) continue;
+
+        const distance = Math.sqrt(distanceSq) || 0.00001;
+        const push = PLAYER_RADIUS - distance;
+        if (axis === "x") {
+          state.player.x += (deltaX / distance || (state.player.x < nearestX ? -1 : 1)) * push;
+        } else {
+          state.player.z += (deltaZ / distance || (state.player.z < nearestZ ? -1 : 1)) * push;
+        }
+      }
+    }
+
+    function movePlayer(delta) {
+      moveInput.set(
+        (keys.get("KeyD") || keys.get("ArrowRight") ? 1 : 0) - (keys.get("KeyA") || keys.get("ArrowLeft") ? 1 : 0),
+        0,
+        (keys.get("KeyS") || keys.get("ArrowDown") ? 1 : 0) - (keys.get("KeyW") || keys.get("ArrowUp") ? 1 : 0)
+      );
+
+      const moving = moveInput.lengthSq() > 0;
+      if (moving) {
+        moveInput.normalize();
+      }
+
+      const speed = WALK_SPEED * (keys.get("ShiftLeft") || keys.get("ShiftRight") ? SPRINT_MULTIPLIER : 1) * delta;
+      forwardVector.set(0, 0, -1).applyAxisAngle(THREE.Object3D.DEFAULT_UP, state.yaw);
+      lateralVector.set(1, 0, 0).applyAxisAngle(THREE.Object3D.DEFAULT_UP, state.yaw);
+
+      reusableVector.copy(forwardVector).multiplyScalar(-moveInput.z);
+      reusableVector.addScaledVector(lateralVector, moveInput.x);
+      if (reusableVector.lengthSq() > 0) {
+        reusableVector.normalize().multiplyScalar(speed);
+      }
+
+      state.player.x += reusableVector.x;
+      resolveCollisions("x");
+      state.player.z += reusableVector.z;
+      resolveCollisions("z");
+
+      if (moving) {
+        state.headBob += delta * 10.5;
+      }
+    }
+
+    function updateGameplay(delta, elapsed) {
+      state.timeLeft = Math.max(0, state.timeLeft - delta);
+      updateHud();
+
+      movePlayer(delta);
+      syncCamera();
+
+      const cell = worldToCell(state.player.x, state.player.z);
+      if (cell.x !== state.currentCell.x || cell.y !== state.currentCell.y) {
+        state.currentCell = cell;
+        revealAround(cell.x, cell.y);
+        state.score += 8;
+      }
+
+      for (const collectible of world.collectibles) {
+        if (collectible.userData.collected) continue;
+        collectible.rotation.y += delta * 1.8;
+        collectible.position.y = collectible.userData.homeY + Math.sin(elapsed * 2.4 + collectible.userData.phase) * 0.08;
+        collectible.userData.ring.rotation.z += delta * 0.8;
+
+        const distance = collectible.position.distanceTo(camera.position);
+        if (distance < 0.82) {
+          collectible.userData.collected = true;
+          collectible.visible = false;
+          state.collected += 1;
+          state.score += 125;
+          updateHud();
+          setStatus("Relic secured. <strong>Score boosted</strong> — keep moving.");
+        }
+      }
+
+      if (world.portal) {
+        const { outerRing, innerRing, beam, sprite, beacon, baseY } = world.portal.userData;
+        world.portal.rotation.y += delta * 0.55;
+        outerRing.rotation.z += delta * 0.8;
+        innerRing.rotation.y -= delta * 1.35;
+        world.portal.position.y = baseY + Math.sin(elapsed * 2.1) * 0.08;
+        beam.scale.setScalar(0.92 + Math.sin(elapsed * 3.1) * 0.08);
+        sprite.material.opacity = 0.56 + Math.sin(elapsed * 4.2) * 0.16;
+        beacon.material.opacity = 0.52 + Math.sin(elapsed * 5.1) * 0.2;
+        if (world.portalLight) {
+          world.portalLight.intensity = 7.2 + Math.sin(elapsed * 4.1) * 0.8;
+        }
+      }
+
+      for (const torch of world.torches) {
+        const flicker = Math.sin(elapsed * 11 + torch.userData.phase) * 0.3 + Math.sin(elapsed * 17 + torch.userData.phase * 0.7) * 0.12;
+        torch.userData.flame.scale.setScalar(0.9 + flicker * 0.12);
+        torch.userData.flare.material.opacity = 0.45 + flicker * 0.12;
+        torch.userData.light.intensity = 1.5 + flicker * 0.35;
+      }
+
+      if (world.dust) {
+        const positions = world.dust.geometry.attributes.position;
+        const phases = world.dust.geometry.attributes.phase;
+        for (let i = 0; i < positions.count; i += 1) {
+          const baseY = positions.getY(i);
+          const phase = phases.getX(i);
+          positions.setY(i, baseY + Math.sin(elapsed * 0.9 + phase) * 0.0025);
+          positions.setX(i, positions.getX(i) + Math.sin(elapsed * 0.2 + phase) * 0.0012);
+        }
+        positions.needsUpdate = true;
+      }
+
+      const exitCenter = cellCenter(world.exitCell.x, world.exitCell.y);
+      const distanceToExit = Math.hypot(state.player.x - exitCenter.x, state.player.z - exitCenter.z);
+      if (distanceToExit < PORTAL_RADIUS * 0.84) {
+        finishRun("won");
+        return;
+      }
+
+      if (state.timeLeft <= 0) {
+        finishRun("lost");
+      }
+    }
+
+    function drawMinimap() {
+      const ctx = minimapCtx;
+      const size = minimapCanvas.width;
+      if (!size) return;
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = "rgba(4, 4, 6, 0.95)";
+      ctx.fillRect(0, 0, size, size);
+
+      const inset = size * 0.06;
+      const cellSize = (size - inset * 2) / COLS;
+
+      ctx.fillStyle = "rgba(255, 102, 0, 0.04)";
+      ctx.fillRect(inset, inset, cellSize * COLS, cellSize * ROWS);
+
+      for (let y = 0; y < ROWS; y += 1) {
+        for (let x = 0; x < COLS; x += 1) {
+          const cell = world.grid[y]?.[x];
+          if (!cell || !cell.explored) continue;
+          const px = inset + x * cellSize;
+          const py = inset + y * cellSize;
+          ctx.fillStyle = "rgba(255, 112, 28, 0.18)";
+          ctx.fillRect(px + 0.5, py + 0.5, cellSize - 1, cellSize - 1);
+
+          ctx.strokeStyle = "rgba(255, 165, 92, 0.78)";
+          ctx.lineWidth = Math.max(1, cellSize * 0.09);
+          ctx.beginPath();
+          if (cell.walls.n) {
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + cellSize, py);
+          }
+          if (cell.walls.e) {
+            ctx.moveTo(px + cellSize, py);
+            ctx.lineTo(px + cellSize, py + cellSize);
+          }
+          if (cell.walls.s) {
+            ctx.moveTo(px, py + cellSize);
+            ctx.lineTo(px + cellSize, py + cellSize);
+          }
+          if (cell.walls.w) {
+            ctx.moveTo(px, py);
+            ctx.lineTo(px, py + cellSize);
+          }
+          ctx.stroke();
+        }
+      }
+
+      for (const collectible of world.collectibles) {
+        if (!collectible.userData.collected) {
+          const { x, y } = collectible.userData.cell;
+          if (world.grid[y]?.[x]?.explored) {
+            const px = inset + (x + 0.5) * cellSize;
+            const py = inset + (y + 0.5) * cellSize;
+            ctx.fillStyle = "#ffb06c";
+            ctx.beginPath();
+            ctx.arc(px, py, cellSize * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      if (state.exitKnown) {
+        const px = inset + (world.exitCell.x + 0.5) * cellSize;
+        const py = inset + (world.exitCell.y + 0.5) * cellSize;
+        ctx.strokeStyle = "#ff7a1a";
+        ctx.lineWidth = Math.max(1.5, cellSize * 0.12);
+        ctx.beginPath();
+        ctx.arc(px, py, cellSize * 0.28, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const playerX = inset + ((state.player.x + world.halfWidth) / CELL_SIZE) * cellSize;
+      const playerY = inset + ((state.player.z + world.halfHeight) / CELL_SIZE) * cellSize;
+      const dirX = Math.sin(state.yaw);
+      const dirY = -Math.cos(state.yaw);
+      ctx.fillStyle = "#fff3e8";
+      ctx.beginPath();
+      ctx.moveTo(playerX + dirX * cellSize * 0.34, playerY + dirY * cellSize * 0.34);
+      ctx.lineTo(playerX + dirY * cellSize * 0.18, playerY - dirX * cellSize * 0.18);
+      ctx.lineTo(playerX - dirY * cellSize * 0.18, playerY + dirX * cellSize * 0.18);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function animate() {
+      const delta = Math.min(clock.getDelta(), 0.033);
+      const elapsed = clock.elapsedTime;
+
+      if (state.phase === "playing") {
+        updateGameplay(delta, elapsed);
+      }
+
+      drawMinimap();
+
+      if (state.phase === "playing") {
+        if (!state.pointerLocked && performance.now() < state.showHintUntil) {
+          hintChip.style.opacity = "0.92";
+        } else if (!state.dragging) {
+          hintChip.style.opacity = "0";
+        }
+      } else {
+        hintChip.style.opacity = "0";
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", resize);
+
+    document.addEventListener("pointerlockchange", () => {
+      setPointerLocked(document.pointerLockElement === renderer.domElement);
+    });
+
+    document.addEventListener("pointerlockerror", () => {
+      setStatus("Pointer lock denied. <strong>Drag look</strong> stays enabled.");
+      setPointerLocked(false);
+    });
+
+    renderer.domElement.addEventListener("pointerdown", (event) => {
+      if (state.phase !== "playing") return;
+      state.dragging = true;
+      state.draggingId = event.pointerId;
+      state.lastPointerX = event.clientX;
+      state.lastPointerY = event.clientY;
+      state.dragLooking = !state.pointerLocked;
+      tryPointerLock();
+      renderer.domElement.setPointerCapture?.(event.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (event) => {
+      if (state.phase !== "playing") return;
+      if (state.pointerLocked) {
+        updateLook(event.movementX || 0, event.movementY || 0);
+        return;
+      }
+      if (!state.dragLooking || !state.dragging || event.pointerId !== state.draggingId) return;
+      const deltaX = event.clientX - state.lastPointerX;
+      const deltaY = event.clientY - state.lastPointerY;
+      state.lastPointerX = event.clientX;
+      state.lastPointerY = event.clientY;
+      updateLook(deltaX, deltaY);
+    });
+
+    const endDrag = (event) => {
+      if (event && state.draggingId !== null && event.pointerId !== undefined && state.draggingId !== event.pointerId) return;
+      state.dragging = false;
+      state.dragLooking = false;
+      state.draggingId = null;
+    };
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+    renderer.domElement.addEventListener("lostpointercapture", endDrag);
+
+    document.addEventListener("mousemove", (event) => {
+      if (state.phase !== "playing" || !state.pointerLocked) return;
+      updateLook(event.movementX || 0, event.movementY || 0);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const code = event.code;
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight", "ShiftLeft", "ShiftRight", "Space"].includes(code)) {
+        event.preventDefault();
+      }
+      keys.set(code, true);
+      if (code === "KeyR" && state.phase !== "playing") {
+        beginRun();
+      }
+      if (code === "Escape" && state.phase === "playing" && !state.pointerLocked) {
+        setStatus("Mouse unlocked. <strong>Click or drag</strong> to keep playing.");
+      }
+    }, { passive: false });
+
+    document.addEventListener("keyup", (event) => {
+      keys.set(event.code, false);
+    });
+
+    window.addEventListener("blur", resetInput);
+
+    startButton.addEventListener("click", beginRun);
+    restartButton.addEventListener("click", beginRun);
+
+    resize();
+    updateHud();
+    showGameUi(false);
+    syncCamera();
+    setStatus("Ready for insertion. <strong>Enter the maze</strong> to start.");
+    clock.start();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

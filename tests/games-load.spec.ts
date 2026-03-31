@@ -9,6 +9,8 @@ const ALL_GAMES = [
   { id: "2048", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
   { id: "endless-runner", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
   { id: "marble-madness", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
+  { id: "maze-3d", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
+  { id: "mini-golf", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
 ];
 
 test.describe("Game HTML Files — Load Tests", () => {

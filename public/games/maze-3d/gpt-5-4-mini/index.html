@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D MAZE</title>
+  <style>
+    :root {
+      --bg: #050507;
+      --panel: rgba(10, 8, 7, 0.82);
+      --panel-strong: rgba(4, 4, 5, 0.94);
+      --text: #fff3e9;
+      --muted: #c9b3a3;
+      --accent: #ff6600;
+      --accent-soft: rgba(255, 102, 0, 0.18);
+      --accent-bright: #ff9a3b;
+      --line: rgba(255, 140, 70, 0.16);
+      --shadow: 0 0 0 1px rgba(255, 140, 70, 0.12) inset, 0 16px 48px rgba(0, 0, 0, 0.52), 0 0 30px rgba(255, 102, 0, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(255, 102, 0, 0.12), transparent 24%),
+        radial-gradient(circle at 18% 78%, rgba(255, 153, 76, 0.08), transparent 28%),
+        radial-gradient(circle at 82% 72%, rgba(255, 102, 0, 0.06), transparent 26%),
+        linear-gradient(180deg, #050507 0%, #060607 60%, #030304 100%);
+      color: var(--text);
+      user-select: none;
+      touch-action: none;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(255, 102, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 102, 0, 0.03) 1px, transparent 1px);
+      background-size: 100% 2px, 2px 100%;
+      opacity: 0.12;
+      mix-blend-mode: screen;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #hud,
+    #statusLine,
+    #minimapWrap,
+    #crosshair {
+      position: fixed;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    #hud {
+      top: 16px;
+      left: 16px;
+      display: grid;
+      gap: 10px;
+      opacity: 0;
+      transition: opacity 0.28s ease;
+      max-width: calc(100vw - 32px);
+    }
+
+    .hud-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      min-width: 114px;
+      padding: 10px 12px 9px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      background: linear-gradient(180deg, rgba(30, 16, 10, 0.82), rgba(7, 7, 10, 0.9));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      color: #f5ddd1;
+    }
+
+    .pill b {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+      letter-spacing: 0.08em;
+      color: #fff;
+      text-shadow: 0 0 18px rgba(255, 102, 0, 0.3);
+    }
+
+    #statusLine {
+      top: 16px;
+      right: 16px;
+      max-width: min(40vw, 420px);
+      text-align: right;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 0.28s ease;
+    }
+
+    #statusLine strong {
+      color: var(--accent-bright);
+      text-shadow: 0 0 16px rgba(255, 102, 0, 0.42);
+    }
+
+    #minimapWrap {
+      left: 16px;
+      bottom: 16px;
+      width: min(30vw, 220px);
+      aspect-ratio: 1 / 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 140, 70, 0.18);
+      background: linear-gradient(180deg, rgba(19, 12, 10, 0.82), rgba(5, 5, 7, 0.94));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      transition: opacity 0.28s ease;
+    }
+
+    #minimap {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 12px;
+    }
+
+    #crosshair {
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.18s ease;
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 14px rgba(255, 102, 0, 0.7);
+    }
+
+    #crosshair::before {
+      width: 18px;
+      height: 2px;
+      transform: translate(-50%, -50%);
+    }
+
+    #crosshair::after {
+      width: 2px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 6;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255, 102, 0, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(4, 4, 5, 0.76), rgba(4, 4, 5, 0.92));
+    }
+
+    .panel {
+      width: min(860px, calc(100vw - 28px));
+      max-height: min(88vh, 860px);
+      overflow: auto;
+      border-radius: 28px;
+      padding: clamp(20px, 4vw, 34px);
+      border: 1px solid rgba(255, 140, 70, 0.2);
+      background:
+        linear-gradient(180deg, rgba(18, 10, 8, 0.9), rgba(6, 6, 8, 0.95)),
+        radial-gradient(circle at top, rgba(255, 102, 0, 0.14), transparent 42%);
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.56), 0 0 44px rgba(255, 102, 0, 0.14);
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow {
+      color: var(--accent-bright);
+      letter-spacing: 0.44em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin: 0 0 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(44px, 9vw, 108px);
+      line-height: 0.9;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow: 0 0 18px rgba(255, 102, 0, 0.22), 0 0 44px rgba(255, 102, 0, 0.18);
+    }
+
+    .lead {
+      margin: 18px 0 0;
+      max-width: 62ch;
+      color: #e2cabb;
+      font-size: clamp(14px, 1.8vw, 17px);
+      line-height: 1.7;
+      letter-spacing: 0.03em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .card {
+      padding: 14px 15px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 140, 70, 0.14);
+      background: linear-gradient(180deg, rgba(28, 16, 11, 0.84), rgba(8, 8, 10, 0.92));
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .card p {
+      margin: 0;
+      color: #cdb8a7;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    button {
+      pointer-events: auto;
+      appearance: none;
+      border: none;
+      border-radius: 16px;
+      padding: 13px 18px;
+      background: linear-gradient(180deg, rgba(255, 133, 46, 0.25), rgba(65, 28, 12, 0.92));
+      color: #fff8f2;
+      font: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(255, 140, 70, 0.18) inset, 0 12px 28px rgba(0, 0, 0, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(255, 195, 150, 0.28) inset, 0 14px 34px rgba(0, 0, 0, 0.42), 0 0 20px rgba(255, 102, 0, 0.16);
+      filter: brightness(1.04);
+    }
+
+    button.secondary {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(20, 13, 11, 0.92));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .statBox {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 140, 70, 0.14);
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(26, 15, 11, 0.84), rgba(8, 8, 10, 0.92));
+    }
+
+    .statBox span {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .statBox strong {
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 0 0 16px rgba(255, 102, 0, 0.22);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 720px) {
+      .grid,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      #minimapWrap {
+        width: min(34vw, 180px);
+      }
+
+      #statusLine {
+        max-width: 48vw;
+      }
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div class="hud-row">
+      <div class="pill">TIME<b id="timeValue">120</b></div>
+      <div class="pill">SCORE<b id="scoreValue">0</b></div>
+      <div class="pill">SHARDS<b id="shardsValue">0 / 0</b></div>
+    </div>
+  </div>
+
+  <div id="statusLine">CLICK <strong>START</strong> TO ENTER THE MAZE</div>
+  <div id="crosshair"></div>
+
+  <div id="minimapWrap">
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <section id="startScreen" class="overlay">
+    <div class="panel">
+      <p class="eyebrow">Procedural Neon Labyrinth</p>
+      <h1>3D MAZE</h1>
+      <p class="lead">
+        Find the exit before the clock burns out. Every run builds a new maze.
+        Collect glowing shards for extra score, follow the orange lights, and survive the fog.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Movement</h3>
+          <p>WASD or Arrow Keys to move through the labyrinth. Sprinting is not required — precision matters more than speed.</p>
+        </div>
+        <div class="card">
+          <h3>Look Around</h3>
+          <p>Click the game to lock the pointer and use the mouse to look around. If pointer lock is blocked, drag on the canvas to look.</p>
+        </div>
+        <div class="card">
+          <h3>Goal</h3>
+          <p>Reach the glowing portal before time expires. The shortest routes are rarely obvious in the dark.</p>
+        </div>
+        <div class="card">
+          <h3>Scoring</h3>
+          <p>Time remaining and collectible shards contribute to your score. The faster you escape, the richer your final result.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" class="primary">Start Maze</button>
+        <button id="howBtn" class="secondary">Click + Move</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="endScreen" class="overlay hidden">
+    <div class="panel">
+      <p id="endEyebrow" class="eyebrow">Maze Outcome</p>
+      <h1 id="endTitle">YOU ESCAPED</h1>
+      <p id="endLead" class="lead">The orange light has guided you to safety.</p>
+
+      <div class="stats">
+        <div class="statBox"><span>Final Score</span><strong id="finalScore">0</strong></div>
+        <div class="statBox"><span>Time Left</span><strong id="finalTime">0</strong></div>
+        <div class="statBox"><span>Shards Found</span><strong id="finalShards">0</strong></div>
+      </div>
+
+      <div class="actions">
+        <button id="restartBtn" class="primary">Generate New Maze</button>
+        <button id="backBtn" class="secondary">Back to Intro</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const app = document.getElementById('app');
+    const hud = document.getElementById('hud');
+    const statusLine = document.getElementById('statusLine');
+    const crosshair = document.getElementById('crosshair');
+    const startScreen = document.getElementById('startScreen');
+    const endScreen = document.getElementById('endScreen');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const backBtn = document.getElementById('backBtn');
+    const howBtn = document.getElementById('howBtn');
+    const minimapWrap = document.getElementById('minimapWrap');
+    const endEyebrow = document.getElementById('endEyebrow');
+    const endTitle = document.getElementById('endTitle');
+    const endLead = document.getElementById('endLead');
+    const finalScore = document.getElementById('finalScore');
+    const finalTime = document.getElementById('finalTime');
+    const finalShards = document.getElementById('finalShards');
+    const timeValue = document.getElementById('timeValue');
+    const scoreValue = document.getElementById('scoreValue');
+    const shardsValue = document.getElementById('shardsValue');
+    const minimapCanvas = document.getElementById('minimap');
+    const mctx = minimapCanvas.getContext('2d');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050507);
+    scene.fog = new THREE.Fog(0x050507, 16, 96);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 220);
+    camera.rotation.order = 'YXZ';
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    app.appendChild(renderer.domElement);
+
+    const ambient = new THREE.AmbientLight(0x33190d, 0.72);
+    const keyLight = new THREE.DirectionalLight(0xffb07a, 0.86);
+    keyLight.position.set(-0.3, 1, 0.55);
+    const fillLight = new THREE.HemisphereLight(0x31170d, 0x050507, 0.48);
+    const headLamp = new THREE.PointLight(0xff7a1e, 0.95, 20, 2.1);
+    headLamp.position.set(0, 0, 0);
+    camera.add(headLamp);
+    scene.add(camera, ambient, keyLight, fillLight);
+
+    const glowTexture = makeGlowTexture();
+    const wallTexture = makeWallTexture();
+    const floorTexture = makeFloorTexture();
+    const ceilingTexture = makeCeilingTexture();
+
+    const WALL_H = 4.2;
+    const TILE = 4;
+    const CELL_COUNT = 17;
+    const GRID_SIZE = CELL_COUNT * 2 + 1;
+    const WORLD_SIZE = GRID_SIZE * TILE;
+    const PLAYER_RADIUS = 1.08;
+    const EYE_HEIGHT = 1.62;
+    const TOTAL_TIME = 120;
+    const BASE_SPEED = 5.1;
+    const RUN_ACCEL = 1.0;
+    const LOOK_SPEED = 0.0022;
+
+    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+    floorTexture.repeat.set(GRID_SIZE, GRID_SIZE);
+    ceilingTexture.wrapS = ceilingTexture.wrapT = THREE.RepeatWrapping;
+    ceilingTexture.repeat.set(GRID_SIZE, GRID_SIZE);
+    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+
+    const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, color: 0x101114, roughness: 1, metalness: 0 });
+    const ceilingMat = new THREE.MeshStandardMaterial({ map: ceilingTexture, color: 0x09090d, roughness: 1, metalness: 0 });
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: wallTexture,
+      color: 0x25140d,
+      roughness: 0.96,
+      metalness: 0.02,
+      emissive: 0x120500,
+      emissiveIntensity: 0.42
+    });
+    const collectibleMat = new THREE.MeshStandardMaterial({ color: 0xff9b3b, emissive: 0xff5a00, emissiveIntensity: 1.8, roughness: 0.25, metalness: 0.42 });
+    const portalMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.84, blending: THREE.AdditiveBlending, depthWrite: false });
+    const sparkMat = new THREE.SpriteMaterial({ map: glowTexture, color: 0xff7a1e, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 1, 1), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(WORLD_SIZE / 2, 0, WORLD_SIZE / 2);
+    scene.add(floor);
+
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 1, 1), ceilingMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(WORLD_SIZE / 2, WALL_H, WORLD_SIZE / 2);
+    scene.add(ceiling);
+
+    const tiltLight = new THREE.PointLight(0xff6633, 0.35, WORLD_SIZE * 1.2, 2);
+    tiltLight.position.set(WORLD_SIZE * 0.5, WALL_H * 0.7, WORLD_SIZE * 0.5);
+    scene.add(tiltLight);
+
+    const wallGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const wallMesh = new THREE.InstancedMesh(wallGeometry, wallMat, GRID_SIZE * GRID_SIZE);
+    wallMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(wallMesh);
+
+    const levelRoot = new THREE.Group();
+    const torchGroup = new THREE.Group();
+    const itemGroup = new THREE.Group();
+    const burstGroup = new THREE.Group();
+    const portalGroup = new THREE.Group();
+    const particlesGroup = new THREE.Group();
+    levelRoot.add(torchGroup, itemGroup, burstGroup, portalGroup, particlesGroup);
+    scene.add(levelRoot);
+
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 850;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      const p = i * 3;
+      particlePositions[p] = Math.random() * WORLD_SIZE;
+      particlePositions[p + 1] = 0.6 + Math.random() * (WALL_H - 0.6);
+      particlePositions[p + 2] = Math.random() * WORLD_SIZE;
+      particleSpeeds[p] = (Math.random() - 0.5) * 0.18;
+      particleSpeeds[p + 1] = (Math.random() - 0.5) * 0.03;
+      particleSpeeds[p + 2] = (Math.random() - 0.5) * 0.18;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeo.boundingSphere = new THREE.Sphere(
+      new THREE.Vector3(WORLD_SIZE * 0.5, WALL_H * 0.5, WORLD_SIZE * 0.5),
+      Math.sqrt(WORLD_SIZE * WORLD_SIZE * 2 + WALL_H * WALL_H)
+    );
+    const dust = new THREE.Points(particleGeo, new THREE.PointsMaterial({ map: glowTexture, color: 0xffa162, size: 0.25, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
+    particlesGroup.add(dust);
+
+    const keyState = { forward: false, back: false, left: false, right: false };
+    const pointer = { locked: false, dragging: false, id: null, x: 0, y: 0 };
+    const state = {
+      running: false,
+      ended: false,
+      won: false,
+      timeLeft: TOTAL_TIME,
+      elapsed: 0,
+      score: 0,
+      collected: 0,
+      totalCollectibles: 0,
+      yaw: 0,
+      pitch: 0,
+      moveBob: 0,
+      visited: new Set(),
+      maze: null,
+      exit: null,
+      collectibles: [],
+      torches: [],
+      startCell: { x: 1, y: 1 },
+      currentCellKey: ''
+    };
+
+    let tempDummy = new THREE.Object3D();
+    let sparkleId = 0;
+
+    function makeGlowTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      g.addColorStop(0, 'rgba(255, 230, 190, 1)');
+      g.addColorStop(0.18, 'rgba(255, 157, 75, 0.95)');
+      g.addColorStop(0.44, 'rgba(255, 102, 0, 0.48)');
+      g.addColorStop(1, 'rgba(255, 102, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 128, 128);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function makeWallTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, '#1b1110');
+      grad.addColorStop(0.5, '#2b1710');
+      grad.addColorStop(1, '#120b0a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      for (let y = 0; y < 256; y += 16) ctx.fillRect(0, y, 256, 1);
+      for (let x = 0; x < 256; x += 32) ctx.fillRect(x, 0, 1, 256);
+      ctx.strokeStyle = 'rgba(255, 124, 38, 0.18)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        const sx = Math.random() * 256;
+        const sy = Math.random() * 256;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + (Math.random() - 0.5) * 60, sy + (Math.random() - 0.5) * 34);
+        ctx.stroke();
+      }
+      const img = ctx.getImageData(0, 0, 256, 256);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const n = (Math.random() * 22) | 0;
+        img.data[i] = Math.min(255, img.data[i] + n);
+        img.data[i + 1] = Math.min(255, img.data[i + 1] + n * 0.35);
+        img.data[i + 2] = Math.min(255, img.data[i + 2] + n * 0.2);
+      }
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function makeFloorTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 256, 256);
+      grad.addColorStop(0, '#07080b');
+      grad.addColorStop(0.5, '#111216');
+      grad.addColorStop(1, '#050507');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = 'rgba(255, 102, 0, 0.10)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 256; i += 32) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 256);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(256, i);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(255, 163, 90, 0.06)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.arc(128, 128, 20 + i * 14, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const img = ctx.getImageData(0, 0, 256, 256);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const d = Math.random() * 8;
+        img.data[i] = Math.min(255, img.data[i] + d * 0.25);
+        img.data[i + 1] = Math.min(255, img.data[i + 1] + d * 0.12);
+        img.data[i + 2] = Math.min(255, img.data[i + 2] + d * 0.08);
+      }
+      ctx.putImageData(img, 0, 0);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function makeCeilingTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(128, 100, 10, 128, 128, 170);
+      grad.addColorStop(0, '#181117');
+      grad.addColorStop(0.45, '#0c0d11');
+      grad.addColorStop(1, '#050507');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = 'rgba(255, 102, 0, 0.06)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 256; i += 24) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(256 - i * 0.25, 256);
+        ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function tileToWorld(tile) {
+      return tile * TILE + TILE * 0.5;
+    }
+
+    function worldToTile(value) {
+      return Math.floor(value / TILE);
+    }
+
+    function generateMaze(cellsW, cellsH) {
+      const gridW = cellsW * 2 + 1;
+      const gridH = cellsH * 2 + 1;
+      const grid = Array.from({ length: gridH }, () => Array(gridW).fill(1));
+      const links = Array.from({ length: cellsH }, () => Array.from({ length: cellsW }, () => []));
+      const visited = Array.from({ length: cellsH }, () => Array(cellsW).fill(false));
+      const stack = [[0, 0]];
+      visited[0][0] = true;
+      grid[1][1] = 0;
+
+      const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+      ];
+
+      while (stack.length) {
+        const [cx, cy] = stack[stack.length - 1];
+        const options = [];
+        for (const [dx, dy] of dirs) {
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx >= 0 && ny >= 0 && nx < cellsW && ny < cellsH && !visited[ny][nx]) {
+            options.push([nx, ny, dx, dy]);
+          }
+        }
+
+        if (!options.length) {
+          stack.pop();
+          continue;
+        }
+
+        const pick = options[(Math.random() * options.length) | 0];
+        const [nx, ny, dx, dy] = pick;
+        grid[cy * 2 + 1 + dy][cx * 2 + 1 + dx] = 0;
+        grid[ny * 2 + 1][nx * 2 + 1] = 0;
+        links[cy][cx].push([nx, ny]);
+        links[ny][nx].push([cx, cy]);
+        visited[ny][nx] = true;
+        stack.push([nx, ny]);
+      }
+
+      return { grid, links, gridW, gridH };
+    }
+
+    function bfsFarthest(links, startX, startY) {
+      const h = links.length;
+      const w = links[0].length;
+      const dist = Array.from({ length: h }, () => Array(w).fill(-1));
+      const queue = [[startX, startY]];
+      dist[startY][startX] = 0;
+      let far = [startX, startY, 0];
+
+      for (let i = 0; i < queue.length; i++) {
+        const [x, y] = queue[i];
+        const d = dist[y][x];
+        if (d > far[2]) far = [x, y, d];
+        for (const [nx, ny] of links[y][x]) {
+          if (dist[ny][nx] === -1) {
+            dist[ny][nx] = d + 1;
+            queue.push([nx, ny]);
+          }
+        }
+      }
+
+      return { dist, farthest: { x: far[0], y: far[1], d: far[2] } };
+    }
+
+    function buildLevel() {
+      const maze = generateMaze(CELL_COUNT, CELL_COUNT);
+      const { farthest } = bfsFarthest(maze.links, 0, 0);
+      const exitCell = { x: farthest.x, y: farthest.y };
+
+      const wallCount = maze.gridW * maze.gridH;
+      wallMesh.count = 0;
+      let wallIndex = 0;
+      for (let y = 0; y < maze.gridH; y++) {
+        for (let x = 0; x < maze.gridW; x++) {
+          if (maze.grid[y][x]) {
+            tempDummy.position.set(tileToWorld(x), WALL_H * 0.5, tileToWorld(y));
+            tempDummy.scale.set(TILE * 0.98, WALL_H, TILE * 0.98);
+            tempDummy.updateMatrix();
+            wallMesh.setMatrixAt(wallIndex++, tempDummy.matrix);
+          }
+        }
+      }
+      wallMesh.count = wallIndex;
+      wallMesh.instanceMatrix.needsUpdate = true;
+
+      clearGroup(torchGroup);
+      clearGroup(itemGroup);
+      clearGroup(portalGroup);
+      clearGroup(burstGroup);
+      clearGroup(particlesGroup, true);
+      particlesGroup.add(dust);
+
+      const exitWorld = {
+        x: tileToWorld(exitCell.x * 2 + 1),
+        z: tileToWorld(exitCell.y * 2 + 1)
+      };
+
+      buildPortal(exitWorld.x, exitWorld.z);
+      buildTorches(maze, exitCell);
+
+      const candidates = [];
+      for (let y = 0; y < CELL_COUNT; y++) {
+        for (let x = 0; x < CELL_COUNT; x++) {
+          const degree = maze.links[y][x].length;
+          const distanceFromStart = x + y;
+          if (degree === 1 && !(x === 0 && y === 0) && !(x === exitCell.x && y === exitCell.y)) {
+            candidates.push({ x, y, score: distanceFromStart });
+          }
+        }
+      }
+      candidates.sort((a, b) => b.score - a.score || Math.random() - 0.5);
+
+      const totalCollectibles = Math.min(10, Math.max(7, candidates.length));
+      const collectibleCells = candidates.slice(0, totalCollectibles);
+      if (collectibleCells.length < totalCollectibles) {
+        for (let i = collectibleCells.length; i < totalCollectibles; i++) {
+          const x = 1 + ((Math.random() * (CELL_COUNT - 2)) | 0);
+          const y = 1 + ((Math.random() * (CELL_COUNT - 2)) | 0);
+          if ((x === 0 && y === 0) || (x === exitCell.x && y === exitCell.y)) continue;
+          collectibleCells.push({ x, y, score: x + y });
+        }
+      }
+
+      const collectibles = [];
+      for (const cell of collectibleCells) {
+        const worldX = tileToWorld(cell.x * 2 + 1);
+        const worldZ = tileToWorld(cell.y * 2 + 1);
+        const item = createCollectible(worldX, worldZ);
+        itemGroup.add(item.mesh, item.glow);
+        collectibles.push(item);
+      }
+
+      const startWorld = { x: tileToWorld(1), z: tileToWorld(1) };
+      revealAround(startWorld.x, startWorld.z, maze);
+
+      return {
+        maze,
+        exitCell,
+        exitWorld,
+        collectibles,
+        totalCollectibles,
+        startWorld,
+        cellCount: CELL_COUNT
+      };
+    }
+
+    function clearGroup(group, preserveDust = false) {
+      const children = group.children.slice();
+      for (const child of children) {
+        if (preserveDust && child === dust) continue;
+        group.remove(child);
+      }
+    }
+
+    function buildPortal(x, z) {
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.6, 0.4, 20, 1, false), new THREE.MeshBasicMaterial({ color: 0x2b1002, transparent: true, opacity: 0.88 }));
+      base.position.y = 0.2;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.18, 12, 28), portalMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 1.86;
+      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.08, 12, 24), new THREE.MeshBasicMaterial({ color: 0xffb16e, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false }));
+      ring2.rotation.x = Math.PI / 2;
+      ring2.position.y = 1.86;
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 18), new THREE.MeshBasicMaterial({ color: 0xff7a1e, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, depthWrite: false }));
+      core.position.y = 1.65;
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.4, 10), new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.72, blending: THREE.AdditiveBlending, depthWrite: false }));
+      shaft.position.y = 1.2;
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xff6600, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
+      glow.position.y = 1.75;
+      glow.scale.set(5.5, 5.5, 1);
+      const light = new THREE.PointLight(0xff7a1e, 2.5, 18, 1.7);
+      light.position.y = 1.6;
+      group.add(base, ring, ring2, core, shaft, glow, light);
+      group.userData = { ring, ring2, core, glow, light };
+      portalGroup.add(group);
+      state.portal = group;
+    }
+
+    function buildTorches(maze, exitCell) {
+      const spots = [];
+      for (let y = 0; y < CELL_COUNT; y++) {
+        for (let x = 0; x < CELL_COUNT; x++) {
+          if (maze.links[y][x].length === 1 && !(x === 0 && y === 0) && !(x === exitCell.x && y === exitCell.y)) {
+            spots.push({ x, y, n: maze.links[y][x][0] });
+          }
+        }
+      }
+      spots.sort(() => Math.random() - 0.5);
+      const count = Math.min(14, spots.length);
+      for (let i = 0; i < count; i++) {
+        const spot = spots[i];
+        const worldX = tileToWorld(spot.x * 2 + 1);
+        const worldZ = tileToWorld(spot.y * 2 + 1);
+        const neighbor = spot.n;
+        const dx = neighbor[0] - spot.x;
+        const dy = neighbor[1] - spot.y;
+        const offset = TILE * 0.92;
+        const torch = new THREE.Group();
+        torch.position.set(worldX + dx * offset, 1.45, worldZ + dy * offset);
+
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.54, 8), new THREE.MeshStandardMaterial({ color: 0x2d1a12, roughness: 0.9, metalness: 0.1 }));
+        arm.rotation.z = Math.PI / 2;
+        arm.position.z = -0.15;
+        const ember = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff8430, transparent: true, opacity: 0.82, blending: THREE.AdditiveBlending, depthWrite: false }));
+        ember.position.x = 0.24;
+        const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xff7a1e, transparent: true, opacity: 0.88, depthWrite: false, blending: THREE.AdditiveBlending }));
+        flame.position.x = 0.28;
+        flame.scale.set(1.8, 1.8, 1);
+        const light = new THREE.PointLight(0xff6d14, 0.9, 9, 2);
+        light.position.set(0.25, 0, 0.05);
+        torch.add(arm, ember, flame, light);
+        torch.userData = { flame, light, phase: Math.random() * Math.PI * 2 };
+        torchGroup.add(torch);
+        state.torches.push(torch);
+      }
+    }
+
+    function createCollectible(x, z) {
+      const holder = new THREE.Group();
+      holder.position.set(x, 1.15, z);
+      const gem = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), collectibleMat);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xff8420, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+      glow.scale.set(2.4, 2.4, 1);
+      const aura = new THREE.PointLight(0xff7a1e, 0.55, 5.5, 2);
+      holder.add(gem, glow, aura);
+      return {
+        mesh: holder,
+        glow,
+        gem,
+        light: aura,
+        baseY: holder.position.y,
+        phase: Math.random() * Math.PI * 2,
+        collected: false,
+        pulse: 0
+      };
+    }
+
+    function spawnBurst(x, y, z, color = 0xff7a1e) {
+      const palette = color;
+      for (let i = 0; i < 10; i++) {
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: palette, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+        sprite.position.set(x, y, z);
+        const v = new THREE.Vector3(
+          (Math.random() - 0.5) * 2.8,
+          0.5 + Math.random() * 1.8,
+          (Math.random() - 0.5) * 2.8
+        );
+        sprite.userData = { vel: v, life: 0.58 + Math.random() * 0.24, maxLife: 0.58 + Math.random() * 0.24 };
+        sprite.scale.setScalar(0.4 + Math.random() * 0.5);
+        burstGroup.add(sprite);
+      }
+    }
+
+    function revealAround(worldX, worldZ, maze) {
+      const tx = worldToTile(worldX);
+      const ty = worldToTile(worldZ);
+      for (let y = ty - 2; y <= ty + 2; y++) {
+        for (let x = tx - 2; x <= tx + 2; x++) {
+          if (x < 0 || y < 0 || x >= maze.gridW || y >= maze.gridH) continue;
+          if (Math.abs(x - tx) + Math.abs(y - ty) <= 3) {
+            state.visited.add(`${x},${y}`);
+          }
+        }
+      }
+    }
+
+    function isWallAt(worldX, worldZ, maze) {
+      const tx = worldToTile(worldX);
+      const ty = worldToTile(worldZ);
+      if (tx < 0 || ty < 0 || tx >= maze.gridW || ty >= maze.gridH) return true;
+      return maze.grid[ty][tx] === 1;
+    }
+
+    function collidesAt(x, z, maze) {
+      const r = PLAYER_RADIUS;
+      for (let i = 0; i < 8; i++) {
+        const a = (Math.PI * 2 * i) / 8;
+        const px = x + Math.cos(a) * r;
+        const pz = z + Math.sin(a) * r;
+        if (isWallAt(px, pz, maze)) return true;
+      }
+      return false;
+    }
+
+    function moveWithCollision(dx, dz) {
+      const maze = state.maze;
+      if (!maze) return;
+      const pos = camera.position;
+      const nextX = pos.x + dx;
+      if (!collidesAt(nextX, pos.z, maze)) pos.x = THREE.MathUtils.clamp(nextX, TILE, WORLD_SIZE - TILE);
+      const nextZ = pos.z + dz;
+      if (!collidesAt(pos.x, nextZ, maze)) pos.z = THREE.MathUtils.clamp(nextZ, TILE, WORLD_SIZE - TILE);
+    }
+
+    function resetGame() {
+      state.maze = null;
+      state.exit = null;
+      state.collectibles = [];
+      state.totalCollectibles = 0;
+      state.collected = 0;
+      state.timeLeft = TOTAL_TIME;
+      state.elapsed = 0;
+      state.score = 0;
+      state.won = false;
+      state.ended = false;
+      state.running = true;
+      state.yaw = Math.PI * 0.15;
+      state.pitch = 0;
+      state.moveBob = 0;
+      state.visited.clear();
+      state.currentCellKey = '';
+      hud.style.opacity = '1';
+      minimapWrap.style.opacity = '1';
+      crosshair.style.opacity = '1';
+      startScreen.classList.add('hidden');
+      endScreen.classList.add('hidden');
+      statusLine.innerHTML = 'EXPLORE THE <strong>ORANGE HAZE</strong> AND FIND THE EXIT';
+      document.body.style.cursor = 'none';
+
+      const built = buildLevel();
+      state.maze = built.maze;
+      state.exit = built.exitWorld;
+      state.collectibles = built.collectibles;
+      state.totalCollectibles = built.totalCollectibles;
+      camera.position.set(built.startWorld.x, EYE_HEIGHT, built.startWorld.z);
+      camera.rotation.set(0, state.yaw, 0);
+      revealAround(camera.position.x, camera.position.z, built.maze);
+      syncHud();
+      updateMinimap();
+      requestPointerLockSafe();
+    }
+
+    function startIntro() {
+      hud.style.opacity = '0';
+      minimapWrap.style.opacity = '0';
+      crosshair.style.opacity = '0';
+      startScreen.classList.remove('hidden');
+      endScreen.classList.add('hidden');
+      statusLine.innerHTML = 'CLICK <strong>START</strong> TO ENTER THE MAZE';
+      document.body.style.cursor = 'auto';
+      state.running = false;
+      state.ended = false;
+    }
+
+    function endGame(won) {
+      state.running = false;
+      state.ended = true;
+      state.won = won;
+      if (document.pointerLockElement === renderer.domElement) document.exitPointerLock();
+      hud.style.opacity = '1';
+      minimapWrap.style.opacity = '1';
+      crosshair.style.opacity = '0';
+      endScreen.classList.remove('hidden');
+      startScreen.classList.add('hidden');
+      document.body.style.cursor = 'auto';
+      const timeBonus = Math.max(0, Math.floor(state.timeLeft * 20));
+      state.score = Math.floor(state.timeLeft * 10) + state.collected * 250 + (won ? 1000 + timeBonus : 0);
+      syncHud();
+      finalScore.textContent = String(state.score);
+      finalTime.textContent = String(Math.max(0, Math.ceil(state.timeLeft)));
+      finalShards.textContent = String(state.collected);
+      if (won) {
+        endEyebrow.textContent = 'Maze Cleared';
+        endTitle.textContent = 'YOU ESCAPED';
+        endLead.textContent = 'The portal answered. The maze will reshape itself for the next challenger.';
+      } else {
+        endEyebrow.textContent = 'Time Expired';
+        endTitle.textContent = 'THE MAZE WON';
+        endLead.textContent = 'The orange lights dimmed before you found the exit.';
+      }
+      statusLine.innerHTML = won ? 'YOU <strong>ESCAPED</strong> THE LABYRINTH' : 'THE MAZE <strong>OVERWHELMED</strong> YOU';
+    }
+
+    function syncHud() {
+      timeValue.textContent = String(Math.max(0, Math.ceil(state.timeLeft)));
+      scoreValue.textContent = String(Math.max(0, Math.floor(state.score)));
+      shardsValue.textContent = `${state.collected} / ${state.totalCollectibles}`;
+    }
+
+    function updateMinimap() {
+      const cssSize = minimapCanvas.clientWidth || 180;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(120, Math.floor(cssSize * dpr));
+      const h = w;
+      if (minimapCanvas.width !== w || minimapCanvas.height !== h) {
+        minimapCanvas.width = w;
+        minimapCanvas.height = h;
+      }
+
+      const ctx = mctx;
+      const maze = state.maze;
+      if (!maze) {
+        ctx.clearRect(0, 0, w, h);
+        return;
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(4, 4, 6, 0.96)';
+      ctx.fillRect(0, 0, w, h);
+
+      const pad = 10 * dpr;
+      const size = Math.min(w, h) - pad * 2;
+      const tile = size / maze.gridW;
+      const offsetX = (w - size) * 0.5;
+      const offsetY = (h - size) * 0.5;
+
+      ctx.fillStyle = 'rgba(255, 102, 0, 0.1)';
+      ctx.fillRect(offsetX - 2, offsetY - 2, size + 4, size + 4);
+
+      for (let y = 0; y < maze.gridH; y++) {
+        for (let x = 0; x < maze.gridW; x++) {
+          if (!state.visited.has(`${x},${y}`)) continue;
+          const px = offsetX + x * tile;
+          const py = offsetY + y * tile;
+          if (maze.grid[y][x]) {
+            ctx.fillStyle = 'rgba(51, 25, 17, 0.92)';
+            ctx.fillRect(px, py, tile, tile);
+          } else {
+            ctx.fillStyle = 'rgba(255, 125, 43, 0.16)';
+            ctx.fillRect(px, py, tile, tile);
+          }
+        }
+      }
+
+      ctx.strokeStyle = 'rgba(255, 102, 0, 0.24)';
+      ctx.lineWidth = Math.max(1, dpr * 0.9);
+      ctx.strokeRect(offsetX, offsetY, size, size);
+
+      const exit = state.exit;
+      if (exit) {
+        const ex = offsetX + exit.x * 2 * tile;
+        const ey = offsetY + exit.y * 2 * tile;
+        ctx.fillStyle = 'rgba(255, 212, 155, 0.9)';
+        ctx.beginPath();
+        ctx.arc(ex, ey, Math.max(2, tile * 0.55), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const px = offsetX + (camera.position.x / TILE) * tile;
+      const py = offsetY + (camera.position.z / TILE) * tile;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = 'rgba(255, 102, 0, 0.8)';
+      ctx.shadowBlur = 14 * dpr;
+      ctx.beginPath();
+      ctx.arc(px, py, Math.max(3, tile * 0.42), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const dirLen = tile * 1.15;
+      ctx.strokeStyle = '#ff6600';
+      ctx.lineWidth = Math.max(1.5, dpr * 1.2);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + Math.sin(state.yaw) * dirLen, py - Math.cos(state.yaw) * dirLen);
+      ctx.stroke();
+    }
+
+    function requestPointerLockSafe() {
+      if (renderer.domElement.requestPointerLock) {
+        renderer.domElement.requestPointerLock();
+      }
+    }
+
+    function updateLook(dx, dy) {
+      state.yaw -= dx * LOOK_SPEED;
+      state.pitch -= dy * LOOK_SPEED;
+      state.pitch = THREE.MathUtils.clamp(state.pitch, -1.35, 1.2);
+      camera.rotation.set(state.pitch, state.yaw, 0);
+    }
+
+    function collectItem(item, index) {
+      if (item.collected) return;
+      item.collected = true;
+      state.collected += 1;
+      state.score += 250;
+      spawnBurst(item.mesh.position.x, item.mesh.position.y, item.mesh.position.z, 0xffa13d);
+      item.mesh.visible = false;
+      item.pulse = 0;
+      state.collectibles[index] = item;
+      syncHud();
+    }
+
+    function updateCollectibles(dt) {
+      for (let i = 0; i < state.collectibles.length; i++) {
+        const item = state.collectibles[i];
+        if (!item) continue;
+        if (item.collected) continue;
+        item.pulse += dt;
+        const bob = Math.sin(item.phase + state.elapsed * 4.4) * 0.16;
+        item.mesh.position.y = item.baseY + bob;
+        item.mesh.rotation.y += dt * 1.5;
+        item.mesh.rotation.x += dt * 0.9;
+        const dx = item.mesh.position.x - camera.position.x;
+        const dz = item.mesh.position.z - camera.position.z;
+        if (dx * dx + dz * dz < 2.4 * 2.4) {
+          collectItem(item, i);
+        }
+      }
+    }
+
+    function updatePortal(dt) {
+      if (!state.portal) return;
+      const u = state.portal.userData;
+      const pulse = 1 + Math.sin(state.elapsed * 4.2) * 0.06;
+      state.portal.scale.setScalar(pulse);
+      u.ring.rotation.z += dt * 0.7;
+      u.ring2.rotation.z -= dt * 1.2;
+      u.core.scale.setScalar(1 + Math.sin(state.elapsed * 6.4) * 0.08);
+      u.glow.material.opacity = 0.7 + Math.sin(state.elapsed * 8) * 0.16;
+      u.light.intensity = 2.2 + Math.sin(state.elapsed * 5.4) * 0.45;
+    }
+
+    function updateTorches(dt) {
+      for (const torch of state.torches) {
+        const u = torch.userData;
+        const flicker = 0.78 + Math.sin(state.elapsed * 9.5 + u.phase) * 0.12 + Math.sin(state.elapsed * 17.2 + u.phase * 1.3) * 0.05;
+        u.light.intensity = 0.68 + flicker * 0.62;
+        u.flame.material.opacity = 0.78 + Math.sin(state.elapsed * 12 + u.phase) * 0.14;
+        torch.rotation.y = Math.sin(state.elapsed * 0.8 + u.phase) * 0.06;
+      }
+    }
+
+    function updateDust(dt) {
+      const pos = particleGeo.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        const p = i * 3;
+        pos[p] += particleSpeeds[p] * dt * 18;
+        pos[p + 1] += particleSpeeds[p + 1] * dt * 18;
+        pos[p + 2] += particleSpeeds[p + 2] * dt * 18;
+        if (pos[p] < -8) pos[p] += WORLD_SIZE + 16;
+        if (pos[p] > WORLD_SIZE + 8) pos[p] -= WORLD_SIZE + 16;
+        if (pos[p + 2] < -8) pos[p + 2] += WORLD_SIZE + 16;
+        if (pos[p + 2] > WORLD_SIZE + 8) pos[p + 2] -= WORLD_SIZE + 16;
+        if (pos[p + 1] < 0.45) pos[p + 1] = WALL_H - 0.25;
+        if (pos[p + 1] > WALL_H) pos[p + 1] = 0.55;
+      }
+      particleGeo.attributes.position.needsUpdate = true;
+      dust.rotation.y += dt * 0.03;
+    }
+
+    function updateBursts(dt) {
+      const dead = [];
+      for (const sprite of burstGroup.children) {
+        const ud = sprite.userData;
+        ud.life -= dt;
+        sprite.position.addScaledVector(ud.vel, dt);
+        ud.vel.y -= dt * 2.5;
+        sprite.material.opacity = Math.max(0, ud.life / ud.maxLife);
+        sprite.scale.multiplyScalar(1 + dt * 0.4);
+        if (ud.life <= 0) dead.push(sprite);
+      }
+      for (const sprite of dead) burstGroup.remove(sprite);
+    }
+
+    function checkWin() {
+      if (!state.exit || state.ended) return;
+      const dx = camera.position.x - state.exit.x;
+      const dz = camera.position.z - state.exit.z;
+      if (dx * dx + dz * dz < 3.1 * 3.1) {
+        state.score = Math.floor(state.timeLeft * 10) + state.collected * 250 + 1000 + Math.floor(state.timeLeft * 20);
+        syncHud();
+        endGame(true);
+      }
+    }
+
+    function update(dt) {
+      if (state.running && !state.ended) {
+        state.elapsed += dt;
+        state.timeLeft = Math.max(0, TOTAL_TIME - state.elapsed);
+        if (state.timeLeft <= 0) {
+          syncHud();
+          endGame(false);
+          return;
+        }
+
+        const moveX = (keyState.right ? 1 : 0) - (keyState.left ? 1 : 0);
+        const moveZ = (keyState.back ? 1 : 0) - (keyState.forward ? 1 : 0);
+        const inputLen = Math.hypot(moveX, moveZ);
+        let speed = BASE_SPEED;
+        if (inputLen > 0) {
+          const forward = new THREE.Vector3(Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+          const right = new THREE.Vector3(Math.cos(state.yaw), 0, Math.sin(state.yaw));
+          const move = new THREE.Vector3();
+          move.addScaledVector(forward, moveZ);
+          move.addScaledVector(right, moveX);
+          move.normalize();
+          const step = speed * RUN_ACCEL * dt;
+          moveWithCollision(move.x * step, move.z * step);
+          state.moveBob += dt * 10;
+        } else {
+          state.moveBob += dt * 3;
+        }
+
+        camera.position.y = EYE_HEIGHT + Math.sin(state.moveBob) * 0.03;
+        if (state.maze) revealAround(camera.position.x, camera.position.z, state.maze);
+        updateCollectibles(dt);
+        updateTorches(dt);
+        updatePortal(dt);
+        updateDust(dt);
+        updateBursts(dt);
+        state.score = Math.floor(state.timeLeft * 10) + state.collected * 250;
+        syncHud();
+        checkWin();
+      } else {
+        updateTorches(dt);
+        updatePortal(dt);
+        updateDust(dt * 0.2);
+        updateBursts(dt);
+      }
+
+      const cellKey = `${worldToTile(camera.position.x)},${worldToTile(camera.position.z)}`;
+      if (cellKey !== state.currentCellKey) {
+        state.currentCellKey = cellKey;
+        updateMinimap();
+      }
+      if (Math.random() < 0.07) updateMinimap();
+    }
+
+    function render() {
+      renderer.render(scene, camera);
+    }
+
+    function animate(ts) {
+      if (!animate.last) animate.last = ts;
+      const dt = Math.min((ts - animate.last) / 1000, 0.033);
+      animate.last = ts;
+      update(dt);
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    function handleKeyDown(e) {
+      const k = e.key.toLowerCase();
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
+      if (!state.running && (k === ' ' || k === 'enter')) {
+        resetGame();
+        return;
+      }
+      if (k === 'w' || k === 'arrowup') keyState.forward = true;
+      if (k === 's' || k === 'arrowdown') keyState.back = true;
+      if (k === 'a' || k === 'arrowleft') keyState.left = true;
+      if (k === 'd' || k === 'arrowright') keyState.right = true;
+    }
+
+    function handleKeyUp(e) {
+      const k = e.key.toLowerCase();
+      if (k === 'w' || k === 'arrowup') keyState.forward = false;
+      if (k === 's' || k === 'arrowdown') keyState.back = false;
+      if (k === 'a' || k === 'arrowleft') keyState.left = false;
+      if (k === 'd' || k === 'arrowright') keyState.right = false;
+    }
+
+    function pointerLockChange() {
+      pointer.locked = document.pointerLockElement === renderer.domElement;
+      if (state.running) {
+        statusLine.innerHTML = pointer.locked
+          ? 'Pointer <strong>locked</strong> — stay in motion'
+          : 'Click the maze to <strong>lock cursor</strong> again';
+      }
+    }
+
+    function startGame() {
+      resetGame();
+      pointerLockChange();
+    }
+
+    function showIntro() {
+      startScreen.classList.remove('hidden');
+      endScreen.classList.add('hidden');
+      hud.style.opacity = '0';
+      minimapWrap.style.opacity = '0';
+      crosshair.style.opacity = '0';
+      statusLine.innerHTML = 'CLICK <strong>START</strong> TO ENTER THE MAZE';
+      state.running = false;
+      state.ended = false;
+      document.body.style.cursor = 'auto';
+    }
+
+    function requestLockFromCanvas() {
+      if (state.running && renderer.domElement.requestPointerLock && !pointer.locked) {
+        renderer.domElement.requestPointerLock();
+      }
+    }
+
+    function canvasPointerDown(e) {
+      if (!state.running) return;
+      if (e.pointerType === 'mouse') {
+        requestLockFromCanvas();
+      } else {
+        pointer.dragging = true;
+        pointer.id = e.pointerId;
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+        renderer.domElement.setPointerCapture?.(e.pointerId);
+      }
+    }
+
+    function canvasPointerMove(e) {
+      if (!state.running || pointer.locked || !pointer.dragging || pointer.id !== e.pointerId) return;
+      updateLook(e.clientX - pointer.x, e.clientY - pointer.y);
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+    }
+
+    function canvasPointerUp(e) {
+      if (pointer.id === e.pointerId) {
+        pointer.dragging = false;
+        pointer.id = null;
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, { passive: false });
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('mousemove', (e) => {
+      if (state.running && pointer.locked) updateLook(e.movementX, e.movementY);
+    });
+    document.addEventListener('pointerlockchange', pointerLockChange);
+    document.addEventListener('pointerlockerror', pointerLockChange);
+
+    renderer.domElement.addEventListener('pointerdown', canvasPointerDown);
+    renderer.domElement.addEventListener('pointermove', canvasPointerMove);
+    renderer.domElement.addEventListener('pointerup', canvasPointerUp);
+    renderer.domElement.addEventListener('pointercancel', canvasPointerUp);
+    renderer.domElement.addEventListener('click', () => {
+      if (state.running && !pointer.locked) requestLockFromCanvas();
+    });
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    backBtn.addEventListener('click', showIntro);
+    howBtn.addEventListener('click', () => {
+      statusLine.innerHTML = 'Use <strong>WASD</strong> or arrows and look with the mouse';
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      updateMinimap();
+    });
+
+    showIntro();
+    animate();
+  </script>
+</body>
+</html>

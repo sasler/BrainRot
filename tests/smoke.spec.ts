@@ -11,9 +11,9 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     // Tagline
     await expect(page.getByText("100% AI-generated")).toBeVisible();
 
-    // Arena section with 8 game cards
+    // Arena section with 10 game cards
     const gameCards = page.locator('a[href^="/games/"]');
-    await expect(gameCards).toHaveCount(8);
+    await expect(gameCards).toHaveCount(10);
 
     // Game names present in arena section
     const arena = page.locator("#arena");
@@ -25,6 +25,8 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     await expect(arena.getByText("2048", { exact: true }).first()).toBeVisible();
     await expect(arena.getByText("Endless Runner")).toBeVisible();
     await expect(arena.getByText("Marble Madness")).toBeVisible();
+    await expect(arena.getByText("3D Maze")).toBeVisible();
+    await expect(arena.getByText("Mini Golf 3D")).toBeVisible();
   });
 
   test("navbar has correct links", async ({ page }) => {
@@ -43,7 +45,7 @@ test.describe("BrainRot Games — Smoke Tests", () => {
   });
 
   test("game detail page loads for each game with versions", async ({ page }) => {
-    const games = ["snake", "minesweeper", "tetris", "reversi", "breakout", "2048", "endless-runner", "marble-madness"];
+    const games = ["snake", "minesweeper", "tetris", "reversi", "breakout", "2048", "endless-runner", "marble-madness", "maze-3d", "mini-golf"];
 
     for (const game of games) {
       await page.goto(`/games/${game}`);
@@ -84,7 +86,7 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
-    expect(data.games).toHaveLength(8);
+    expect(data.games).toHaveLength(10);
     expect(data.games.map((g: { id: string }) => g.id)).toEqual([
       "snake",
       "minesweeper",
@@ -94,6 +96,8 @@ test.describe("BrainRot Games — Smoke Tests", () => {
       "2048",
       "endless-runner",
       "marble-madness",
+      "maze-3d",
+      "mini-golf",
     ]);
   });
 

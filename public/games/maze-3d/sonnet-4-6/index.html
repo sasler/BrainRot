@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D MAZE</title>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #06000a;
+      color: #ff6600;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    #gc {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ── HUD ── */
+    #hud {
+      display: none;
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 14px;
+      gap: 8px;
+    }
+
+    .hp {
+      background: rgba(0,0,0,0.72);
+      border: 1px solid #ff6600;
+      border-radius: 4px;
+      padding: 5px 12px;
+      font-size: clamp(11px, 2vw, 14px);
+      font-weight: 700;
+      color: #ff6600;
+      text-shadow: 0 0 6px #ff6600;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    #xhair {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 18px; height: 18px;
+      pointer-events: none;
+    }
+    #xhair::before, #xhair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,102,0,0.75);
+      border-radius: 1px;
+    }
+    #xhair::before { width: 2px; height: 100%; top: 0; left: 50%; transform: translateX(-50%); }
+    #xhair::after  { width: 100%; height: 2px; top: 50%; left: 0;  transform: translateY(-50%); }
+
+    #msg {
+      position: absolute;
+      bottom: 54px; left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(11px, 1.8vw, 13px);
+      color: rgba(255,150,50,0.65);
+      pointer-events: none;
+      letter-spacing: 1px;
+    }
+
+    .warn { color: #ff2200 !important; animation: flash .45s step-start infinite; }
+
+    @keyframes flash { 50% { opacity: 0; } }
+
+    /* ── Minimap ── */
+    #mm {
+      display: none;
+      position: fixed;
+      bottom: 14px; right: 14px;
+      z-index: 10;
+      border: 1px solid rgba(255,102,0,0.6);
+      border-radius: 4px;
+      box-shadow: 0 0 12px rgba(255,102,0,0.35);
+      image-rendering: pixelated;
+    }
+
+    /* ── Overlay Screens ── */
+    .screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(4,0,8,0.93);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(14px, 3vh, 26px);
+      padding: 24px;
+    }
+    .screen.on { display: flex; }
+
+    .gtitle {
+      font-size: clamp(42px, 10vw, 96px);
+      font-weight: 900;
+      letter-spacing: clamp(6px, 2vw, 14px);
+      color: #ff6600;
+      text-shadow:
+        0 0 18px #ff6600,
+        0 0 40px #ff6600,
+        0 0 80px rgba(255,102,0,0.4);
+      animation: glow 2.2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%,100% { text-shadow: 0 0 18px #ff6600, 0 0 40px #ff6600, 0 0 80px rgba(255,102,0,.4); }
+      50%      { text-shadow: 0 0 28px #ff9933, 0 0 60px #ff6600, 0 0 120px rgba(255,102,0,.6); }
+    }
+
+    .gtitle.red {
+      color: #ff1a00;
+      text-shadow: 0 0 18px #ff1a00, 0 0 40px #ff1a00, 0 0 80px rgba(255,26,0,.5);
+      animation: glowR 2s ease-in-out infinite;
+    }
+    @keyframes glowR {
+      0%,100% { text-shadow: 0 0 18px #ff1a00, 0 0 40px #ff1a00; }
+      50%      { text-shadow: 0 0 32px #ff5500, 0 0 70px #ff1a00; }
+    }
+    .gtitle.green {
+      color: #00ff88;
+      text-shadow: 0 0 18px #00ff88, 0 0 40px #00ff88;
+    }
+
+    .info-box {
+      background: rgba(255,102,0,0.07);
+      border: 1px solid rgba(255,102,0,0.3);
+      border-radius: 8px;
+      padding: clamp(12px,2.5vh,22px) clamp(18px,4vw,36px);
+      font-size: clamp(12px, 2vw, 15px);
+      line-height: 2;
+      color: #ffaa55;
+      text-align: center;
+      max-width: 480px;
+      width: 100%;
+    }
+    .info-box span { color: #ff6600; font-weight: 700; }
+
+    .score-box {
+      font-size: clamp(14px, 2.5vw, 18px);
+      color: #ffaa55;
+      text-align: center;
+      line-height: 1.8;
+    }
+    .score-box strong { color: #ff6600; font-size: 1.25em; }
+
+    .btn {
+      background: transparent;
+      border: 2px solid #ff6600;
+      color: #ff6600;
+      padding: clamp(9px,1.5vh,14px) clamp(28px,5vw,50px);
+      font-family: inherit;
+      font-size: clamp(14px, 2.2vw, 17px);
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background .15s, box-shadow .15s;
+      box-shadow: 0 0 10px rgba(255,102,0,0.25);
+    }
+    .btn:hover {
+      background: rgba(255,102,0,0.18);
+      box-shadow: 0 0 22px rgba(255,102,0,0.6);
+    }
+
+    /* ── Touch controls ── */
+    #touch-zone {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      pointer-events: none;
+    }
+    #tj { /* joystick base */
+      position: absolute;
+      bottom: 80px; left: 30px;
+      width: 110px; height: 110px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,102,0,0.35);
+      background: rgba(0,0,0,0.25);
+      pointer-events: all;
+      touch-action: none;
+    }
+    #th { /* joystick handle */
+      position: absolute;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(255,102,0,0.45);
+      border: 2px solid rgba(255,102,0,0.7);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      pointer-events: none;
+    }
+    #tlook { /* look area */
+      position: absolute;
+      top: 0; right: 0;
+      width: 50%; height: 100%;
+      pointer-events: all;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gc"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-row">
+    <div class="hp" id="htimer">⏱ 2:00</div>
+    <div class="hp" id="hscore">⭐ 0</div>
+    <div class="hp" id="hgems">💎 0 / 10</div>
+  </div>
+  <div id="xhair"></div>
+  <div id="msg">ESC = release mouse</div>
+</div>
+
+<!-- Minimap -->
+<canvas id="mm" width="160" height="160"></canvas>
+
+<!-- Start Screen -->
+<div class="screen on" id="sStart">
+  <div class="gtitle">3D MAZE</div>
+  <div class="info-box">
+    <div>🖱 <span>Click</span> to capture mouse &amp; start</div>
+    <div><span>W A S D</span> or <span>↑ ← ↓ →</span> — Move</div>
+    <div><span>Mouse</span> — Look around</div>
+    <div>Reach the <span>glowing portal</span> before time runs out</div>
+    <div>Collect <span>gems 💎</span> for bonus score &amp; time</div>
+  </div>
+  <button class="btn" id="btnStart">ENTER MAZE</button>
+</div>
+
+<!-- Win Screen -->
+<div class="screen" id="sWin">
+  <div class="gtitle green">ESCAPED!</div>
+  <div class="score-box" id="winInfo"></div>
+  <button class="btn" id="btnWinPlay">PLAY AGAIN</button>
+</div>
+
+<!-- Game Over Screen -->
+<div class="screen" id="sOver">
+  <div class="gtitle red">TIME'S UP</div>
+  <div class="score-box" id="overInfo"></div>
+  <button class="btn" id="btnOverPlay">TRY AGAIN</button>
+</div>
+
+<!-- Touch Controls -->
+<div id="touch-zone">
+  <div id="tj"><div id="th"></div></div>
+  <div id="tlook"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════
+const MW       = 13;          // maze columns
+const MH       = 13;          // maze rows
+const CELL     = 4.0;         // world units per cell
+const WH       = 3.0;         // wall height
+const WT       = 0.25;        // wall thickness
+const PH       = 1.55;        // player eye height
+const PSPEED   = 5.2;         // movement speed
+const PRAD     = 0.32;        // player collision radius
+const SENS     = 0.0028;      // mouse sensitivity
+const GDUR     = 120;         // game duration (seconds)
+const N_GEMS   = 10;          // collectibles count
+const GEM_PTS  = 50;          // score per gem
+const GEM_TIME = 5;           // seconds added per gem
+const T_PTS    = 10;          // score per second remaining
+const FOG_N    = 6;
+const FOG_F    = 32;
+
+// ═══════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════
+let phase = 'start';   // 'start' | 'playing' | 'win' | 'over'
+let score = 0;
+let tLeft = GDUR;
+let gemsFound = 0;
+let lastTS = 0;
+let locked = false;
+
+// ═══════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════
+const keys = {};
+const mdx = { v: 0 }, mdy = { v: 0 };
+
+// ═══════════════════════════════════════════════════════
+//  MAZE DATA
+// ═══════════════════════════════════════════════════════
+let wH = [];   // wH[r][c] = bool  horizontal wall at z=r*CELL
+let wV = [];   // wV[r][c] = bool  vertical wall at x=c*CELL
+const explored = new Set();
+
+// ═══════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════
+const P = { x: CELL * 0.5, z: CELL * 0.5, yaw: Math.PI * 0.9, pitch: 0 };
+
+// ═══════════════════════════════════════════════════════
+//  THREE.JS OBJECTS
+// ═══════════════════════════════════════════════════════
+let scene, cam, renderer;
+let mazeGrp;
+let gemObjs  = [];   // { mesh, light, active, baseY, phase }
+let torchAnims = []; // { flame, light, phase }
+let portalAnims = [];
+let portalPtSys, portalPtPos;
+let portalLamp;
+
+// ═══════════════════════════════════════════════════════
+//  MAZE GENERATION  (iterative DFS / recursive backtracker)
+// ═══════════════════════════════════════════════════════
+function genMaze() {
+  const cell = (r, c) => ({ n:true, e:true, s:true, w:true, v:false });
+  const grid = Array.from({ length: MH }, (_, r) =>
+    Array.from({ length: MW }, (_, c) => cell(r, c)));
+
+  const DIRS = [
+    { dr:-1, dc:0, from:'n', back:'s' },
+    { dr:0,  dc:1, from:'e', back:'w' },
+    { dr:1,  dc:0, from:'s', back:'n' },
+    { dr:0,  dc:-1,from:'w', back:'e' },
+  ];
+
+  const stk = [{ r:0, c:0 }];
+  grid[0][0].v = true;
+
+  while (stk.length) {
+    const cur = stk[stk.length - 1];
+    const free = DIRS.filter(d => {
+      const nr = cur.r + d.dr, nc = cur.c + d.dc;
+      return nr >= 0 && nr < MH && nc >= 0 && nc < MW && !grid[nr][nc].v;
+    });
+
+    if (free.length) {
+      const d = free[(Math.random() * free.length) | 0];
+      const nr = cur.r + d.dr, nc = cur.c + d.dc;
+      grid[cur.r][cur.c][d.from] = false;
+      grid[nr][nc][d.back]       = false;
+      grid[nr][nc].v             = true;
+      stk.push({ r:nr, c:nc });
+    } else {
+      stk.pop();
+    }
+  }
+
+  // Build wall-array representation
+  // wH[r][c] — horizontal wall centred at z = r*CELL (north edge of row r)
+  wH = Array.from({ length: MH + 1 }, () => new Array(MW).fill(false));
+  wV = Array.from({ length: MH },     () => new Array(MW + 1).fill(false));
+
+  for (let r = 0; r < MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (grid[r][c].n) wH[r][c]   = true;
+      if (grid[r][c].s) wH[r+1][c] = true;
+      if (grid[r][c].w) wV[r][c]   = true;
+      if (grid[r][c].e) wV[r][c+1] = true;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLLISION
+// ═══════════════════════════════════════════════════════
+function collides(x, z) {
+  const col = Math.floor(x / CELL);
+  const row = Math.floor(z / CELL);
+  if (col < 0 || col >= MW || row < 0 || row >= MH) return true;
+
+  const cx  = x - col * CELL;
+  const cz  = z - row * CELL;
+  const BUF = PRAD + WT * 0.5;
+
+  if (wH[row][col]       && cz < BUF)        return true;
+  if (wH[row+1][col]     && cz > CELL - BUF) return true;
+  if (wV[row][col]       && cx < BUF)        return true;
+  if (wV[row][col+1]     && cx > CELL - BUF) return true;
+
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TEXTURES
+// ═══════════════════════════════════════════════════════
+function makeTex(draw, w, h) {
+  const c = Object.assign(document.createElement('canvas'), { width: w, height: h });
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const wallTex = makeTex((ctx, w, h) => {
+  ctx.fillStyle = '#3d1a00';
+  ctx.fillRect(0, 0, w, h);
+  const bW = 32, bH = 16;
+  for (let y = 0; y < h; y += bH) {
+    const off = ((y / bH) % 2 === 0) ? 0 : bW / 2;
+    for (let x = -bW + off; x < w + bW; x += bW) {
+      const shade = 55 + (Math.random() * 30 | 0);
+      ctx.fillStyle = `rgb(${shade},${shade*0.35|0},0)`;
+      ctx.fillRect(x + 2, y + 2, bW - 3, bH - 3);
+    }
+  }
+  // grout lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1;
+  for (let y = 0; y <= h; y += bH) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    const off = ((y / bH) % 2 === 0) ? 0 : bW / 2;
+    for (let x = off; x <= w; x += bW) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + bH); ctx.stroke();
+    }
+  }
+}, 128, 128);
+
+const floorTex = makeTex((ctx, w, h) => {
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(0, 0, w, h);
+  const t = 32;
+  for (let y = 0; y < h; y += t) {
+    for (let x = 0; x < w; x += t) {
+      const v = 35 + (Math.random() * 20 | 0);
+      ctx.fillStyle = `rgb(${v},${v*0.3|0},0)`;
+      ctx.fillRect(x + 1, y + 1, t - 2, t - 2);
+    }
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= w; i += t) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke();
+  }
+}, 256, 256);
+
+const ceilTex = makeTex((ctx, w, h) => {
+  ctx.fillStyle = '#05000c';
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 120; i++) {
+    const x = Math.random() * w, y = Math.random() * h, r = 1 + Math.random() * 2;
+    ctx.fillStyle = `rgba(80,20,120,${0.1 + Math.random() * 0.15})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+}, 256, 256);
+
+// ═══════════════════════════════════════════════════════
+//  THREE.JS INIT
+// ═══════════════════════════════════════════════════════
+function initThree() {
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gc'), antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06000a);
+  scene.fog = new THREE.Fog(0x06000a, FOG_N, FOG_F);
+
+  cam = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 120);
+  cam.rotation.order = 'YXZ';
+
+  window.addEventListener('resize', () => {
+    cam.aspect = innerWidth / innerHeight;
+    cam.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  // Global lighting
+  scene.add(new THREE.AmbientLight(0x554433, 2.0));
+  const sky = new THREE.HemisphereLight(0x664422, 0x332200, 0.9);
+  scene.add(sky);
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUILD 3-D MAZE
+// ═══════════════════════════════════════════════════════
+function buildMaze() {
+  if (mazeGrp) { scene.remove(mazeGrp); mazeGrp.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) { Array.isArray(o.material) ? o.material.forEach(m=>m.dispose()) : o.material.dispose(); }
+  }); }
+
+  mazeGrp    = new THREE.Group();
+  gemObjs    = [];
+  torchAnims = [];
+  portalAnims = [];
+  portalLamp  = null;
+  portalPtSys = null;
+  scene.add(mazeGrp);
+
+  wallTex.repeat.set(1, WH / 1.5);
+  floorTex.repeat.set(MW * CELL / 3, MH * CELL / 3);
+  ceilTex.repeat.set(MW * CELL / 4, MH * CELL / 4);
+
+  const matWall  = new THREE.MeshLambertMaterial({ map: wallTex, color: 0xffffff });
+  const matFloor = new THREE.MeshLambertMaterial({ map: floorTex });
+  const matCeil  = new THREE.MeshLambertMaterial({ map: ceilTex });
+
+  // Floor
+  const fGeo = new THREE.PlaneGeometry(MW * CELL, MH * CELL);
+  const fl   = new THREE.Mesh(fGeo, matFloor);
+  fl.rotation.x = -Math.PI / 2;
+  fl.position.set(MW * CELL / 2, 0, MH * CELL / 2);
+  mazeGrp.add(fl);
+
+  // Ceiling
+  const cGeo = new THREE.PlaneGeometry(MW * CELL, MH * CELL);
+  const cl   = new THREE.Mesh(cGeo, matCeil);
+  cl.rotation.x = Math.PI / 2;
+  cl.position.set(MW * CELL / 2, WH, MH * CELL / 2);
+  mazeGrp.add(cl);
+
+  // Build wall meshes
+  for (let r = 0; r <= MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (wH[r]?.[c]) {
+        const g = new THREE.BoxGeometry(CELL, WH, WT);
+        const m = new THREE.Mesh(g, matWall);
+        m.position.set(c * CELL + CELL / 2, WH / 2, r * CELL);
+        mazeGrp.add(m);
+      }
+    }
+  }
+  for (let r = 0; r < MH; r++) {
+    for (let c = 0; c <= MW; c++) {
+      if (wV[r]?.[c]) {
+        const g = new THREE.BoxGeometry(WT, WH, CELL);
+        const m = new THREE.Mesh(g, matWall);
+        m.position.set(c * CELL, WH / 2, r * CELL + CELL / 2);
+        mazeGrp.add(m);
+      }
+    }
+  }
+
+  addTorches();
+  addPortal();
+  addGems();
+  addPortalParticles();
+}
+
+// ═══════════════════════════════════════════════════════
+//  TORCHES
+// ═══════════════════════════════════════════════════════
+function addTorches() {
+  const candidates = [];
+
+  for (let r = 1; r < MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (wH[r][c]) {
+        // South face of horizontal wall
+        candidates.push({
+          x: c * CELL + CELL * (0.2 + Math.random() * 0.6),
+          z: r * CELL + 0.22,
+        });
+      }
+    }
+  }
+  for (let r = 0; r < MH; r++) {
+    for (let c = 1; c < MW; c++) {
+      if (wV[r][c]) {
+        candidates.push({
+          x: c * CELL + 0.22,
+          z: r * CELL + CELL * (0.2 + Math.random() * 0.6),
+        });
+      }
+    }
+  }
+
+  // Shuffle + pick ~14
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const picks = candidates.slice(0, 14);
+
+  const stickMat  = new THREE.MeshLambertMaterial({ color: 0x5c2c00 });
+  const flameMat  = new THREE.MeshBasicMaterial({ color: 0xff7700, transparent: true, opacity: 0.92 });
+  const flameMatG = new THREE.MeshBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.75 });
+  const stickGeo  = new THREE.CylinderGeometry(0.038, 0.055, 0.36, 6);
+  const flameGeo  = new THREE.SphereGeometry(0.085, 7, 5);
+  const innerGeo  = new THREE.SphereGeometry(0.044, 6, 4);
+
+  picks.forEach(pos => {
+    const ty = PH + 0.18;
+
+    // Stick
+    const stick = new THREE.Mesh(stickGeo, stickMat);
+    stick.position.set(pos.x, ty, pos.z);
+    mazeGrp.add(stick);
+
+    // Outer flame
+    const flame = new THREE.Mesh(flameGeo, flameMat.clone());
+    flame.position.set(pos.x, ty + 0.28, pos.z);
+    mazeGrp.add(flame);
+
+    // Inner bright core
+    const inner = new THREE.Mesh(innerGeo, flameMatG.clone());
+    inner.position.set(pos.x, ty + 0.28, pos.z);
+    mazeGrp.add(inner);
+
+    // Point light
+    const light = new THREE.PointLight(0xff6600, 3.0, 10, 2);
+    light.position.set(pos.x, ty + 0.32, pos.z);
+    mazeGrp.add(light);
+
+    const phase = Math.random() * Math.PI * 2;
+    torchAnims.push({ flame, inner, light, phase, baseY: ty + 0.28 });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXIT PORTAL
+// ═══════════════════════════════════════════════════════
+function addPortal() {
+  const ex = (MW - 1) * CELL + CELL / 2;
+  const ez = (MH - 1) * CELL + CELL / 2;
+  const ey = WH / 2;
+
+  // Outer ring
+  const ringGeo  = new THREE.TorusGeometry(0.85, 0.1, 20, 48);
+  const ringMat  = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+  const ring     = new THREE.Mesh(ringGeo, ringMat);
+  ring.position.set(ex, ey, ez);
+  mazeGrp.add(ring);
+
+  // Glow shell ring (larger, additive)
+  const glowGeo  = new THREE.TorusGeometry(0.92, 0.18, 12, 40);
+  const glowMat  = new THREE.MeshBasicMaterial({
+    color: 0xff4400, transparent: true, opacity: 0.25,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const glowRing = new THREE.Mesh(glowGeo, glowMat);
+  glowRing.position.set(ex, ey, ez);
+  mazeGrp.add(glowRing);
+
+  // Inner disc
+  const discGeo  = new THREE.CircleGeometry(0.8, 40);
+  const discMat  = new THREE.MeshBasicMaterial({
+    color: 0xff8800, transparent: true, opacity: 0.45,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const disc     = new THREE.Mesh(discGeo, discMat);
+  disc.position.set(ex, ey, ez);
+  mazeGrp.add(disc);
+
+  // Strong point light
+  portalLamp = new THREE.PointLight(0xff5500, 5, 14, 2);
+  portalLamp.position.set(ex, ey, ez);
+  mazeGrp.add(portalLamp);
+
+  // Vertical beacon beam
+  const beamGeo = new THREE.CylinderGeometry(0.08, 0.35, WH, 8, 1, true);
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0xff6600, transparent: true, opacity: 0.12,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const beam    = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.set(ex, WH / 2, ez);
+  mazeGrp.add(beam);
+
+  portalAnims.push({ mesh: ring,     type: 'ring'  });
+  portalAnims.push({ mesh: glowRing, type: 'glow'  });
+  portalAnims.push({ mesh: disc,     type: 'disc'  });
+  portalAnims.push({ mesh: beamMat,  type: 'beam', mat: beamMat });
+
+  // Store exit world position for win detection
+  scene.userData.exitX = ex;
+  scene.userData.exitZ = ez;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PORTAL PARTICLES
+// ═══════════════════════════════════════════════════════
+function addPortalParticles() {
+  const ex = scene.userData.exitX;
+  const ez = scene.userData.exitZ;
+  const N  = 120;
+
+  const pos    = new Float32Array(N * 3);
+  const col    = new Float32Array(N * 3);
+  const phases = new Float32Array(N);
+
+  for (let i = 0; i < N; i++) {
+    phases[i] = Math.random() * Math.PI * 2;
+    const ang = phases[i];
+    const rad = 0.3 + Math.random() * 1.1;
+    pos[i*3]   = ex + Math.cos(ang) * rad;
+    pos[i*3+1] = WH / 2 + (Math.random() - 0.5) * WH * 0.85;
+    pos[i*3+2] = ez + Math.sin(ang) * rad;
+    col[i*3]   = 1.0;
+    col[i*3+1] = 0.3 + Math.random() * 0.45;
+    col[i*3+2] = 0.0;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.13, vertexColors: true,
+    transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+
+  portalPtSys = new THREE.Points(geo, mat);
+  portalPtPos = pos;
+  portalPtSys.userData.phases = phases;
+  mazeGrp.add(portalPtSys);
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLLECTIBLE GEMS
+// ═══════════════════════════════════════════════════════
+function addGems() {
+  // Avoid start cell and exit cell
+  const pool = [];
+  for (let r = 0; r < MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (r === 0 && c === 0) continue;
+      if (r === MH-1 && c === MW-1) continue;
+      pool.push({ r, c });
+    }
+  }
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  const oct = new THREE.OctahedronGeometry(0.22, 0);
+  const glowSphGeo = new THREE.SphereGeometry(0.38, 8, 6);
+
+  pool.slice(0, N_GEMS).forEach((cell, i) => {
+    const x = cell.c * CELL + CELL / 2;
+    const z = cell.r * CELL + CELL / 2;
+    const y = 0.75;
+
+    const hue = 0.08 + Math.random() * 0.08;          // warm yellow-orange
+    const gemColor = new THREE.Color().setHSL(hue, 1, 0.55);
+    const mat = new THREE.MeshBasicMaterial({ color: gemColor });
+
+    const gem = new THREE.Mesh(oct, mat);
+    gem.position.set(x, y, z);
+    mazeGrp.add(gem);
+
+    // Glow shell
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: gemColor, transparent: true, opacity: 0.18,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const glow = new THREE.Mesh(glowSphGeo, glowMat);
+    glow.position.set(x, y, z);
+    mazeGrp.add(glow);
+
+    // Light
+    const light = new THREE.PointLight(gemColor, 0.9, 4, 2);
+    light.position.set(x, y, z);
+    mazeGrp.add(light);
+
+    gemObjs.push({ gem, glow, light, active: true, baseY: y, phase: Math.random() * Math.PI * 2 });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANIMATIONS
+// ═══════════════════════════════════════════════════════
+function animateScene(t) {
+  // Torches
+  torchAnims.forEach(({ flame, inner, light, phase, baseY }) => {
+    const f1 = Math.sin(t * 9.3 + phase);
+    const f2 = Math.sin(t * 14.1 + phase * 1.7);
+    const flicker = 0.85 + 0.35 * f1 * f1 + 0.12 * f2;
+
+    light.intensity    = 3.0 * flicker;
+    flame.position.y   = baseY + 0.06 * Math.sin(t * 11 + phase);
+    flame.scale.x      = 1 + 0.25 * f1;
+    flame.scale.y      = 1 + 0.30 * f2;
+    inner.position.copy(flame.position);
+    inner.scale.copy(flame.scale);
+    flame.material.opacity = 0.75 + 0.17 * f1;
+  });
+
+  // Portal ring
+  portalAnims.forEach(({ mesh, type, mat }) => {
+    if (type === 'ring') {
+      mesh.rotation.y = t * 1.4;
+      mesh.rotation.z = Math.sin(t * 0.6) * 0.15;
+    } else if (type === 'glow') {
+      mesh.rotation.y = -t * 0.9;
+      mesh.material.opacity = 0.18 + 0.14 * Math.sin(t * 2.8);
+    } else if (type === 'disc') {
+      mesh.material.opacity = 0.35 + 0.18 * Math.sin(t * 3.2);
+      mesh.rotation.z = t * 0.5;
+    } else if (type === 'beam') {
+      mat.opacity = 0.08 + 0.08 * Math.sin(t * 2.1);
+    }
+  });
+
+  if (portalLamp) {
+    portalLamp.intensity = 5 + 2.5 * Math.sin(t * 2.7);
+  }
+
+  // Portal particles – orbit + float
+  if (portalPtSys) {
+    const ex  = scene.userData.exitX;
+    const ez  = scene.userData.exitZ;
+    const N   = portalPtPos.length / 3;
+    const phs = portalPtSys.userData.phases;
+
+    for (let i = 0; i < N; i++) {
+      const spd = 0.55 + (i % 7) * 0.08;
+      const ang = t * spd + phs[i];
+      const rad = 0.25 + 0.9 * Math.abs(Math.sin(phs[i] * 1.3));
+      portalPtPos[i*3]   = ex + Math.cos(ang) * rad;
+      portalPtPos[i*3+1] = (WH * 0.5) + Math.sin(t * 1.1 + phs[i] * 2) * WH * 0.42;
+      portalPtPos[i*3+2] = ez + Math.sin(ang) * rad;
+    }
+    portalPtSys.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // Gems
+  gemObjs.forEach(obj => {
+    if (!obj.active) return;
+    obj.gem.position.y  = obj.baseY + 0.15 * Math.sin(t * 2.1 + obj.phase);
+    obj.gem.rotation.y  = t * 2.4 + obj.phase;
+    obj.gem.rotation.x  = Math.sin(t * 1.3 + obj.phase) * 0.4;
+    obj.glow.position.copy(obj.gem.position);
+    obj.light.position.copy(obj.gem.position);
+    obj.glow.material.opacity = 0.12 + 0.08 * Math.sin(t * 3 + obj.phase);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  PLAYER UPDATE
+// ═══════════════════════════════════════════════════════
+function updatePlayer(dt) {
+  // Mouse look
+  if (locked) {
+    P.yaw   -= mdx.v * SENS;
+    P.pitch -= mdy.v * SENS;
+    P.pitch  = Math.max(-1.3, Math.min(1.3, P.pitch));
+    mdx.v = mdy.v = 0;
+  }
+
+  // Touch look
+  if (touchLookDelta.x || touchLookDelta.y) {
+    P.yaw   -= touchLookDelta.x * SENS * 0.9;
+    P.pitch -= touchLookDelta.y * SENS * 0.9;
+    P.pitch  = Math.max(-1.3, Math.min(1.3, P.pitch));
+    touchLookDelta.x = touchLookDelta.y = 0;
+  }
+
+  // Movement input
+  let moveX = 0, moveZ = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    moveZ -= 1;
+  if (keys['KeyS'] || keys['ArrowDown'])  moveZ += 1;
+  if (keys['KeyA'] || keys['ArrowLeft'])  moveX -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+
+  // Touch joystick
+  moveX += touchJoy.x;
+  moveZ += touchJoy.y;
+
+  const len = Math.hypot(moveX, moveZ);
+  if (len > 1) { moveX /= len; moveZ /= len; }
+
+  if (len > 0.01) {
+    const sinY = Math.sin(P.yaw), cosY = Math.cos(P.yaw);
+    // Forward dir: (-sinY, 0, -cosY)  Right dir: (cosY, 0, -sinY)
+    const dx = (sinY * (-moveZ) + cosY * moveX) * PSPEED * dt;
+    const dz = (cosY * (-moveZ) - sinY * moveX) * PSPEED * dt;
+
+    if (!collides(P.x + dx, P.z))    P.x += dx;
+    if (!collides(P.x, P.z + dz))    P.z += dz;
+  }
+
+  // Sync camera
+  cam.position.set(P.x, PH, P.z);
+  cam.rotation.y = P.yaw;
+  cam.rotation.x = P.pitch;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MINIMAP
+// ═══════════════════════════════════════════════════════
+function drawMinimap() {
+  const cv  = document.getElementById('mm');
+  const ctx = cv.getContext('2d');
+  const W   = cv.width, H = cv.height;
+  const cW  = W / MW,   cH = H / MH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Update explored radius
+  const pc = Math.floor(P.x / CELL);
+  const pr = Math.floor(P.z / CELL);
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      const r = pr + dr, c = pc + dc;
+      if (r >= 0 && r < MH && c >= 0 && c < MW) explored.add(r * MW + c);
+    }
+  }
+
+  // Background
+  ctx.fillStyle = 'rgba(3,0,6,0.88)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Explored floors
+  ctx.fillStyle = '#1a0800';
+  for (let r = 0; r < MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (explored.has(r * MW + c)) ctx.fillRect(c*cW+1, r*cH+1, cW-1, cH-1);
+    }
+  }
+
+  // Exit marker (always shown)
+  ctx.fillStyle = '#ff6600';
+  const exC = MW - 1, exR = MH - 1;
+  ctx.fillRect(exC*cW+2, exR*cH+2, cW-4, cH-4);
+
+  // Gem markers (only in explored cells)
+  gemObjs.forEach(g => {
+    if (!g.active) return;
+    const gc = Math.floor(g.gem.position.x / CELL);
+    const gr = Math.floor(g.gem.position.z / CELL);
+    if (!explored.has(gr * MW + gc)) return;
+    ctx.fillStyle = '#ffcc00';
+    const mx = gc*cW + cW/2, my = gr*cH + cH/2;
+    ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI*2); ctx.fill();
+  });
+
+  // Walls (explored only)
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth   = 1;
+  for (let r = 0; r <= MH; r++) {
+    for (let c = 0; c < MW; c++) {
+      if (!wH[r]?.[c]) continue;
+      const adjN = r > 0  && explored.has((r-1)*MW + c);
+      const adjS = r < MH && explored.has(r*MW + c);
+      if (!adjN && !adjS) continue;
+      ctx.beginPath();
+      ctx.moveTo(c * cW, r * cH); ctx.lineTo((c+1)*cW, r*cH);
+      ctx.stroke();
+    }
+  }
+  for (let r = 0; r < MH; r++) {
+    for (let c = 0; c <= MW; c++) {
+      if (!wV[r]?.[c]) continue;
+      const adjW = c > 0  && explored.has(r*MW + (c-1));
+      const adjE = c < MW && explored.has(r*MW + c);
+      if (!adjW && !adjE) continue;
+      ctx.beginPath();
+      ctx.moveTo(c*cW, r*cH); ctx.lineTo(c*cW, (r+1)*cH);
+      ctx.stroke();
+    }
+  }
+
+  // Player dot + direction arrow
+  const px = pc * cW + cW / 2;
+  const py = pr * cH + cH / 2;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+
+  const arrowLen = 7;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px - Math.sin(P.yaw) * arrowLen, py - Math.cos(P.yaw) * arrowLen);
+  ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════
+//  HUD UPDATE
+// ═══════════════════════════════════════════════════════
+function updateHUD() {
+  const mins = (tLeft / 60) | 0;
+  const secs = (tLeft % 60) | 0;
+  const tEl  = document.getElementById('htimer');
+  tEl.textContent = `⏱ ${mins}:${secs.toString().padStart(2,'0')}`;
+  tEl.classList.toggle('warn', tLeft < 30);
+
+  document.getElementById('hscore').textContent = `⭐ ${score}`;
+  document.getElementById('hgems').textContent  = `💎 ${gemsFound} / ${N_GEMS}`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLLECTIBLE CHECK
+// ═══════════════════════════════════════════════════════
+function checkGems() {
+  gemObjs.forEach(obj => {
+    if (!obj.active) return;
+    const dx = P.x - obj.gem.position.x;
+    const dz = P.z - obj.gem.position.z;
+    if (dx*dx + dz*dz < 0.9) {
+      obj.active = false;
+      obj.gem.visible  = false;
+      obj.glow.visible = false;
+      obj.light.intensity = 0;
+      gemsFound++;
+      score += GEM_PTS;
+      tLeft += GEM_TIME;
+      if (tLeft > GDUR) tLeft = GDUR;
+      spawnCollectEffect(obj.gem.position.x, obj.gem.position.y, obj.gem.position.z);
+      updateHUD();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  COLLECT EFFECT (burst)
+// ═══════════════════════════════════════════════════════
+const collectBursts = [];
+function spawnCollectEffect(x, y, z) {
+  const N = 18;
+  const pos = new Float32Array(N * 3);
+  const vel = [];
+  for (let i = 0; i < N; i++) {
+    pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.random() * Math.PI;
+    const sp = 1.2 + Math.random() * 2.2;
+    vel.push({ x: Math.sin(ph)*Math.cos(th)*sp, y: Math.cos(ph)*sp*0.8, z: Math.sin(ph)*Math.sin(th)*sp });
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ size: 0.14, color: 0xffcc00, transparent:true, opacity:1, blending: THREE.AdditiveBlending, depthWrite:false });
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  collectBursts.push({ pts, vel, pos, life: 1.0 });
+}
+
+function updateBursts(dt) {
+  for (let i = collectBursts.length - 1; i >= 0; i--) {
+    const b = collectBursts[i];
+    b.life -= dt * 1.6;
+    if (b.life <= 0) { scene.remove(b.pts); collectBursts.splice(i,1); continue; }
+    const N = b.vel.length;
+    for (let j = 0; j < N; j++) {
+      b.pos[j*3]   += b.vel[j].x * dt;
+      b.pos[j*3+1] += b.vel[j].y * dt;
+      b.pos[j*3+2] += b.vel[j].z * dt;
+      b.vel[j].y   -= 2.5 * dt;
+    }
+    b.pts.geometry.attributes.position.needsUpdate = true;
+    b.pts.material.opacity = Math.max(0, b.life * 0.95);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  WIN / LOSE CHECK
+// ═══════════════════════════════════════════════════════
+function checkWinLose() {
+  if (phase !== 'playing') return;
+
+  // Time up
+  if (tLeft <= 0) {
+    tLeft = 0;
+    endGame('over');
+    return;
+  }
+
+  // Exit reached
+  const dx = P.x - scene.userData.exitX;
+  const dz = P.z - scene.userData.exitZ;
+  if (dx*dx + dz*dz < 1.6) endGame('win');
+}
+
+function endGame(result) {
+  phase = result;
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('mm').style.display  = 'none';
+  document.getElementById('touch-zone').style.display = 'none';
+  if (document.pointerLockElement) document.exitPointerLock();
+  locked = false;
+
+  const timePts = (tLeft | 0) * T_PTS;
+  if (result === 'win') {
+    score += timePts;
+    document.getElementById('winInfo').innerHTML =
+      `Gems collected: <strong>${gemsFound} / ${N_GEMS}</strong> (+${gemsFound*GEM_PTS})<br>` +
+      `Time bonus: <strong>${tLeft|0}s × ${T_PTS} = +${timePts}</strong><br>` +
+      `<strong style="font-size:1.3em;color:#ff6600">SCORE: ${score}</strong>`;
+    document.getElementById('sWin').classList.add('on');
+  } else {
+    document.getElementById('overInfo').innerHTML =
+      `Gems collected: <strong>${gemsFound} / ${N_GEMS}</strong><br>` +
+      `Score: <strong>${score}</strong>`;
+    document.getElementById('sOver').classList.add('on');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTS) / 1000, 0.05);
+  lastTS = ts;
+  const t  = ts / 1000;
+
+  if (phase === 'playing') {
+    tLeft -= dt;
+    updatePlayer(dt);
+    checkGems();
+    checkWinLose();
+    updateBursts(dt);
+    animateScene(t);
+    drawMinimap();
+    updateHUD();
+  } else if (phase === 'start') {
+    // Idle camera pan
+    cam.position.set(CELL * 0.5 + Math.sin(t * 0.3) * 1.5, PH, CELL * 0.5 + Math.cos(t * 0.25) * 1.2);
+    cam.rotation.y = P.yaw + Math.sin(t * 0.2) * 0.3;
+    animateScene(t);
+  }
+
+  renderer.render(scene, cam);
+}
+
+// ═══════════════════════════════════════════════════════
+//  START / RESTART
+// ═══════════════════════════════════════════════════════
+function startGame() {
+  phase       = 'playing';
+  score       = 0;
+  tLeft       = GDUR;
+  gemsFound   = 0;
+  explored.clear();
+  collectBursts.length = 0;
+
+  P.x   = CELL * 0.5;
+  P.z   = CELL * 0.5;
+  P.yaw = Math.PI * 0.9;
+  P.pitch = 0;
+
+  document.getElementById('sStart').classList.remove('on');
+  document.getElementById('sWin').classList.remove('on');
+  document.getElementById('sOver').classList.remove('on');
+  document.getElementById('hud').style.display = 'block';
+  document.getElementById('mm').style.display  = 'block';
+
+  if (isTouchDevice) document.getElementById('touch-zone').style.display = 'block';
+
+  genMaze();
+  buildMaze();
+  updateHUD();
+
+  // Request pointer lock (desktop)
+  if (!isTouchDevice) renderer.domElement.requestPointerLock();
+}
+
+// ═══════════════════════════════════════════════════════
+//  POINTER LOCK
+// ═══════════════════════════════════════════════════════
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === renderer.domElement;
+  if (locked && phase === 'start') startGame();
+  document.getElementById('msg').style.opacity = locked ? '0.55' : '0';
+});
+
+document.addEventListener('mousemove', e => {
+  if (locked) { mdx.v += e.movementX; mdy.v += e.movementY; }
+});
+
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Escape' && phase === 'playing') {
+    // handled by browser: exits pointer lock
+  }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ═══════════════════════════════════════════════════════
+//  TOUCH CONTROLS
+// ═══════════════════════════════════════════════════════
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const touchJoy  = { x: 0, y: 0 };
+const touchLookDelta = { x: 0, y: 0 };
+let joyTouch = null, lookTouch = null;
+let joyBaseX = 0, joyBaseY = 0;
+let lookLastX = 0, lookLastY = 0;
+
+const tjEl   = document.getElementById('tj');
+const tlEl   = document.getElementById('tlook');
+const JOYRAD = 42;
+
+tjEl.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  joyTouch = t.identifier;
+  joyBaseX = t.clientX; joyBaseY = t.clientY;
+  touchJoy.x = touchJoy.y = 0;
+}, { passive: false });
+
+tjEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joyTouch) continue;
+    let dx = t.clientX - joyBaseX;
+    let dy = t.clientY - joyBaseY;
+    const dist = Math.hypot(dx, dy);
+    if (dist > JOYRAD) { dx = dx/dist*JOYRAD; dy = dy/dist*JOYRAD; }
+    touchJoy.x = dx / JOYRAD;
+    touchJoy.y = dy / JOYRAD;
+    const h = document.getElementById('th');
+    h.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+  }
+}, { passive: false });
+
+['touchend', 'touchcancel'].forEach(ev => tjEl.addEventListener(ev, e => {
+  e.preventDefault();
+  joyTouch = null;
+  touchJoy.x = touchJoy.y = 0;
+  document.getElementById('th').style.transform = 'translate(-50%,-50%)';
+}, { passive: false }));
+
+tlEl.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  lookTouch = t.identifier;
+  lookLastX = t.clientX; lookLastY = t.clientY;
+}, { passive: false });
+
+tlEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier !== lookTouch) continue;
+    touchLookDelta.x += (t.clientX - lookLastX) * 1.8;
+    touchLookDelta.y += (t.clientY - lookLastY) * 1.8;
+    lookLastX = t.clientX; lookLastY = t.clientY;
+  }
+}, { passive: false });
+
+['touchend','touchcancel'].forEach(ev => tlEl.addEventListener(ev, e => {
+  e.preventDefault();
+  lookTouch = null;
+}, { passive: false }));
+
+if (isTouchDevice) {
+  document.getElementById('touch-zone').style.display = 'none'; // shown only in-game
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUTTON WIRING
+// ═══════════════════════════════════════════════════════
+document.getElementById('btnStart').addEventListener('click', () => {
+  if (isTouchDevice) { startGame(); return; }
+  renderer.domElement.requestPointerLock();
+});
+
+document.getElementById('btnWinPlay').addEventListener('click', startGame);
+document.getElementById('btnOverPlay').addEventListener('click', startGame);
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+initThree();
+
+// Canvas click → request pointer lock
+renderer.domElement.addEventListener('click', () => {
+  if (phase === 'playing' && !locked) renderer.domElement.requestPointerLock();
+});
+
+// Pre-build maze for start screen preview
+genMaze();
+buildMaze();
+cam.position.set(CELL * 0.5, PH, CELL * 0.5);
+cam.rotation.order = 'YXZ';
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

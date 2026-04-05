@@ -34,6 +34,13 @@
           "date": "2026-03-26",
           "linesOfCode": 1172,
           "path": "/games/snake/gpt-5-4-mini/index.html"
+        },
+        {
+          "model": "Gemini 3.1 Pro",
+          "modelId": "gemini-3-1-pro",
+          "date": "2026-04-05",
+          "linesOfCode": 297,
+          "path": "/games/snake/gemini-3-1-pro/index.html"
         }
       ]
     },
@@ -71,6 +78,13 @@
           "date": "2026-03-26",
           "linesOfCode": 1081,
           "path": "/games/minesweeper/gpt-5-4-mini/index.html"
+        },
+        {
+          "model": "Gemini 3.1 Pro",
+          "modelId": "gemini-3-1-pro",
+          "date": "2026-04-05",
+          "linesOfCode": 438,
+          "path": "/games/minesweeper/gemini-3-1-pro/index.html"
         }
       ]
     },
@@ -145,6 +159,13 @@
           "date": "2026-03-26",
           "linesOfCode": 1274,
           "path": "/games/reversi/gpt-5-4-mini/index.html"
+        },
+        {
+          "model": "Gemini 3.1 Pro",
+          "modelId": "gemini-3-1-pro",
+          "date": "2024-07-26",
+          "linesOfCode": 417,
+          "path": "/games/reversi/gemini-3-1-pro/index.html"
         }
       ]
     },
@@ -219,6 +240,13 @@
           "date": "2026-03-30",
           "linesOfCode": 476,
           "path": "/games/2048/gpt-5-4-mini/index.html"
+        },
+        {
+          "model": "Gemini 3.1 Pro",
+          "modelId": "gemini-3-1-pro",
+          "date": "2024-07-26",
+          "linesOfCode": 333,
+          "path": "/games/2048/gemini-3-1-pro/index.html"
         }
       ]
     },

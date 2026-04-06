@@ -466,11 +466,7 @@
             }
         }
 
-        function slideAndMerge(line, reverse) {
-            if (reverse) line.reverse();
-
-            // Slide non-zero tiles
-            let newLine = line.filter(v => v !== 0);
+        function slideAndMerge(line, reverse) {\n            const workingLine = reverse ? [...line].reverse() : [...line];\n            let newLine = workingLine.filter(v => v !== 0);
             let points = 0;
 
             // Merge tiles

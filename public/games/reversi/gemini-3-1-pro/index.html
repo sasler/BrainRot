@@ -144,6 +144,7 @@
         flippingPieces = [];
         updateScores();
         updateMessage("");
+        if(loopId) cancelAnimationFrame(loopId);
         gameLoop();
     }
 
@@ -201,7 +202,7 @@
 
     function drawPiece(x, y, player) {
         ctx.beginPath();
-        ctx.arc(x, y, pieceRadius, 0, 2 * Math.PI);
+        ctx.arc(x, y,Math.max(0,  pieceRadius), 0, 2 * Math.PI);
 
         if (player === PLAYER) { // Black piece
             ctx.fillStyle = '#1a1a1a';
@@ -228,7 +229,7 @@
             const x = boardPadding + move.c * squareSize + squareSize / 2;
             const y = boardPadding + move.r * squareSize + squareSize / 2;
             ctx.beginPath();
-            ctx.arc(x, y, pieceRadius * 0.3, 0, 2 * Math.PI);
+            ctx.arc(x, y,Math.max(0,  pieceRadius * 0.3), 0, 2 * Math.PI);
             ctx.fill();
         });
         ctx.shadowBlur = 0;
@@ -240,7 +241,7 @@
         drawPieces();
         drawValidMoves();
         updateFlippingPieces();
-        requestAnimationFrame(gameLoop);
+        loopId = requestAnimationFrame(gameLoop);
     }
     
     function updateFlippingPieces() {

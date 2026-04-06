@@ -249,117 +249,40 @@
                 });
                 
                 // Laser collision
-                lasers.forEach((laser, l_idx) => {
-                    laser.y += laser.dy;
-                    if (laser.y < 0) lasers.splice(l_idx, 1);
-                    
-                    bricks.forEach((brick, b_idx) => {
-                        if (brick.status === 1 && laser.x > brick.x && laser.x < brick.x + brick.w && laser.y > brick.y && laser.y < brick.y + brick.h) {
-                            brick.status = 0;
-                            score += brick.points;
-                            createParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color);
-                            createPowerUp(brick.x + brick.w / 2, brick.y + brick.h / 2);
-                            lasers.splice(l_idx, 1);
-                        }
-                    });
-                });
+for (let l_idx = lasers.length - 1; l_idx >= 0; l_idx--) {
+    const laser = lasers[l_idx];
+    laser.y += laser.dy;
+    if (laser.y < 0) {
+        lasers.splice(l_idx, 1);
+        continue;
+    }
+    
+    for (let b_idx = 0; b_idx < bricks.length; b_idx++) {
+        const brick = bricks[b_idx];
+        if (brick.status === 1 && laser.x > brick.x && laser.x < brick.x + brick.w && laser.y > brick.y && laser.y < brick.y + brick.h) {
+            brick.status = 0;
+            score += brick.points;
+            createParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color);
+            createPowerUp(brick.x + brick.w / 2, brick.y + brick.h / 2);
+            lasers.splice(l_idx, 1);
+            break;
+        }
+    }
+}
 
-                // Power-up movement and collection
-                powerUps.forEach((p, index) => {
-                    p.y += p.dy;
-                    if (p.y > height) {
-                        powerUps.splice(index, 1);
-                    }
-                    if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y && p.y < paddle.y + paddle.h) {
-                        activatePowerUp(p.type);
-                        powerUps.splice(index, 1);
-                    }
-                });
-                
-                // Power-up timer
-                if (paddle.powerUpTimer > 0) {
-                    paddle.powerUpTimer--;
-                    if (paddle.powerUpTimer === 0) {
-                        paddle.w = PADDLE_WIDTH;
-                        ball.speed = 5 + level * 0.5; // Reset speed
-                        paddle.powerUp = null;
-                    }
-                }
-
-                // Lose life
-                if (ball.y + ball.radius > height) {
-                    lives--;
-                    if (lives <= 0) {
-                        gameState = 'gameOver';
-                    } else {
-                        resetBallAndPaddle();
-                    }
-                }
-                
-                // Level complete
-                if (allBricksCleared) {
-                    gameState = 'levelComplete';
-                    level++;
-                    setTimeout(() => {
-                        createBricks();
-                        resetBallAndPaddle();
-                        gameState = 'start';
-                    }, 2000);
-                }
-
-                // Update particles
-                particles.forEach((p, index) => {
-                    p.x += p.dx;
-                    p.y += p.dy;
-                    p.life--;
-                    if (p.life <= 0) {
-                        particles.splice(index, 1);
-                    }
-                });
-            }
-
-            function draw() {
-                ctx.fillStyle = '#050510';
-                ctx.fillRect(0, 0, width, height);
-
-                // Draw paddle
-                ctx.shadowColor = NEON_ORANGE;
-                ctx.shadowBlur = paddle.glow;
-                ctx.fillStyle = NEON_ORANGE;
-                ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
-                if (paddle.powerUp === 'laser') {
-                    ctx.fillStyle = NEON_PINK;
-                    ctx.fillRect(paddle.x + 5, paddle.y - 5, 10, 5);
-                    ctx.fillRect(paddle.x + paddle.w - 15, paddle.y - 5, 10, 5);
-                }
-
-                // Draw ball
-                ctx.shadowColor = NEON_BLUE;
-                ctx.shadowBlur = ball.glow;
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                ctx.fillStyle = NEON_BLUE;
-                ctx.fill();
-                ctx.closePath();
-                
-                // Draw ball trail
-                ctx.globalAlpha = 0.5;
-                ctx.beginPath();
-                ctx.arc(ball.x - ball.dx, ball.y - ball.dy, ball.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-
-                // Draw bricks
-                ctx.shadowBlur = 10;
-                bricks.forEach(brick => {
-                    if (brick.status === 1) {
-                        ctx.shadowColor = brick.color;
-                        ctx.fillStyle = brick.color;
-                        ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
-                    }
-                });
-                
-                // Draw lasers
+// Power-up movement and collection
+for (let index = powerUps.length - 1; index >= 0; index--) {
+    const p = powerUps[index];
+    p.y += p.dy;
+    if (p.y > height) {
+        powerUps.splice(index, 1);
+        continue;
+    }
+    if (p.x > paddle.x && p.x < paddle.x + paddle.w && p.y > paddle.y && p.y < paddle.y + paddle.h) {
+        activatePowerUp(p.type);
+        powerUps.splice(index, 1);
+    }
+}
                 ctx.shadowColor = NEON_PINK;
                 ctx.shadowBlur = 15;
                 ctx.fillStyle = NEON_PINK;

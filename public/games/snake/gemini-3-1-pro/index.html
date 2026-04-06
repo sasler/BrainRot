@@ -245,7 +245,7 @@
       return;
     }
     
-    if (!touchStartX || !touchStartY || e.changedTouches.length === 0) return;
+    if (touchStartX == null || touchStartY == null || e.changedTouches.length === 0) return;
 
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
@@ -266,6 +266,7 @@
   function resize() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = window.innerWidth * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     canvas.height = window.innerHeight * dpr;
     ctx.scale(dpr, dpr);
     // Adjust canvas style size
@@ -292,8 +293,8 @@
     toggleMute();
   });
 
-  resize();
   initGame();
+  resize();
   requestAnimationFrame(draw);
   gameLoop();
 

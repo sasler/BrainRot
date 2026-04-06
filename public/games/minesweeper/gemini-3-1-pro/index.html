@@ -252,8 +252,7 @@
                     board.push(row);
                 }
                 
-                grid.addEventListener('click', handleCellClick);
-                grid.addEventListener('contextmenu', handleCellRightClick);
+                
             }
 
             function startTimer() {
@@ -437,6 +436,8 @@
             });
 
 
+            grid.addEventListener('click', handleCellClick);
+            grid.addEventListener('contextmenu', handleCellRightClick);
             init();
         })();
     </script>

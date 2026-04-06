@@ -152,10 +152,10 @@
                 const mapX = Math.floor(newX);
                 const mapY = Math.floor(newY);
 
-                if (map[mapY][mapX] === 0) {
+                if (map[mapY] && map[mapY][mapX] === 0) {
                     player.x = newX;
                     player.y = newY;
-                } else if (map[mapY][mapX] === 2) {
+                } else if (map[mapY] && map[mapY][mapX] === 2) {
                     endGame("You found the exit!");
                 }
             }
@@ -220,9 +220,7 @@
                 ctx.fillRect(miniMapX + player.x * cellSize - 1, miniMapY + player.y * cellSize - 1, 3, 3);
 
 
-                if (gameRunning) {
-                    requestAnimationFrame(draw);
-                }
+                // Fixed: single loop
             }
             
             function loop() {

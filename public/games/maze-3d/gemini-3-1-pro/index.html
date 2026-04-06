@@ -38,7 +38,9 @@
       let nx = p.x, ny = p.y;
       if(keys['ArrowUp']) { nx += Math.cos(p.a)*0.1; ny += Math.sin(p.a)*0.1; }
       if(keys['ArrowDown']) { nx -= Math.cos(p.a)*0.1; ny -= Math.sin(p.a)*0.1; }
-      if(map[ny|0][nx|0] == '0') { p.x=nx; p.y=ny; } else if(map[ny|0][nx|0] == '2') return go(true);
+      let tileX = nx|0, tileY = ny|0;
+      let tile = (tileY < 0 || tileY >= map.length || tileX < 0 || tileX >= map[0].length) ? '1' : map[tileY][tileX];
+      if(tile == '0') { p.x=nx; p.y=ny; } else if(tile == '2') return go(true);
       document.getElementById('t').innerText=((Date.now()-tm)/1000).toFixed(1);
       
       ctx.clearRect(0,0,W,H);
@@ -52,7 +54,8 @@
           else if(map[ry|0][rx|0]=='2') hit = 2;
         }
         let hLine = H / (d*Math.cos(ra-p.a));
-        ctx.fillStyle = hit==2 ? '#0f0' : gb(0,\,\);
+        let cVal = Math.max(0, Math.floor(255-d*25));
+        ctx.fillStyle = hit==2 ? '#0f0' : 'rgb(0,' + cVal + ',' + cVal + ')';
         ctx.fillRect(i, (H-hLine)/2, 4, hLine);
       }
     }

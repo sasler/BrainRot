@@ -21,6 +21,7 @@
   <script>
     let b=[], sc=0, run=false;
     function st() {
+      document.getElementById('over').querySelector('h1').innerText='GAME OVER';
       document.getElementById('start').style.display='none'; document.getElementById('over').style.display='none';
       b=Array(16).fill(0); sc=0; run=true; add(); add(); draw();
       document.getElementById('st').innerText='PLAYING'; document.getElementById('s').innerText=sc;

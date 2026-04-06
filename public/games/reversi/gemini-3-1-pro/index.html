@@ -1,13 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reversi</title>
-  <style>body { background: #050510; color: #e4e4ef; margin: 0; overflow: hidden; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reversi / Othello</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 { color: #f1c40f; margin-bottom: 5px; }
+        .status-container {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin-bottom: 20px;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .player-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .turn-indicator {
+            font-size: 18px;
+            text-align: center;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+        }
+        .disc-icon {
+            width: 30px; height: 30px; border-radius: 50%;
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .black .disc-icon { background: linear-gradient(135deg, #444, #000); }
+        .white .disc-icon { background: linear-gradient(135deg, #fff, #ddd); }
+        
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 2px;
+            background-color: #1a252f;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .cell {
+            background-color: #27ae60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .cell:hover { background-color: #2ecc71; }
+        .cell.valid-move { position: relative; }
+        .cell.valid-move::after {
+            content: '';
+            width: 12px; height: 12px;
+            background-color: rgba(26, 37, 47, 0.4);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .disc {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.4);
+            transition: transform 0.4s, background-color 0.4s;
+        }
+        .disc.B { background: linear-gradient(135deg, #444, #111); }
+        .disc.W { background: linear-gradient(135deg, #fff, #bbb); }
+        
+        button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #c0392b; }
+        #message { margin-top: 15px; font-size: 24px; font-weight: bold; height: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    </style>
 </head>
 <body>
-  <div><h1>REVERSI</h1></div>
-  <script>console.log("Reversi placeholder");</script>
+    <h1>REVERSI</h1>
+    <div class="status-container">
+        <div class="player-score black"><div class="disc-icon"></div> <span id="score-b">2</span></div>
+        <div class="turn-indicator" id="turn-display">Black's Turn</div>
+        <div class="player-score white"><div class="disc-icon"></div> <span id="score-w">2</span></div>
+    </div>
+
+    <div id="board"></div>
+    <div id="message"></div>
+    <button onclick="initGame()">Restart Game</button>
+
+    <script>
+        const boardEl = document.getElementById('board');
+        const scoreB = document.getElementById('score-b');
+        const scoreW = document.getElementById('score-w');
+        const turnDisp = document.getElementById('turn-display');
+        const msgEl = document.getElementById('message');
+        
+        let board = [], curP = 'B', gameOver = false;
+        const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+        function initGame() {
+            board = Array(8).fill(null).map(()=>Array(8).fill(null));
+            board[3][3] = 'W'; board[3][4] = 'B'; board[4][3] = 'B'; board[4][4] = 'W';
+            curP = 'B'; gameOver = false; msgEl.textContent = '';
+            update();
+        }
+
+        function update() {
+            boardEl.innerHTML = '';
+            let valids = getValidMoves(curP);
+            
+            if(valids.length === 0) {
+                curP = curP==='B'?'W':'B';
+                valids = getValidMoves(curP);
+                if(valids.length === 0) { endGame(); return; }
+                else {
+                    msgEl.textContent = `No moves for ${curP==='W'?'Black':'White'}, turn passed.`;
+                    setTimeout(()=>msgEl.textContent='', 2000);
+                }
+            }
+
+            let sb=0, sw=0;
+            for(let r=0; r<8; r++) {
+                for(let c=0; c<8; c++) {
+                    if(board[r][c]==='B') sb++; if(board[r][c]==='W') sw++;
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if(board[r][c]) {
+                        const d = document.createElement('div');
+                        d.className = 'disc ' + board[r][c];
+                        cell.appendChild(d);
+                    } else if(!gameOver && valids.some(v=>v.r===r && v.c===c)) {
+                        cell.classList.add('valid-move');
+                        cell.onclick = () => makeMove(r, c);
+                    }
+                    boardEl.appendChild(cell);
+                }
+            }
+            scoreB.textContent = sb; scoreW.textContent = sw;
+            turnDisp.textContent = `${curP==='B'?'Black':'White'}'s Turn`;
+            turnDisp.style.color = curP==='B' ? '#f1c40f' : '#ecf0f1';
+        }
+
+        function getValidMoves(player) {
+            let moves = [];
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(canPlay(r,c,player).length>0) moves.push({r,c});
+            return moves;
+        }
+
+        function canPlay(r, c, player) {
+            if(board[r][c]) return [];
+            let flips = [];
+            const opp = player==='B'?'W':'B';
+            for(let [dr, dc] of dirs) {
+                let tr=r+dr, tc=c+dc, line=[];
+                while(tr>=0 && tr<8 && tc>=0 && tc<8 && board[tr][tc]===opp) {
+                    line.push({r:tr, c:tc});
+                    tr+=dr; tc+=dc;
+                }
+                if(tr>=0 && tr<8 && tc>=0 && tc<8 && board[tr][tc]===player && line.length>0) {
+                    flips.push(...line);
+                }
+            }
+            return flips;
+        }
+
+        function makeMove(r, c) {
+            if(gameOver) return;
+            const flips = canPlay(r, c, curP);
+            if(flips.length===0) return;
+            
+            board[r][c] = curP;
+            flips.forEach(f => board[f.r][f.c] = curP);
+            curP = curP==='B'?'W':'B';
+            update();
+        }
+
+        function endGame() {
+            gameOver = true;
+            let sb = 0, sw = 0;
+            board.flat().forEach(c => { if(c==='B') sb++; else if(c==='W') sw++; });
+            if(sb>sw) msgEl.textContent = 'Black Wins!';
+            else if(sw>sb) msgEl.textContent = 'White Wins!';
+            else msgEl.textContent = 'It\'s a Tie!';
+            boardEl.innerHTML = '';
+            for(let r=0; r<8; r++) {
+                for(let c=0; c<8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if(board[r][c]) {
+                        const d = document.createElement('div');
+                        d.className = 'disc ' + board[r][c];
+                        cell.appendChild(d);
+                    }
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        initGame();
+    </script>
 </body>
 </html>

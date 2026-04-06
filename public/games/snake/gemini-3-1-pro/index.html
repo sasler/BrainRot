@@ -30,7 +30,13 @@
       document.getElementById('s').innerText = sc; document.getElementById('st').innerText = 'PLAYING';
       spawn(); last = performance.now(); requestAnimationFrame(loop);
     }
-    function spawn() { food = {x: (Math.random()*(W/s)|0)*s, y: (Math.random()*(H/s)|0)*s}; }
+    function spawn() { 
+      let valid = false;
+      while(!valid) {
+        food = {x: (Math.random()*(W/s)|0)*s, y: (Math.random()*(H/s)|0)*s};
+        valid = !snake.some(p => p.x === food.x && p.y === food.y);
+      }
+    }
     window.addEventListener('keydown', e => {
       if(e.key=='ArrowUp' && dir.y!==s) dir={x:0,y:-s}; else if(e.key=='ArrowDown' && dir.y!==-s) dir={x:0,y:s};
       else if(e.key=='ArrowLeft' && dir.x!==s) dir={x:-s,y:0}; else if(e.key=='ArrowRight' && dir.x!==-s) dir={x:s,y:0};

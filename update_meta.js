@@ -1,5 +1,5 @@
 const fs = require('fs');
-const meta = JSON.parse(fs.readFileSync('games-metadata.json'));
+const meta = JSON.parse(fs.readFileSync('games-metadata.json', 'utf8'));
 let today = new Date().toISOString().split('T')[0];
 let games = ['snake','minesweeper','tetris','reversi','breakout','2048','endless-runner','marble-madness','maze-3d'];
 for(let g of games) {

@@ -5,7 +5,7 @@
  * Reads reviews-{modelId}.json files and merges them into the metadata.
  * 
  * Usage: node scripts/assemble-reviews.js <reviews-dir>
- * Example: node scripts/assemble-reviews.js C:\Users\sasch\.copilot\session-state\ca75c1df-4eb7-49af-97d4-02b409ccf772\files
+ * Example: node scripts/assemble-reviews.js ./reviews
  */
 
 const fs = require("fs");

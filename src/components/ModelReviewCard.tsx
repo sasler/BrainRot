@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MODEL_COLORS } from "@/lib/modelColors";
 import type { ModelReviewEntry } from "@/lib/games";
 
 interface ModelReviewCardProps {
   entry: ModelReviewEntry;
   index: number;
 }
-
-const MODEL_COLORS: Record<string, string> = {
-  "sonnet-4-6": "#cc8833",
-  "gpt-5-4": "#10a37f",
-  "gpt-5-4-mini": "#74aa9c",
-  "opus-4-6": "#6366f1",
-  "gemini-3-1-pro": "#4285f4",
-};
 
 export default function ModelReviewCard({ entry, index }: ModelReviewCardProps) {
   const modelColor = MODEL_COLORS[entry.modelId] || "#888";

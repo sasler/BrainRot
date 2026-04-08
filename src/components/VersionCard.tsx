@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MODEL_COLORS } from "@/lib/modelColors";
 import type { Game, GameVersion } from "@/lib/games";
 
 interface VersionCardProps {
@@ -9,14 +10,6 @@ interface VersionCardProps {
   version: GameVersion;
   index: number;
 }
-
-const MODEL_COLORS: Record<string, string> = {
-  "sonnet-4-6": "#cc8833",
-  "gpt-5-4": "#10a37f",
-  "gpt-5-4-mini": "#74aa9c",
-  "opus-4-6": "#6366f1",
-  "gemini-3-1-pro": "#4285f4",
-};
 
 const FEATURE_LABELS: Record<string, string> = {
   sound: "🔊 Sound",

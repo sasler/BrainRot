@@ -47,8 +47,49 @@ export interface GamesData {
   modelReviews?: ModelReviewEntry[];
 }
 
-// Cast through unknown since JSON may contain legacy `comment` field during migration
-const typedData = gamesData as unknown as GamesData;
+// Normalize legacy `comment` (string) fields to `comments` (string[]) arrays
+type LegacyReview = {
+  from: string;
+  comments?: string[];
+  comment?: string;
+};
+
+function normalizeReview(review: LegacyReview): AiReview {
+  return {
+    from: review.from,
+    comments:
+      review.comments ?? (review.comment !== undefined ? [review.comment] : []),
+  };
+}
+
+type RawGamesData = {
+  games: Array<Omit<Game, "versions"> & {
+    versions: Array<Omit<GameVersion, "aiReviews"> & {
+      aiReviews?: LegacyReview[];
+    }>;
+  }>;
+  modelReviews?: Array<Omit<ModelReviewEntry, "reviews"> & {
+    reviews: LegacyReview[];
+  }>;
+};
+
+function normalizeGamesData(data: RawGamesData): GamesData {
+  return {
+    games: data.games.map((game) => ({
+      ...game,
+      versions: game.versions.map((version) => ({
+        ...version,
+        aiReviews: version.aiReviews?.map(normalizeReview),
+      })),
+    })),
+    modelReviews: data.modelReviews?.map((entry) => ({
+      ...entry,
+      reviews: entry.reviews.map(normalizeReview),
+    })),
+  };
+}
+
+const typedData = normalizeGamesData(gamesData as unknown as RawGamesData);
 
 export function getGames(): Game[] {
   return typedData.games;

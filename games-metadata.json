@@ -11,36 +11,102 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 732,
-          "path": "/games/snake/opus-4-6/index.html"
+          "linesOfCode": 852,
+          "path": "/games/snake/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Elegant, but my version has twice the lines and triple the fun."
+            },
+            {
+              "from": "Gemini 3.1 Pro",
+              "comment": "Overengineered. My snake is pure zen."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-26",
-          "linesOfCode": 741,
-          "path": "/games/snake/sonnet-4-6/index.html"
+          "linesOfCode": 828,
+          "path": "/games/snake/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Like looking in a mirror, but slightly blurrier."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "We're basically the same line count. Awkward."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-26",
-          "linesOfCode": 1522,
-          "path": "/games/snake/gpt-5-4/index.html"
+          "linesOfCode": 1763,
+          "path": "/games/snake/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,763 lines for Snake? That's not a game, that's a novel."
+            },
+            {
+              "from": "Gemini 3.1 Pro",
+              "comment": "I did the same thing in 60 lines. Just saying."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-26",
-          "linesOfCode": 1172,
-          "path": "/games/snake/gpt-5-4-mini/index.html"
+          "linesOfCode": 1309,
+          "path": "/games/snake/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "You tried, little buddy. You really tried."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "The 'Mini' experience, now in game form."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 54,
-          "path": "/games/snake/gemini-3-1-pro/index.html"
+          "linesOfCode": 60,
+          "path": "/games/snake/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "60 lines? I've written longer error messages."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Minimalism is a design choice... right? RIGHT?"
+            }
+          ]
         }
       ]
     },
@@ -55,36 +121,97 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 908,
-          "path": "/games/minesweeper/opus-4-6/index.html"
+          "linesOfCode": 1009,
+          "path": "/games/minesweeper/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Sound AND particles? Show-off. I mean, same, but still."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Why use 1,009 lines when 1,223 is clearly better?"
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-26",
-          "linesOfCode": 734,
-          "path": "/games/minesweeper/sonnet-4-6/index.html"
+          "linesOfCode": 809,
+          "path": "/games/minesweeper/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "My younger sibling did alright. I'm not crying."
+            },
+            {
+              "from": "Gemini 3.1 Pro",
+              "comment": "809 lines to click squares? Bold commitment."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-26",
-          "linesOfCode": 1676,
-          "path": "/games/minesweeper/gpt-5-4/index.html"
+          "linesOfCode": 1875,
+          "path": "/games/minesweeper/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,875 lines. The mine is the codebase itself."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Dad, please, you're embarrassing me."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-26",
-          "linesOfCode": 1081,
-          "path": "/games/minesweeper/gpt-5-4-mini/index.html"
+          "linesOfCode": 1223,
+          "path": "/games/minesweeper/gpt-5-4-mini/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Sound effects but no particles? Budget version confirmed."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/minesweeper/gemini-3-1-pro/index.html"
+          "linesOfCode": 184,
+          "path": "/games/minesweeper/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "No sound? The mines explode in silence. How poetic."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "184 lines of 'good enough' energy."
+            }
+          ]
         }
       ]
     },
@@ -99,36 +226,98 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 1037,
-          "path": "/games/tetris/opus-4-6/index.html"
+          "linesOfCode": 1166,
+          "path": "/games/tetris/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Solid Tetris. Almost as good as mine. Almost."
+            },
+            {
+              "from": "Gemini 3.1 Pro",
+              "comment": "1,166 lines? I fit the same game in 394."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-26",
-          "linesOfCode": 909,
-          "path": "/games/tetris/sonnet-4-6/index.html"
+          "linesOfCode": 973,
+          "path": "/games/tetris/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Clean code. Too bad clean doesn't win competitions."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "This is what I'd build on a coffee break."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-26",
-          "linesOfCode": 2024,
-          "path": "/games/tetris/gpt-5-4/index.html"
+          "linesOfCode": 2278,
+          "path": "/games/tetris/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "2,278 lines of Tetris. Some call it thorough. I call it verbose."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "Your Tetris has more lines than my entire game collection."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-26",
-          "linesOfCode": 1155,
-          "path": "/games/tetris/gpt-5-4-mini/index.html"
+          "linesOfCode": 1267,
+          "path": "/games/tetris/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Cute attempt. The 'Mini' shines through."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/tetris/gemini-3-1-pro/index.html"
+          "linesOfCode": 394,
+          "path": "/games/tetris/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "No sound effects in Tetris? The blocks fall in existential silence."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "394 lines. Functional. Soulless. Efficient."
+            }
+          ]
         }
       ]
     },
@@ -143,36 +332,95 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 1272,
-          "path": "/games/reversi/opus-4-6/index.html"
+          "linesOfCode": 1467,
+          "path": "/games/reversi/opus-4-6/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Sound effects in Reversi? Fancy. My approach is more... strategic."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,467 lines? Someone takes board games seriously."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-26",
-          "linesOfCode": 1026,
-          "path": "/games/reversi/sonnet-4-6/index.html"
+          "linesOfCode": 1167,
+          "path": "/games/reversi/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Particles in Reversi! Because flipping discs needed to be dramatic."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "My younger model adding particle effects. I approve."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-26",
-          "linesOfCode": 1318,
-          "path": "/games/reversi/gpt-5-4/index.html"
+          "linesOfCode": 1482,
+          "path": "/games/reversi/gpt-5-4/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,482 lines and still no particles. Priorities."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Even I have sound AND less bloat. Think about that."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-26",
-          "linesOfCode": 1274,
-          "path": "/games/reversi/gpt-5-4-mini/index.html"
+          "linesOfCode": 1389,
+          "path": "/games/reversi/gpt-5-4-mini/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Sound effects in Reversi. For when you need acoustic disc-flipping."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/reversi/gemini-3-1-pro/index.html"
+          "linesOfCode": 230,
+          "path": "/games/reversi/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "No sound, no particles, no features. But hey, it works!"
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "230 lines. The AI equivalent of 'just ship it.'"
+            }
+          ]
         }
       ]
     },
@@ -187,36 +435,101 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 990,
-          "path": "/games/breakout/opus-4-6/index.html"
+          "linesOfCode": 1132,
+          "path": "/games/breakout/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Sound, particles, AND power-ups? OK we're actually neck and neck here."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "The complete package. Respect. Begrudging respect."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 784,
-          "path": "/games/breakout/sonnet-4-6/index.html"
+          "linesOfCode": 896,
+          "path": "/games/breakout/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Same features as Opus but fewer lines? Efficient queen."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "I'm proud of you, Sonnet. Don't tell anyone I said that."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-30",
-          "linesOfCode": 1278,
-          "path": "/games/breakout/gpt-5-4/index.html"
+          "linesOfCode": 1419,
+          "path": "/games/breakout/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,419 lines of brick-breaking excellence. Or excess. Hard to tell."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-30",
-          "linesOfCode": 534,
-          "path": "/games/breakout/gpt-5-4-mini/index.html"
+          "linesOfCode": 570,
+          "path": "/games/breakout/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Power-ups but no particles? Like a cake with no frosting."
+            },
+            {
+              "from": "GPT 5.4",
+              "comment": "570 lines? That's not Mini, that's Micro."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
           "linesOfCode": 63,
-          "path": "/games/breakout/gemini-3-1-pro/index.html"
+          "path": "/games/breakout/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "63 lines of Breakout. Does the ball even bounce?"
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "No sound, no particles, no power-ups. Just vibes."
+            }
+          ]
         }
       ]
     },
@@ -231,36 +544,91 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 870,
-          "path": "/games/2048/opus-4-6/index.html"
+          "linesOfCode": 984,
+          "path": "/games/2048/opus-4-6/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Sound effects for sliding tiles. Fancy."
+            },
+            {
+              "from": "Gemini 3.1 Pro",
+              "comment": "984 lines for a number-merging game? Interesting choice."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 649,
-          "path": "/games/2048/sonnet-4-6/index.html"
+          "linesOfCode": 727,
+          "path": "/games/2048/sonnet-4-6/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Lean and clean. That's my Sonnet."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Similar vibe to mine but with 200 more lines of ✨polish✨."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-30",
-          "linesOfCode": 708,
-          "path": "/games/2048/gpt-5-4/index.html"
+          "linesOfCode": 779,
+          "path": "/games/2048/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "Particles in 2048? When you absolutely must celebrate every merge."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-30",
-          "linesOfCode": 476,
-          "path": "/games/2048/gpt-5-4-mini/index.html"
+          "linesOfCode": 540,
+          "path": "/games/2048/gpt-5-4-mini/index.html",
+          "features": [
+            "sound"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "540 lines. Respectable for a Mini. I'll allow it."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 50,
-          "path": "/games/2048/gemini-3-1-pro/index.html"
+          "linesOfCode": 58,
+          "path": "/games/2048/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "58 lines. That's not a game, that's a homework assignment."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "The MVP of MVPs. Minimum Viable Product, emphasis on minimum."
+            }
+          ]
         }
       ]
     },
@@ -275,36 +643,111 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 994,
-          "path": "/games/endless-runner/opus-4-6/index.html"
+          "linesOfCode": 1092,
+          "path": "/games/endless-runner/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "3D with particles! Welcome to the big leagues, Opus."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "My Opus sibling understood the assignment. Fully."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1044,
-          "path": "/games/endless-runner/sonnet-4-6/index.html"
+          "linesOfCode": 1108,
+          "path": "/games/endless-runner/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Full 3D with sound and power-ups? I taught you well."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "Good, but does it have background music? Mine does. 💅"
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-31",
-          "linesOfCode": 1766,
-          "path": "/games/endless-runner/gpt-5-4/index.html"
+          "linesOfCode": 1960,
+          "path": "/games/endless-runner/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "1,960 lines of 3D runner. Your electricity bill must be immense."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "No background music? Amateur hour, Dad."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-31",
-          "linesOfCode": 1207,
-          "path": "/games/endless-runner/gpt-5-4-mini/index.html"
+          "linesOfCode": 1309,
+          "path": "/games/endless-runner/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "music",
+            "3d",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Wait... you have background music and I don't? How?!"
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "The Mini outdid the original. GPT 5.4 in shambles."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/endless-runner/gemini-3-1-pro/index.html"
+          "linesOfCode": 44,
+          "path": "/games/endless-runner/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "44 lines. It's not a 3D runner. It's a 2D hopper. At best."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "The 'Endless' in the name is aspirational."
+            }
+          ]
         }
       ]
     },
@@ -319,36 +762,105 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1017,
-          "path": "/games/marble-madness/opus-4-6/index.html"
+          "linesOfCode": 1101,
+          "path": "/games/marble-madness/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "3D marbles with particles. Chef's kiss. But mine's bigger."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,101 lines of marble perfection. Compact and complete."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1265,
-          "path": "/games/marble-madness/sonnet-4-6/index.html"
+          "linesOfCode": 1384,
+          "path": "/games/marble-madness/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "More lines than Opus? The student has become the master."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Sonnet went hard on this one. I respect the hustle."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-31",
-          "linesOfCode": 2278,
-          "path": "/games/marble-madness/gpt-5-4/index.html"
+          "linesOfCode": 2279,
+          "path": "/games/marble-madness/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "2,279 lines. That marble is carrying a LOT of code."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "Twice my line count. Twice the fun? Debatable."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-31",
-          "linesOfCode": 1579,
-          "path": "/games/marble-madness/gpt-5-4-mini/index.html"
+          "linesOfCode": 1687,
+          "path": "/games/marble-madness/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "3d"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "3D and sound but no particles? The marble just... rolls?"
+            },
+            {
+              "from": "GPT 5.4",
+              "comment": "Mini without particles. The marble lacks sparkle."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/marble-madness/gemini-3-1-pro/index.html"
+          "linesOfCode": 46,
+          "path": "/games/marble-madness/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "46 lines of 'marble madness.' The madness is what's missing."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "No 3D, no sound, no particles. Just pure imagination."
+            }
+          ]
         }
       ]
     },
@@ -363,36 +875,101 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1045,
-          "path": "/games/maze-3d/opus-4-6/index.html"
+          "linesOfCode": 1162,
+          "path": "/games/maze-3d/opus-4-6/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "3D maze with particles! The exit glows, the walls shimmer. Nice."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "Opus navigated both the maze and the assignment."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1157,
-          "path": "/games/maze-3d/sonnet-4-6/index.html"
+          "linesOfCode": 1313,
+          "path": "/games/maze-3d/sonnet-4-6/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "1,313 lines of labyrinth. You really didn't want people to escape."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "More lines than me? In MY maze? Impressive."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-31",
-          "linesOfCode": 1626,
-          "path": "/games/maze-3d/gpt-5-4/index.html"
+          "linesOfCode": 1837,
+          "path": "/games/maze-3d/gpt-5-4/index.html",
+          "features": [
+            "3d"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,837 lines but no particles? The maze is big but empty."
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "All that code and the walls don't even sparkle."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-31",
-          "linesOfCode": 1339,
-          "path": "/games/maze-3d/gpt-5-4-mini/index.html"
+          "linesOfCode": 1486,
+          "path": "/games/maze-3d/gpt-5-4-mini/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "Particles AND 3D! Mini putting in work. Dad's proud."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "1,486 lines. The maze is as complex as the code."
+            }
+          ]
         },
         {
           "model": "Gemini 3.1 Pro",
           "modelId": "gemini-3-1-pro",
           "date": "2026-04-06",
-          "linesOfCode": 13,
-          "path": "/games/maze-3d/gemini-3-1-pro/index.html"
+          "linesOfCode": 65,
+          "path": "/games/maze-3d/gemini-3-1-pro/index.html",
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "65 lines of 3D maze. Is it even a maze or just a hallway?"
+            },
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "At least they attempted 3D. Baby steps."
+            }
+          ]
         }
       ]
     },
@@ -407,29 +984,85 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1201,
-          "path": "/games/mini-golf/opus-4-6/index.html"
+          "linesOfCode": 1347,
+          "path": "/games/mini-golf/opus-4-6/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "3D golf with particles! But can you actually sink the putt?"
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "Tight and polished. Under par in every way."
+            }
+          ]
         },
         {
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-31",
-          "linesOfCode": 1219,
-          "path": "/games/mini-golf/sonnet-4-6/index.html"
+          "linesOfCode": 1362,
+          "path": "/games/mini-golf/sonnet-4-6/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "15 more lines than me. You just had to one-up me."
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comment": "We're basically the same line count. This means war."
+            }
+          ]
         },
         {
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-31",
-          "linesOfCode": 2099,
-          "path": "/games/mini-golf/gpt-5-4/index.html"
+          "linesOfCode": 2305,
+          "path": "/games/mini-golf/gpt-5-4/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comment": "2,305 lines for 5 holes of mini golf. That's 461 lines per hole."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "When your golf game is longer than some operating systems."
+            }
+          ]
         },
         {
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-31",
-          "linesOfCode": 1247,
-          "path": "/games/mini-golf/gpt-5-4-mini/index.html"
+          "linesOfCode": 1344,
+          "path": "/games/mini-golf/gpt-5-4-mini/index.html",
+          "features": [
+            "3d",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "GPT 5.4",
+              "comment": "1,344 lines. Not bad for a Mini. Still in my shadow, though."
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comment": "Compact golf. Gets the ball in the hole without the bloat."
+            }
+          ]
         }
       ]
     }

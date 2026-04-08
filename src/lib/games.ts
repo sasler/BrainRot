@@ -1,11 +1,18 @@
 import gamesData from "../../games-metadata.json";
 
+export interface AiReview {
+  from: string;
+  comment: string;
+}
+
 export interface GameVersion {
   model: string;
   modelId: string;
   date: string;
   linesOfCode: number;
   path: string;
+  features?: string[];
+  aiReviews?: AiReview[];
 }
 
 export interface Game {

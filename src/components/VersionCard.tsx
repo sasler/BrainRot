@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MODEL_COLORS } from "@/lib/modelColors";
 import type { Game, GameVersion } from "@/lib/games";
 
 interface VersionCardProps {
@@ -6,14 +10,6 @@ interface VersionCardProps {
   version: GameVersion;
   index: number;
 }
-
-const MODEL_COLORS: Record<string, string> = {
-  "sonnet-4-6": "#cc8833",
-  "gpt-5-4": "#10a37f",
-  "gpt-5-4-mini": "#74aa9c",
-  "opus-4-6": "#6366f1",
-  "gemini-3-1-pro": "#4285f4",
-};
 
 const FEATURE_LABELS: Record<string, string> = {
   sound: "🔊 Sound",
@@ -33,6 +29,16 @@ const FEATURE_COLORS: Record<string, string> = {
 
 export default function VersionCard({ game, version, index }: VersionCardProps) {
   const modelColor = MODEL_COLORS[version.modelId] || game.accentColor;
+  const [review, setReview] = useState<{ from: string; comment: string } | null>(null);
+
+  useEffect(() => {
+    if (!version.aiReviews || version.aiReviews.length === 0) return;
+    const reviewer = version.aiReviews[Math.floor(Math.random() * version.aiReviews.length)];
+    if (!reviewer.comments || reviewer.comments.length === 0) return;
+    const comment = reviewer.comments[Math.floor(Math.random() * reviewer.comments.length)];
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR-safe: must randomize after hydration to avoid mismatch
+    setReview({ from: reviewer.from, comment });
+  }, [version.aiReviews]);
 
   return (
     <Link
@@ -96,13 +102,13 @@ export default function VersionCard({ game, version, index }: VersionCardProps) 
         </div>
       )}
 
-      {/* AI review quote */}
-      {version.aiReviews && version.aiReviews.length > 0 && (
+      {/* AI review quote — randomly selected */}
+      {review && (
         <div className="mb-4">
           <p className="text-xs italic leading-relaxed text-foreground/50">
-            &ldquo;{version.aiReviews[0].comment}&rdquo;{" "}
+            &ldquo;{review.comment}&rdquo;{" "}
             <span style={{ color: modelColor }}>
-              — {version.aiReviews[0].from}
+              — {review.from}
             </span>
           </p>
         </div>

@@ -9,7 +9,18 @@ export type FeatureId =
 
 export interface AiReview {
   from: string;
-  comment: string;
+  comments: string[];
+}
+
+export interface ModelReview {
+  from: string;
+  comments: string[];
+}
+
+export interface ModelReviewEntry {
+  model: string;
+  modelId: string;
+  reviews: ModelReview[];
 }
 
 export interface GameVersion {
@@ -33,10 +44,55 @@ export interface Game {
 
 export interface GamesData {
   games: Game[];
+  modelReviews?: ModelReviewEntry[];
 }
 
+// Normalize legacy `comment` (string) fields to `comments` (string[]) arrays
+type LegacyReview = {
+  from: string;
+  comments?: string[];
+  comment?: string;
+};
+
+function normalizeReview(review: LegacyReview): AiReview {
+  return {
+    from: review.from,
+    comments:
+      review.comments ?? (review.comment !== undefined ? [review.comment] : []),
+  };
+}
+
+type RawGamesData = {
+  games: Array<Omit<Game, "versions"> & {
+    versions: Array<Omit<GameVersion, "aiReviews"> & {
+      aiReviews?: LegacyReview[];
+    }>;
+  }>;
+  modelReviews?: Array<Omit<ModelReviewEntry, "reviews"> & {
+    reviews: LegacyReview[];
+  }>;
+};
+
+function normalizeGamesData(data: RawGamesData): GamesData {
+  return {
+    games: data.games.map((game) => ({
+      ...game,
+      versions: game.versions.map((version) => ({
+        ...version,
+        aiReviews: version.aiReviews?.map(normalizeReview),
+      })),
+    })),
+    modelReviews: data.modelReviews?.map((entry) => ({
+      ...entry,
+      reviews: entry.reviews.map(normalizeReview),
+    })),
+  };
+}
+
+const typedData = normalizeGamesData(gamesData as unknown as RawGamesData);
+
 export function getGames(): Game[] {
-  return (gamesData as GamesData).games;
+  return typedData.games;
 }
 
 export function getGame(id: string): Game | undefined {
@@ -61,4 +117,8 @@ export function getUniqueModels(): string[] {
     game.versions.forEach((v) => models.add(v.model)),
   );
   return Array.from(models);
+}
+
+export function getModelReviews(): ModelReviewEntry[] {
+  return typedData.modelReviews ?? [];
 }

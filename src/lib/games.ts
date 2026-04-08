@@ -1,11 +1,25 @@
 import gamesData from "../../games-metadata.json";
 
+export type FeatureId =
+  | "sound"
+  | "music"
+  | "3d"
+  | "particles"
+  | "powerups";
+
+export interface AiReview {
+  from: string;
+  comment: string;
+}
+
 export interface GameVersion {
   model: string;
   modelId: string;
   date: string;
   linesOfCode: number;
   path: string;
+  features?: FeatureId[];
+  aiReviews?: AiReview[];
 }
 
 export interface Game {

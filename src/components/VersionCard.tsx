@@ -11,6 +11,24 @@ const MODEL_COLORS: Record<string, string> = {
   "sonnet-4-6": "#cc8833",
   "gpt-5-4": "#10a37f",
   "gpt-5-4-mini": "#74aa9c",
+  "opus-4-6": "#6366f1",
+  "gemini-3-1-pro": "#4285f4",
+};
+
+const FEATURE_LABELS: Record<string, string> = {
+  sound: "🔊 Sound",
+  music: "🎵 Music",
+  "3d": "🎮 3D",
+  particles: "✨ Particles",
+  powerups: "⚡ Power-ups",
+};
+
+const FEATURE_COLORS: Record<string, string> = {
+  sound: "rgba(99, 102, 241, 0.25)",
+  music: "rgba(168, 85, 247, 0.25)",
+  "3d": "rgba(16, 185, 129, 0.25)",
+  particles: "rgba(245, 158, 11, 0.25)",
+  powerups: "rgba(239, 68, 68, 0.25)",
 };
 
 export default function VersionCard({ game, version, index }: VersionCardProps) {
@@ -59,6 +77,36 @@ export default function VersionCard({ game, version, index }: VersionCardProps) 
           </div>
         </div>
       </div>
+
+      {/* Feature badges */}
+      {version.features && version.features.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {version.features.map((feature) => (
+            <span
+              key={feature}
+              className="rounded-full px-2.5 py-0.5 font-mono text-[10px] text-foreground/90"
+              style={{
+                backgroundColor:
+                  FEATURE_COLORS[feature] || "rgba(255,255,255,0.1)",
+              }}
+            >
+              {FEATURE_LABELS[feature] || feature}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* AI review quote */}
+      {version.aiReviews && version.aiReviews.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs italic leading-relaxed text-foreground/50">
+            &ldquo;{version.aiReviews[0].comment}&rdquo;{" "}
+            <span style={{ color: modelColor }}>
+              — {version.aiReviews[0].from}
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* Play button */}
       <div className="mt-auto flex items-center justify-between">

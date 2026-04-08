@@ -51,16 +51,16 @@ test.describe("BrainRot Games — Smoke Tests", () => {
       await page.goto(`/games/${game}`);
 
       // Breadcrumb
-      await expect(page.getByRole("main").getByRole("link", { name: "Home" })).toBeVisible();
+      await expect(page.getByRole("main").getByRole("link", { name: "Home", exact: true })).toBeVisible();
 
       // AI implementations section (games have versions now)
       await expect(page.getByText("AI IMPLEMENTATIONS")).toBeVisible();
 
-      // Should show version cards for all 4 models
-      await expect(page.getByText("Claude Opus 4.6")).toBeVisible();
-      await expect(page.getByText("Claude Sonnet 4.6")).toBeVisible();
-      await expect(page.getByText("GPT 5.4", { exact: true })).toBeVisible();
-      await expect(page.getByText("GPT 5.4 Mini")).toBeVisible();
+      // Should show version cards for all 4 models (use heading role to avoid matching review quotes)
+      await expect(page.getByRole("heading", { name: "Claude Opus 4.6" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Claude Sonnet 4.6" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "GPT 5.4", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "GPT 5.4 Mini" })).toBeVisible();
     }
   });
 

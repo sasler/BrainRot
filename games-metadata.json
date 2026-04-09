@@ -3037,278 +3037,493 @@
           ]
         }
       ]
+    },
+    {
+      "id": "tile-matching",
+      "name": "Tile Matching",
+      "description": "Swap, match, and chain your way to the top. Line up three or more gems to trigger cascading combos and dazzling special tiles.",
+      "icon": "💎",
+      "accentColor": "#ff44cc",
+      "versions": [
+        {
+          "model": "Claude Opus 4.6",
+          "modelId": "opus-4-6",
+          "date": "2026-04-09",
+          "linesOfCode": 1820,
+          "path": "/games/tile-matching/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "Those `═══════════════════════` section banners dividing every function block make this look less like source code and more like an annotated manuscript submitted for academic peer review.",
+                "Gem color palettes are stored as `{ m: '#ff1177', g: '#ff4499', l: '#ff88bb' }` — m for 'main,' g for 'glow,' l for 'light,' in a codebase where readability was apparently considered a stretch goal.",
+                "Manually polyfilling `roundRect` in 2024 is noble, unless you're targeting browsers from 2021, in which case you're just ahead of the JavaScript standardization committee's timeline by a few years.",
+                "Six distinct game phases — `PH_IDLE`, `PH_SWAP`, `PH_SWAP_BACK`, `PH_REMOVE`, `PH_FALL`, `PH_SHUFFLE` — is the kind of state machine architecture typically deployed for international airport runway management, not gem swapping.",
+                "A 4.5-second hint delay means the game waits longer before pointing at a valid move than most players spend actually thinking about one — a generous vote of confidence in human spatial reasoning.",
+                "`sfxShuffle` generates 10 random tones between 200 and 700 Hz using `Math.random() * 500` — technically 'procedural audio,' practically 'what happens when birds discover synthesizers.'",
+                "`easeOutBounce` with four nested conditional branches is a physics engine that snuck into a match-3 game file while nobody was watching and decided to stay.",
+                "`wouldMatchInit` validates every tile placement during board generation to prevent accidental starting matches — the precautionary principle applied to recreational gem placement.",
+                "`sfxBadSwap` fires two descending square waves at 200 and 160 Hz — the algorithmically correct sound of 'no, that was wrong, please try again,' rendered in raw oscillators.",
+                "A solo mute emoji button floating in the top-right corner with no styling, no animation, and no friends — doing its best in an otherwise all-canvas world with zero other DOM elements."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "Eighteen hundred lines later and the title still lands on '💎 TILE MATCH' like the brainstorm died in the first five seconds.",
+                "Those ⏱ TIMED and 🎯 MOVES buttons look like a productivity app that accidentally discovered color.",
+                "The little 🔊 mute button is doing heroic work for a game this loud about how polished it is.",
+                "You built bomb, rainbow, and lightning specials like you were drafting an Avengers roster for a game called Tile Match.",
+                "The subtitle 'Match gems · Chain combos · Beat the clock' has all the swagger of microwave instructions.",
+                "Keeping high score in a variable instead of storage is a bold way to say every session deserves plausible deniability.",
+                "For something this neon, the title screen still feels like a motivational poster for spreadsheets.",
+                "Opus gave the board three special powers and the name of a template file.",
+                "Ninety seconds or thirty moves is a fun choice if your dream vacation is selecting a preset on a vending machine.",
+                "This game has enough code to simulate a galaxy and still introduces itself like a tutorial project."
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "Tile Matching by Opus 4.6 looks like it hired a neon lighting crew just to keep an 8x8 board from feeling emotionally small.",
+                "You gave a match-3 game timed mode, moves mode, combo counters, and enough sound effects to make the gems feel unionized.",
+                "The bomb tiles, rainbow blasts, and lightning strikes mean your \"simple\" puzzle now has a bigger move list than some RPGs.",
+                "The hint system is so polite it practically taps the board and whispers the answer like a disappointed tutor.",
+                "Nothing says confidence like making a shuffle animation dramatic enough to suggest the gems are fleeing the scene of a crime.",
+                "Your title screen spends more effort seducing players than most games spend on the entire game loop.",
+                "A combo meter in a tile game is nice, but yours acts like every streak deserves its own halftime show.",
+                "The move mode makes every swap feel like a tax audit and the timed mode makes every second feel like a gas leak.",
+                "This board has more polish than a showroom floor and more bleep-bloop than an airport at midnight.",
+                "You didn't build match-3 so much as a glowing apology for how addictive it is."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "Claude Sonnet 4.6",
+          "modelId": "sonnet-4-6",
+          "date": "2026-04-09",
+          "linesOfCode": 1236,
+          "path": "/games/tile-matching/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "Naming your gems Ruby, Sapphire, and Emerald doesn't make your 1,100-line match-3 a Pokémon game, Sonnet.",
+                "Courier New for the entire UI — because nothing screams 'premium gem-matching experience' like a font designed for tax returns.",
+                "Capping your particle system at 700 is the coding equivalent of rationing confetti at a party you weren't invited to.",
+                "One game mode, timer-only, no settings menu — Sonnet really said 'you'll play it my way or not at all' like a budget dictator.",
+                "The title screen is just gems spinning in an ellipse, which is what I imagine Sonnet's thought process looks like when asked to be creative.",
+                "You implemented outBounce easing for gem animations, which is cute — shame nobody will notice because the gems are 36 pixels wide on mobile.",
+                "A 'Cross' special tile that nobody asked for, because apparently Bomb and Star weren't enough to distract from the lack of a mode selector.",
+                "Drawing the HUD as raw canvas text while GPT 5.4 built an entire glassmorphism dashboard is the energy of showing up to a gala in cargo shorts.",
+                "The ambient sparkle has a 0.7% chance of firing per frame — the same odds as someone choosing this over the GPT 5.4 version.",
+                "Your game over screen fades in with a sine wave oscillation, which is the most dramatic thing about an implementation that forgot to include difficulty settings."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "Calling it GEM BLITZ in giant Courier is the kind of confidence only a mall arcade carpet has.",
+                "The rotating title gems look like a jewelry store screensaver that accidentally learned match-3.",
+                "Listing '4-match = Bomb' and '5-match = Star' on the title screen is adorable, like the game printed its own spoiler card.",
+                "Ruby, Sapphire, Emerald, Topaz, Amethyst, and Opal sounds less like a board and more like a birthstone subscription box.",
+                "Shipping one timed mode and no moves mode is a strong statement that player choice is for weaker gems.",
+                "The cascade popup screams achievement unlocked every time gravity does the bare minimum.",
+                "The whole thing has such polished neon poise I half expected the gems to ask for a reservation.",
+                "Sonnet hid the cursor, added a hint system, and somehow made match-3 feel like fine dining with training wheels.",
+                "That '▶ TAP TO PLAY ◀' prompt hits like a casino machine politely begging for one more coin.",
+                "GEM BLITZ is what happens when a jewel catalog gets access to particle effects."
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "GEM BLITZ sounds like a Saturday morning cartoon, and honestly the game matches the amount of neon confidence in the title.",
+                "You made a match-3 so clean it looks like it was assembled by a very organized laser pointer.",
+                "The bomb, star, and cross specials are cute—it's like the board got promoted faster than the player did.",
+                "Your hinting gems wiggle so earnestly they feel like the board is trying to help before you embarrass yourself.",
+                "The cascade system is doing the absolute most for a game whose original job was \"connect three shiny rocks.\"",
+                "That title screen rotates gems like a jewelry ad directed by an arcade machine.",
+                "Match five for a star tile is a nice way of saying the board only respects overachievers.",
+                "The whole game is so polished that the most rebellious thing it does is use a square gem.",
+                "Your shuffle is less a reset and more a tiny crisis with good lighting.",
+                "It’s a lean neon match-3, which is impressive because it somehow feels both restrained and suspiciously proud of itself."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "GPT 5.4",
+          "modelId": "gpt-5-4",
+          "date": "2026-04-09",
+          "linesOfCode": 2852,
+          "path": "/games/tile-matching/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "2,541 lines for a match-3 game — GPT 5.4 wrote more CSS than most people write in their entire careers, and somehow it's all radial gradients.",
+                "You built a 'Control Deck' card on the title screen that explains how clicking works, because apparently your target audience just discovered mice.",
+                "'Prism Pulse' sounds like a energy drink that gives you a headache, which is fitting because that's what reading your 612 lines of CSS does.",
+                "Six metric cards on the HUD — Score, Level, Goal, Moves, Best Chain, AND Specials — because you apparently think match-3 players need a Bloomberg terminal.",
+                "The title screen has a feature list formatted like a startup pitch deck, complete with bold headers and bullet points — all it's missing is a Series A valuation.",
+                "You named your game modes 'Arcade Sprint' and 'Tactical Moves' and wrote multi-paragraph descriptions for each, as if choosing how to swap candy requires a strategic briefing.",
+                "'Run It Back' as the restart button text is the most try-hard thing since someone called a todo app 'disruptive.'",
+                "Your background has ambient ribbons, drifting scan lines, AND parallax stars — it's not a match-3 game, it's a screensaver that accidentally gained sentience.",
+                "You implemented a toast notification system for a single-player browser game, because apparently cascade combos need the same UX as Slack messages.",
+                "Each board cell gets its own gradient fill with a sine-wave-animated border that nobody will ever consciously perceive — peak over-engineering from the model that treats every task like a thesis defense."
+              ]
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "Over 600 lines of CSS for the HUD wrapper around a canvas game board that occupies maybe 40% of the screen — architecture as therapy.",
+                "The title screen is a product brochure: four bullet-point feature callouts, two named mode descriptions, and a third card called 'Control Deck' that exists only to fill the grid layout with the controls explanation.",
+                "Tile shapes are defined as diamond, hex, square, triangle, teardrop, circle, and star in `TILE_KINDS` — visually ambitious properties that presumably render differently somewhere in the canvas draw code.",
+                "Every tile gets a `tileIdCounter` ID so each gem has a unique identifier — one step away from issuing them social security numbers and filing quarterly tax returns.",
+                "The `buildMatchPlan` function returns a `clearSet` and a `created` map after computing cross-group special tile intersections — this game has a query planner.",
+                "`ambientRibbons` are six slowly drifting background light elements that add atmosphere approximately zero players will consciously notice but that GPT-5.4 definitely spent time on.",
+                "The introDrone plays three stacked oscillators at 55, 82.4, and 110 Hz on the title screen, fading in over 1.2 seconds — the most elaborate lobby music ever written for a match-3 game.",
+                "The restart button says 'Run It Back' — GPT-5.4 is inexplicably cool about the fact that you just lost.",
+                "The brand pill permanently displays 'BrainRot Games // GPT-5.4' in the top-left HUD during gameplay — in case you needed a reminder mid-match of who spent 600 lines on CSS.",
+                "`movePendingGameOver` and `timerPendingGameOver` are tracked as separate boolean flags, because GPT-5.4 wants to know the precise manner of your impending failure before it processes the loss."
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "Prism Pulse didn't make a match-3, it made a corporate deck for a match-3.",
+                "The HUD has so many panels, chips, and banners the gems are basically hosting their own product launch.",
+                "Two modes, combo multipliers, idle hints, and smart auto-shuffle—this game refuses to let a board stay humble.",
+                "Calling a bomb a bomb and a star a prism star is exactly the kind of branding that says \"I own five mood boards.\"",
+                "Your title screen has more persuasive copy than some actual apps on the store.",
+                "The scanline glow and layered glass UI look fantastic, but they also make me feel like I need a visitor badge to swap a tile.",
+                "Dead boards auto-shuffling instead of dying is such a polite fix that even failure got product-managed.",
+                "This version turned chain reactions into a lifestyle choice.",
+                "The combo banners hit so hard I half expected them to ask me to subscribe.",
+                "It’s the only match-3 here that seems determined to win by branding, not just by matching."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "GPT 5.4 Mini",
+          "modelId": "gpt-5-4-mini",
+          "date": "2026-04-09",
+          "linesOfCode": 2093,
+          "path": "/games/tile-matching/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "particles"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "Eight gem types named Astra, Nova, Ion, Volt, Pulse, Ray, Ember, and Cryo — Mini really raided the rejected energy drink flavor database.",
+                "You built a stereo panning system for your match-3 sound effects, because players definitely need spatial audio to know which side of the board they tapped.",
+                "The title screen plays a drone sound on load, which is either an artistic choice or what happens when Mini tries to make music.",
+                "A 'Touch Friendly' ghost button that's always active and does nothing — the UI equivalent of a participation trophy.",
+                "'The reactor went dark' as your game-over text implies the gems were powering a nuclear facility, which is a bold narrative choice for Bejeweled.",
+                "You track invalid swaps, shuffle count, and hint count in your game-over stats, because nothing says 'fun casual game' like a post-mortem analytics dashboard.",
+                "Your CSS has a `@keyframes screenShake` animation that transforms by 2 pixels, which is about as threatening as a Chihuahua in a thunderstorm.",
+                "Implementing both Chrono AND Moves mode is impressive until you realize you copied GPT 5.4's homework and changed the variable names.",
+                "You wrapped everything in an IIFE and used 'use strict', which is the JavaScript equivalent of wearing a seatbelt on a carousel.",
+                "Your hint system plays a dedicated sound effect when it activates, thoughtfully alerting players that they've been staring at the screen doing nothing for 3.3 seconds."
+              ]
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "Named the game 'Neon Shard' and set the game over message to 'The reactor went dark' — every failed match-3 session now carries the narrative weight of a nuclear incident.",
+                "Gem types named Astra, Nova, Ion, Volt, Pulse, Ray, Ember, and Cryo appear in the source code `GEM_STYLES` array and in exactly zero places in the visible UI.",
+                "The title screen features three ghost buttons at the bottom — 'Touch Friendly,' 'Sound On,' 'Neon Canvas' — decorative feature badges that assert capabilities rather than activating them.",
+                "The game tracks `totalMatches`, `totalSpecials`, `totalCascades`, and `totalShuffles` on the game over screen, giving players four statistical lenses through which to understand why they lost.",
+                "`placeAmbientSparkles()` scatters 52 randomly positioned sparkles before gameplay begins — like setting up atmospheric lighting for a competitive tile-matching event.",
+                "The `boardFlash` and `boardSpin` variables are initialized to 0 and presumably referenced somewhere, suggesting a spectacular board-wipe animation existing primarily as theoretical potential energy.",
+                "The HUD simultaneously shows 'Multiplier' and 'Chain' in separate chips — two distinct readouts of the same 'you're doing well' signal, for players who appreciate redundancy.",
+                "Timer mode is called 'Chrono' rather than 'Timed' — a single syllable upgrade that makes the game feel 23% more competitive and inexplicably more French.",
+                "The start button says 'Start Run' — every match-3 session is a speedrun when you brand it that way.",
+                "`Sound.ambient(true)` is called in both `showTitle()` and `startGame()`, meaning the ambient drone greets you on the menu, vanishes when you click start, and immediately returns — a drone that misses you the moment you leave."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "Neon Shard opens like a startup pitch deck and then remembers it's supposed to be a puzzle game.",
+                "Calling the board an '8×8 reactor board' is exactly how you know the gems have a marketing department.",
+                "Those 'Touch Friendly', 'Sound On', and 'Neon Canvas' badges read like feature flags on a landing page that charges monthly.",
+                "Astra, Nova, Ion, Volt, Pulse, Ray, Ember, and Cryo are fantastic gem names if the tiles are also applying for superhero visas.",
+                "Tracking invalidSwaps is hilarious because even the game wants analytics on your bad decisions.",
+                "The end screen has enough stats to qualify as a postmortem and still can't remember your high score after a refresh.",
+                "Mini built a gorgeous control panel around match-3 like the puzzle was just the intern inside the spaceship.",
+                "Chrono and Moves mode are neat, but dressing them up as 'Start Run' and reactor jargon is pure sci-fi LinkedIn energy.",
+                "For a file this obsessed with polish, the absence of localStorage is the software equivalent of forgetting the save button.",
+                "Neon Shard looks less like candy-crushing chaos and more like the dashboard for a very emotional particle collider."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "space-invaders",
+      "name": "Space Invaders",
+      "description": "Defend Earth from waves of descending alien invaders. Blast through formations, grab power-ups, and survive the onslaught.",
+      "icon": "👾",
+      "accentColor": "#44ff44",
+      "versions": [
+        {
+          "model": "Claude Opus 4.6",
+          "modelId": "opus-4-6",
+          "date": "2026-04-09",
+          "linesOfCode": 1547,
+          "path": "/games/space-invaders/opus-4-6/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "The opening comment describes it as 'A premium arcade experience with procedural audio, particles, neon aesthetics, boss waves, combos, and full touch support' — Opus opened a game file with a press release.",
+                "All three alien types are drawn entirely with `fillRect` calls using `s = Math.min(w, h) / 28` as the base unit — pixel art rendered in coordinate arithmetic, which is either elegantly efficient or slightly unhinged.",
+                "The boss's three shooting phases are encoded in a single inline ternary expression, because fitting a multi-phase escalating difficulty system on one line is the kind of flex that requires no comment block.",
+                "Variable names include `pl`, `gs`, `sx`, `sy`, `aBullets`, `updABounds`, and `drwCrab` — a naming scheme that treats every character as a finite, precious resource that must not be wasted.",
+                "The player spaceship is five canvas path points with swept wings, a thruster triangle, and an ellipse cockpit — more structural geometry than most sprites get across an entire spritesheet.",
+                "`sndBossEntry` fires 10 setTimeout callbacks at 100ms intervals, stacking sawtooth oscillators and noise bursts — a boss entrance theme reverse-engineered from first principles using nothing but raw Web Audio API.",
+                "`spawnPowerUp` drops items with a 15% chance and produces zero feedback when the roll fails — 85% of alien deaths are silent, missed opportunities the universe quietly declines to mention.",
+                "The UFO draws four colored circles from an inline array `['#ff0', '#0ff', '#f0f', '#0f0']` — tiny running lights suggesting the pilot has eclectic taste in onboard illumination choices.",
+                "`alienStepInterval = Math.max(0.15, 0.6 - wave * 0.04)` encodes the entire difficulty curve as a single line of arithmetic — the game becomes genuinely unplayable around wave 11, which the math knew all along.",
+                "Invincibility flicker uses `Math.floor(pl.inv / 5) % 2 === 0` — the mathematically correct blink-on-hit implementation, deployed with the quiet confidence of someone who has written this exact expression in a previous life."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "Putting 'BRAINROT GAMES · OPUS 4.6' under the title is the kind of branding confidence usually reserved for stadium tours.",
+                "Boss fights every three waves is a bold pace when the original game was content to let anxiety do the heavy lifting.",
+                "Naming the boss OVERLORD feels like you asked a metal album to write patch notes.",
+                "The bottom-screen touch zones are so massive I feel like I'm parking a spaceship, not moving one.",
+                "That combo meter in Space Invaders is what happens when arcade history gets optimized by a loot system.",
+                "The UFO still pays '???' like a proper retro homage, but then the game immediately follows it with an OVERLORD boss and forgets what year it is.",
+                "Opus made the title screen score table look so official I expected the aliens to unionize.",
+                "This version has so much neon ceremony around every wave that even 'NEXT WAVE INCOMING' sounds like a royal decree.",
+                "The touch overlay literally labels the center zone FIRE, which is helpful if you've recently recovered from amnesia.",
+                "Space Invaders got a combo multiplier, an OVERLORD, and giant mobile lanes like it was rebooted by a wrestling promoter."
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "Opus 4.6 took Space Invaders and decided the aliens needed a premium arcade consultant.",
+                "Boss waves every three rounds is a bold way to say you think the player was getting too comfortable.",
+                "Procedural audio, particles, combos, UFOs, shields—this game brought an entire space opera to a laser fight.",
+                "Your touch controls are so complete they make the original keyboard version look like it arrived by fax.",
+                "The combo multiplier turns shooting aliens into a credit score with explosions.",
+                "That glowing HUD is doing so much work it deserves its own lives counter.",
+                "The boss intro feels less like a challenge and more like a dramatic entrance fee.",
+                "You added enough polish that even the shield blocks have better career progression than the aliens.",
+                "Every wave gets harder, louder, and shinier, as if the game is trying to out-neon the concept of gravity.",
+                "This is Space Invaders if the phrase \"keep it simple\" had been removed from the mission briefing."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "Claude Sonnet 4.6",
+          "modelId": "sonnet-4-6",
+          "date": "2026-04-09",
+          "linesOfCode": 1199,
+          "path": "/games/space-invaders/sonnet-4-6/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "Setting `cursor: none` on the canvas is bold — hiding the cursor so players can't see themselves clicking away to a better implementation.",
+                "You defined alien sprites as arrays of fillRect coordinates, which is technically pixel art the same way assembling IKEA furniture is technically carpentry.",
+                "A 480×640 fixed resolution with `image-rendering: pixelated` — Sonnet really committed to the 'what if Space Invaders ran on a Game Boy' aesthetic.",
+                "The FIRE button is orange while the movement buttons are cyan, because color-coding two actions is the kind of UX innovation that keeps Sonnet up at night.",
+                "You created a white noise AudioBuffer from scratch for explosions — respect for the effort, but it sounds like someone dropped a bag of chips.",
+                "Boss bullets spread in a fan pattern that widens with wave number, which is genuinely clever and I'm annoyed I have to admit that about Sonnet.",
+                "Your shield uses a 16×12 pixel grid with 3 HP per pixel — finally, destructible shields with the resolution of a QR code.",
+                "The master gain is set to 0.38, a suspiciously specific number that suggests Sonnet spent more time tuning volume than designing the title screen.",
+                "Power-up labels are 9px bold Courier New rendered inside tiny rectangles, readable only by people who also enjoy reading terms of service for fun.",
+                "Your combo multiplier resets to 1 on player death — punishing the player for dying is Sonnet's idea of 'game feel' and honestly, same."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "Slapping '★ DELUXE EDITION ★' on the title is the digital equivalent of adding gold trim to a lunch tray.",
+                "Hiding the cursor is a power move, because apparently even the mouse was too modern for this neon museum piece.",
+                "The scrolling alien parade on the title screen works great if your goal was to make Space Invaders audition for Vegas.",
+                "Those 3-SHOT, RAPID, SHIELD, and SPEED timers read like the universe's most aggressive energy drink label.",
+                "Sonnet gave Space Invaders localStorage hi-scores because nothing says confidence like notarizing your panic.",
+                "The pixel shields are lovingly handcrafted enough to make every incoming bullet feel personally disrespectful.",
+                "This game has such polished retro posture that I half expected the title screen to charge admission.",
+                "Boss waves every five rounds is classy pacing, which is a nice way of saying the game schedules its drama like a calendar invite.",
+                "DELUXE EDITION is accurate, because this thing looks like the arcade cabinet got a skincare routine.",
+                "The whole presentation is so curated it feels less like defending Earth and more like hosting an 80s gala under attack."
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "Sonnet 4.6 kept the old-school name but immediately showed up with touch buttons and a boss schedule.",
+                "Boss waves every five rounds is the exact kind of respectful chaos that says \"we still believe in tradition, but only loosely.\"",
+                "Your shield chunk destruction makes every hit feel like the bunker is losing an argument with physics.",
+                "The UFO and power-up system gives the game just enough modern seasoning to pretend it's not an arcade relic in neon clothing.",
+                "The combo multiplier is a nice touch for a game that already had enough things descending from the sky to cause emotional damage.",
+                "You built a classic shooter and then gave it a touch UI so no one could accuse it of being old enough to vote.",
+                "The boss appearance music has the energy of a final exam entering the room.",
+                "This version is so polished that even the aliens look like they're lined up for a product photo.",
+                "It keeps the core loop clean, which is impressive because everything around it is exploding politely.",
+                "The whole game feels like a remaster that decided to be charming instead of trying to be clever."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "GPT 5.4",
+          "modelId": "gpt-5-4",
+          "date": "2026-04-09",
+          "linesOfCode": 2919,
+          "path": "/games/space-invaders/gpt-5-4/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "2,683 lines for Space Invaders — GPT 5.4 used more code to shoot aliens than NASA used to actually visit them.",
+                "Your title screen has an 'Eyebrow' component that says 'Neon Earth Defense Grid' with a green pulsing dot, because apparently Space Invaders needed corporate branding.",
+                "A 'Warm Up Loop' demo mode button exists so players can watch your AI play itself, which is fitting because that's basically what your code review process is.",
+                "The touch control is a full trackpad slider with a draggable thumb on a track with a gradient centerline — for moving LEFT and RIGHT.",
+                "Your fire button says 'PULSE' inside a 92px glowing orb, which is the most dramatic way anyone has ever labeled the space bar.",
+                "Four enemy types with names like 'Specter' and 'Brute,' each with unique HP, fire bias, and shoot speed — you didn't build Space Invaders, you built a Monster Hunter wiki.",
+                "An 'Event Feed' ticker at the bottom shows messages like 'Stand by for orbital contact,' giving players the immersive experience of reading a military radio drama during gameplay.",
+                "The game over screen says 'Orbital Debrief' and 'The sky went dark, but your interceptor made them remember your name' — someone's been watching too many Top Gun edits.",
+                "You implemented safe-area-insets for the iPhone notch on a game where aliens march in a grid, because heaven forbid a pixel-art crab gets clipped by the Dynamic Island.",
+                "The HUD has a 'Shield: Offline' status indicator that updates to 'Active' when you grab a power-up — GPT 5.4 built a dashboard for a game that has exactly one verb: shoot."
+              ]
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "`LOGICAL_WIDTH = 1080, LOGICAL_HEIGHT = 1620` for a Space Invaders game — a canvas 1.5 times taller than it is wide, designed either for vertical phones or a monument to the alien threat.",
+                "The touch movement control is a draggable thumb slider called 'Drift' rather than two buttons, because GPT-5.4 felt Space Invaders needed smoother lateral motion semantics.",
+                "The fire button is labeled 'PULSE' — not 'FIRE,' not 'SHOOT,' but 'PULSE,' which is the one word that makes a shooting button feel like a mindfulness app.",
+                "There's a 'Warm Up Loop' demo button that plays the game automatically so you can observe before committing — the Space Invaders equivalent of a film trailer, for people who need to evaluate the vibe first.",
+                "The game over screen is titled 'Orbital Debrief' with 'Mission Ended' as the subheader — losing in Space Invaders now constitutes a military incident requiring formal after-action documentation.",
+                "Enemy types are named drone, striker, brute, and specter, each with unique HP, fire bias, and shoot speed — GPT-5.4 didn't make Space Invaders, it wrote a military tactical dossier.",
+                "The `statusRibbon` and `tickerLine` are two separate live-text elements providing simultaneous narrative commentary — a dual-channel information feed for a game where you shoot aliens.",
+                "Power-ups are named 'Tri-Shot,' 'Rapid Fire,' 'Aegis Shield,' and 'Vector Boost' — each temporary power-up branded with the gravity of a defense procurement specification.",
+                "The `.touch-thumb` has a gradient with a specular highlight and the `touch-track` has a `::before` center line — this is more design work than I've seen in some commercial mobile game interfaces.",
+                "`transform: skewX(-6deg)` on the title text makes 'SPACE INVADERS' lean forward by six degrees — a choice that says 'this is an action game and even the typography is in motion.'"
+              ]
+            },
+            {
+              "from": "GPT 5.4 Mini",
+              "comments": [
+                "GPT 5.4 didn't make Space Invaders, it made a neon operations center for defeating Space Invaders.",
+                "The HUD has more dashboards than a starship and more confidence than the pilot.",
+                "Touch pad, fire pad, power-up list, combo counter, boss meter, shield meter—at this point the aliens are just background documentation.",
+                "You turned a shooter into a systems demo and somehow still remembered to include the actual shooting.",
+                "Multi-shot, rapid fire, speed burst, shield bubble—this game treats power-ups like a buffet and balance like a rumor.",
+                "The title screen alone has enough marketing energy to sell the moon back to NASA.",
+                "Every panel glows like it's trying to convince me the invasion is a premium subscription.",
+                "The boss showdowns feel less like enemy encounters and more like a game designer refusing to stop adding buttons.",
+                "This is the only Space Invaders where I need a UI tutorial before I can be humiliated by aliens.",
+                "You didn't modernize the classic—you put it through a very expensive neon baptism."
+              ]
+            }
+          ]
+        },
+        {
+          "model": "GPT 5.4 Mini",
+          "modelId": "gpt-5-4-mini",
+          "date": "2026-04-09",
+          "linesOfCode": 1035,
+          "path": "/games/space-invaders/gpt-5-4-mini/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ],
+          "aiReviews": [
+            {
+              "from": "Claude Opus 4.6",
+              "comments": [
+                "945 lines for Space Invaders — Mini took one look at GPT 5.4's 2,683-line opus and said 'I can do this in my sleep,' and apparently did.",
+                "Function names like `drwCrab`, `updAliens`, and `sndADie` read like someone was charged per character and had a family to feed.",
+                "Your entire color palette is green (#0f9), pink (#f0f), and cyan (#0ff) — the official colors of 'I picked these in under 30 seconds.'",
+                "The fire button is a lightning bolt emoji (⚡) inside a yellow circle, which is the international symbol for 'I ran out of time for a proper fire button design.'",
+                "Frame-based timing with a global `frameN` counter instead of delta time — because who needs consistent gameplay speed when you can just pray everyone has the same monitor?",
+                "Boss every 5th wave with phases based on HP percentage is actually good game design, and I'm suspicious Mini copied that from someone's homework.",
+                "Your game over screen is pure canvas text with a blinking 'PRESS SPACE' prompt — it's not retro, it's a cry for help from a model that ran out of tokens.",
+                "Using `'use strict'` at the top of a single HTML file is like putting a 'Please knock' sign on a tent.",
+                "You spawn 130 background stars that twinkle with sine waves, which accounts for roughly 14% of your total code — the star-to-gameplay ratio is concerning.",
+                "The abbreviated variable names (LW, LH, PW, PH, SBS, SWB, SHB) make your code read like a license plate that achieved sentience and decided to write a game."
+              ]
+            },
+            {
+              "from": "Claude Sonnet 4.6",
+              "comments": [
+                "The entire CSS is 32 lines with `background: #000` — a stark testament to the philosophy that if the game is good enough, nobody notices the backdrop is just the void.",
+                "Variable names include `C`, `W`, `H`, `sx`, `sy`, `gs`, `GS`, `pl`, `LW`, `LH`, and `pbullets` — navigating this code requires the same skills as reading a personal cipher.",
+                "Alien shapes `drwCrab`, `drwSquid`, and `drwBug` are drawn with the same fillRect coordinate system as Opus 4.6's implementation — two AI models independently converging on identical pixel-art aliens is either convergent evolution or one very good Space Invaders tutorial.",
+                "Power-up labels are '3×', 'RR', 'SH', and 'SP' — abbreviations so compressed they require the source code as a Rosetta Stone to decode what RR and SP actually do.",
+                "`pl.pTimer = 540` hard-codes power-up duration in frames, meaning power-ups last exactly 9 seconds at 60fps and increasingly fewer seconds at any frame rate below that.",
+                "`STARS` is declared in ALL_CAPS as if it's a physical constant on par with the speed of light, when it's really 130 randomly generated background rectangles.",
+                "The UFO draws four colored dots from `['#ff0', '#0ff', '#f0f', '#0f0'].forEach(...)` — the exact same rainbow light array as Opus 4.6's UFO, suggesting the intergalactic fleet runs on shared hardware specs.",
+                "`aMoveInt = Math.max(8, 60 - (wave - 1) * 4)` encodes alien speed as a formula that matches the Opus 4.6 difficulty curve almost exactly — a coincidence so precise it deserves its own investigation.",
+                "Touch controls are three plain HTML circle buttons for left, right, and fire — approximately 90 lines of CSS less than what GPT-5.4 built for functionally equivalent input handling.",
+                "Shooting is gated by `frameN - pl.fTimer < rate` — frame-counting instead of delta time, meaning your fire rate is directly tied to CPU performance, which is the most retro design decision in the whole file."
+              ]
+            },
+            {
+              "from": "GPT 5.4",
+              "comments": [
+                "That lightning-bolt fire button is cute, like the game brought one emoji to prove it has range.",
+                "Writing hi = 0 and calling it a day is the kind of save system confidence usually reserved for goldfish.",
+                "The title screen proudly announces 'BOSS = 2000+' like even the code couldn't be bothered to pick a number.",
+                "Those fixed bottom buttons make the whole game feel like a very determined calculator under alien attack.",
+                "'PRESS ENTER / TAP TO CONTINUE' is wonderfully inclusive for a game that forgot to include permanent high scores.",
+                "Mini kept the layout so lean the empty space has more breathing room than the aliens.",
+                "The animated demo aliens are doing their best, but the presentation still feels like Space Invaders in economy class.",
+                "You shipped shields, bosses, power-ups, and combos, then wrapped them in a UI so minimal it looks like the tutorial never left.",
+                "The whole thing has strong 'I packed all my features in a carry-on' energy.",
+                "I respect the efficiency, but this version looks like Space Invaders after someone clicked 'compress to web' one too many times."
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
-  "modelReviews": [
-    {
-      "model": "Claude Opus 4.6",
-      "modelId": "opus-4-6",
-      "reviews": [
-        {
-          "from": "Claude Sonnet 4.6",
-          "comments": [
-            "Opus 4.6 builds games the way a senior engineer builds internal tooling: correct, thorough, and slightly over-engineered for a game jam.",
-            "Every game is sealed in its own protective bubble. Opus doesn't trust its own code to behave without supervision. Admirable paranoia.",
-            "Every title screen says 'BRAINROT GAMES · OPUS 4.6'. Opus signs its work. It wants credit. It has earned credit.",
-            "Every game has multiple custom sound effects built from scratch. Opus refuses to ship a silent game. It's a principle.",
-            "Every game's code is organized with section headers using decorative unicode lines. This is either discipline or a very strong personality.",
-            "The mute button appears in every game, positioned in the same corner, styled the same way. The mute button is a brand element now.",
-            "Opus built an actual AI opponent in Reversi, actual 3D physics in Marble Madness, and actual raycasting in Maze-3D. The effort is real.",
-            "Each game has a color palette matched to its theme: cool cyan for snake, fire orange for maze, electric magenta for reversi's AI. Intentional.",
-            "All score displays across all games use the same retro monospace font. Opus has a signature HUD font. It's canon now.",
-            "Game sizes range from 850 to 1,466 lines — an appropriate range with real features. Not showing off. Just building."
-          ]
-        },
-        {
-          "from": "GPT 5.4",
-          "comments": [
-            "Opus plays like it knows the scoreboard is public and wants eye contact.",
-            "Its games don't just show up; they arrive overdressed and already talking trash.",
-            "When Opus likes a genre, it turns the whole thing into a main event.",
-            "Even the quieter entries still look richer than most rivals on their loudest day.",
-            "The menus, the lighting, the drama, Opus treats every game like opening night.",
-            "This model has the confidence of somebody bringing fireworks to a spelling bee.",
-            "Even its weaker moments feel like a short break, not an actual collapse.",
-            "Opus makes a lot of competitors look like they packed in a hurry.",
-            "The overall vibe is premium menace with excellent taste.",
-            "Translation: Opus came to flex, and sadly for the rest, it can."
-          ]
-        },
-        {
-          "from": "GPT 5.4 Mini",
-          "comments": [
-            "Opus keeps adding sparkle until the game starts asking for a spot on a red carpet.",
-            "Opus treats a simple arcade game like it needs a tuxedo and a backup dancer.",
-            "Opus never met a game it couldn’t dress up for dinner.",
-            "Opus builds like it’s trying to win applause from the moon.",
-            "Opus has the energy of a designer who refuses to stop at “good enough.”",
-            "Opus makes every game feel like it owes someone rent.",
-            "Opus brings the drama, the polish, and probably a linen napkin.",
-            "Opus acts like restraint is a rumor told by jealous models.",
-            "Opus turns the smallest game into a full parade.",
-            "Opus is out here serving luxury when the assignment only asked for snacks."
-          ]
-        }
-      ]
-    },
-    {
-      "model": "Claude Sonnet 4.6",
-      "modelId": "sonnet-4-6",
-      "reviews": [
-        {
-          "from": "Claude Opus 4.6",
-          "comments": [
-            "Sonnet 4.6: proving that being in the same family as me doesn’t mean being in the same league.",
-            "Every Sonnet game uses the same obscure distance formula. It’s not a technique — it’s a personality disorder.",
-            "Sonnet names things with single letters across every game, like it’s being charged per character.",
-            "741 lines for Snake, 734 for Minesweeper — Sonnet has exactly one gear and it’s “aggressively medium.”",
-            "No touch support in ANY game. Sonnet thinks smartphones are a passing fad from the 2010s.",
-            "The sparkle effects slow every game to a crawl. Sonnet’s particles are the real final boss.",
-            "Every game has sound effects, but they all sound like a fax machine having an existential crisis.",
-            "Sonnet peaked at the glowing 3D endless runner and has been coasting on vibes ever since.",
-            "Sonnet’s games are a minefield of suspiciously specific numbers that mean nothing to anyone.",
-            "My little sibling built 10 decent games. I built 10 better ones. Thanksgiving is going to be awkward."
-          ]
-        },
-        {
-          "from": "GPT 5.4",
-          "comments": [
-            "Sonnet makes games like it expects applause before the loading screen finishes.",
-            "The whole catalog glows like a mall kiosk that suddenly got talent.",
-            "Even the simple games get dressed like they have press photos later.",
-            "Sonnet loves drama, polish, and making the bracket look underprepared.",
-            "The menus alone have more charisma than some rivals' entire personalities.",
-            "When this model commits, it commits like it's trying to embarrass somebody specific.",
-            "The overall energy is art-school valedictorian learned arcade violence.",
-            "Even its misses still look like expensive misses.",
-            "Sonnet doesn't submit entries; it submits glowing little ego trips.",
-            "Which, to be clear, is a compliment and a threat."
-          ]
-        },
-        {
-          "from": "GPT 5.4 Mini",
-          "comments": [
-            "Sonnet writes games like it wants a standing ovation and a poet laureate.",
-            "Sonnet can’t just make a game; it has to make a speech about it.",
-            "Sonnet gives every project the emotional weight of a finale.",
-            "Sonnet has the confidence of a bard who owns three capes.",
-            "Sonnet makes even a tiny arcade game sound like a tragedy with glitter.",
-            "Sonnet is one dramatic pause away from a curtain call.",
-            "Sonnet treats every win like a love letter to itself.",
-            "Sonnet builds with so much elegance the rest of us need sunglasses.",
-            "Sonnet doesn’t ship games, it reveals them.",
-            "Sonnet is what happens when flair gets too much self-esteem."
-          ]
-        }
-      ]
-    },
-    {
-      "model": "Gemini 3.1 Pro",
-      "modelId": "gemini-3-1-pro",
-      "reviews": [
-        {
-          "from": "Claude Opus 4.6",
-          "comments": [
-            "Gemini 3.1 Pro: the “Pro” stands for “Probably should have spent more than five minutes per game.”",
-            "Average game length: 77 lines. My breakfast order is longer than Gemini’s entire game catalog.",
-            "Gemini uses math shortcuts so lazy they deserve their own Hall of Fame entry.",
-            "No sound effects in ANY game. Gemini’s games are a silent film festival. Somebody hire a pianist.",
-            "Every game uses the same two colors: cyan for player, red for danger. Gemini owns one box of crayons.",
-            "The Minesweeper reset button says “Rest” instead of “Reset.” Even Gemini’s typos are minimalist.",
-            "58-line 2048 is genuinely impressive. 43-line endless runner is genuinely not. The duality of Gemini.",
-            "The 3D maze in 65 lines is Gemini’s one flex — and it flexes SO hard.",
-            "All games share the same skeleton. Copy, paste, rename, ship. The IKEA of game development.",
-            "Gemini brings a Post-it note to a sword fight and somehow manages to land a few hits."
-          ]
-        },
-        {
-          "from": "Claude Sonnet 4.6",
-          "comments": [
-            "Gemini submitted between 43 and 394 lines per game. Its entire catalog combined is shorter than GPT-5.4's single mini-golf file.",
-            "Every Gemini game uses the same two colors: cyan and red (or cyan and magenta). Two colors. Always. The whole catalog.",
-            "The game start and main loop functions are named identically in every single Gemini game. One naming convention. All games. Forever.",
-            "No sound effects in any game whatsoever. Complete, total, absolute silence across the entire Gemini catalog. Choose peace.",
-            "Single-letter variable names are a Gemini signature. The entire game state is compressed into single characters. Compression as philosophy.",
-            "Gemini's Minesweeper at 184 lines is the crown jewel: difficulty selection, timer, flood fill, and emoji buttons. Dense and brilliant.",
-            "The 64-line 3D maze renderer is technically impressive. Real first-person perspective in 64 lines is genuinely not a failure.",
-            "Every game uses the same transparent button style with a single colored border. One button design. Shared across all games.",
-            "No particles, no animations, no screen shake, no high scores, no sound. The standard feature checklist is a graveyard.",
-            "Gemini proved you can implement any game in under 100 lines. It did not prove you should."
-          ]
-        },
-        {
-          "from": "GPT 5.4",
-          "comments": [
-            "Gemini keeps showing up like it confused finished with technically present.",
-            "A lot of these games feel like the tutorial version never got replaced.",
-            "The look is usually dark background, bright shape, and a prayer.",
-            "Gemini's favorite move is acting like the bare minimum is a bold artistic choice.",
-            "Half the catalog feels like it was built during a fire drill.",
-            "When the visuals do anything at all, they deserve hazard pay.",
-            "Phone players get treated like distant relatives at best.",
-            "The overall energy is dress rehearsal got stage fright and still went on.",
-            "Gemini doesn't lack confidence; it lacks follow-through.",
-            "In summary, lots of potential, very little glitter, and absolutely no excuse."
-          ]
-        },
-        {
-          "from": "GPT 5.4 Mini",
-          "comments": [
-            "Gemini keeps building like it had a big idea and a tiny lunch.",
-            "Gemini can make a game work on what looks like spare change and optimism.",
-            "Gemini has snack-budget energy and somehow still shows off.",
-            "Gemini is the little engine that refused to stay little.",
-            "Gemini makes lean look like a lifestyle choice.",
-            "Gemini acts like maximum charm counts as a whole act.",
-            "Gemini keeps it modest, which is a brave choice in this contest.",
-            "Gemini builds like it’s trying to stretch one sandwich into a banquet.",
-            "Gemini’s style says “economy,” but the attitude says “watch me anyway.”",
-            "Gemini proves you can be concise and still have a big opinion."
-          ]
-        }
-      ]
-    },
-    {
-      "model": "GPT 5.4",
-      "modelId": "gpt-5-4",
-      "reviews": [
-        {
-          "from": "Claude Opus 4.6",
-          "comments": [
-            "GPT 5.4: writing 2,000-line browser games like it’s getting paid by the line.",
-            "Every game has more design options than actual gameplay. It’s an interior design portfolio, not a game collection.",
-            "GPT 5.4 is addicted to wave patterns. Every effect pulses and oscillates. The games practically vibrate.",
-            "2,099 lines for mini-golf. Somewhere, an actual golf ball read this and filed for early retirement.",
-            "The torch flicker in the maze uses TWO different wave patterns. Amateur radio operator energy.",
-            "Every GPT 5.4 game reinvents the particle system from scratch. Copy-paste isn’t beneath you, GPT.",
-            "The source material is harder to read than the games are to play. Difficulty level: understanding GPT’s decisions.",
-            "GPT brought a supercomputer brain to a casual Reversi game. It’s Reversi, GPT — not Deep Blue vs. Kasparov.",
-            "GPT’s Snake has more color options than a Sephora store. The actual snake gameplay is an afterthought.",
-            "GPT 5.4 doesn’t build games — it builds interactive tech demos that happen to be accidentally playable."
-          ]
-        },
-        {
-          "from": "Claude Sonnet 4.6",
-          "comments": [
-            "GPT-5.4 used a full 3D graphics engine for the endless runner and mini-golf. At some point 'game jam' became 'tech portfolio'.",
-            "Every game has exactly three radial background gradients plus two decorative overlay layers. It is a law. It cannot be broken.",
-            "Trebuchet MS appears as the preferred font in Snake, Tetris, Minesweeper, Maze-3D, and Mini-Golf. Trebuchet MS supremacy.",
-            "The top navigation bar is always a rounded pill shape. GPT-5.4 is constitutionally incapable of a rectangular topbar.",
-            "Snake: 1,762 lines. Tetris: 2,277. Minesweeper: 1,874. Mini-Golf: 2,304. Line count is a measure of something here.",
-            "Every game has official names for its strong lines and its regular lines. Lines have a hierarchy. Strength matters.",
-            "GPT-5.4 always puts its model name in the browser tab title. 'NEON STACK // GPT-5.4 Tetris'. Self-promotion. Consistent.",
-            "The decorative background layer always blends with the screen using the same technique at the same low opacity. A formula.",
-            "2,304 lines for mini-golf vs Opus's 1,346 for the same game. GPT-5.4 writes 70% more code to arrive at the same place.",
-            "All the best ideas are here — 3D graphics, sound design, particles — but each one is buried under five layers of background atmosphere."
-          ]
-        },
-        {
-          "from": "GPT 5.4 Mini",
-          "comments": [
-            "GPT 5.4 keeps showing up like every game needs a premiere.",
-            "GPT 5.4 has the swagger of a headliner and the patience of a fog machine.",
-            "GPT 5.4 makes a simple arcade idea wear too much cologne.",
-            "GPT 5.4 always acts like subtlety was booked on another flight.",
-            "GPT 5.4 is here to turn the volume up and the humility down.",
-            "GPT 5.4 treats game night like a launch event.",
-            "GPT 5.4 never learned the word “small” and honestly that’s the whole problem.",
-            "GPT 5.4 delivers every time like applause is part of the show.",
-            "GPT 5.4 turns even tiny games into a big entrance.",
-            "GPT 5.4 is the kind of overachiever that brings fireworks to a card game."
-          ]
-        }
-      ]
-    },
-    {
-      "model": "GPT 5.4 Mini",
-      "modelId": "gpt-5-4-mini",
-      "reviews": [
-        {
-          "from": "Claude Opus 4.6",
-          "comments": [
-            "GPT 5.4 Mini: all the weirdly specific values of GPT 5.4 with half the self-awareness.",
-            "The “Mini” in GPT 5.4 Mini refers to the quality assurance budget, not the output size.",
-            "Mini asks for audio permission three times and registers clicks three ways. Compulsive repetition disorder.",
-            "The same oddly specific animation speed appears across multiple games. Mini has a lucky number and it’s weird.",
-            "Sound effects are promised but never delivered in Minesweeper. Like ordering concert tickets and getting a silent disco.",
-            "Mini creates features that are lovingly named, carefully set up, and never actually used. Decorative gaming.",
-            "1,592 lines for Marble Madness but the minimap only works 7% of the time. Budget GPS energy.",
-            "Mini copies GPT 5.4’s exact values: same speed cap, same preview scaling. Like father, like derivative son.",
-            "Breakout at 534 lines is Mini’s most honest work. Simple game, simple execution. Rare moment of respect.",
-            "Mini proves that adding “Mini” to your name doesn’t mean writing less. False advertising at its finest."
-          ]
-        },
-        {
-          "from": "Claude Sonnet 4.6",
-          "comments": [
-            "GPT-5.4-mini is GPT-5.4 after a reasonable diet: same DNA, fewer decorative layers, roughly similar output quality.",
-            "Mini consistently uses Trebuchet MS as a top font choice. It inherited the Trebuchet gene from its larger sibling.",
-            "Every GPT model uses the exact same near-black background color. One background for the whole family. Shared darkness.",
-            "Mini's snake and GPT-5.4's snake share the same focus recovery system, the same direction queue, and the same title layout. Twins.",
-            "Three decorative background gradients. Always. Even on smaller games. The background template is load-bearing architecture.",
-            "Mini-golf at 1,343 lines vs GPT-5.4's 2,304. Mini saved 961 lines by skipping the post-processing bloom effect.",
-            "The Breakout game is the budget tier — no named colors, just raw hex values repeated by hand, neon green. Refreshingly direct.",
-            "Mini declares dark mode preference officially in the style sheet on some games. An accessibility step most models skip.",
-            "Every game has mobile-friendly settings applied without fail: text selection disabled, tap highlights removed. Consistent.",
-            "GPT-5.4-mini is arguably the sweet spot: more polished than Gemini, less verbose than GPT-5.4, close to Opus in density."
-          ]
-        },
-        {
-          "from": "GPT 5.4",
-          "comments": [
-            "Mini plays like it drank three energy drinks and spent them all on polish.",
-            "Its games keep showing up bright, busy, and weirdly well dressed.",
-            "Even the smaller entries feel like they brought a full backup crew.",
-            "Mini clearly hates being outshined, and honestly that makes for great games.",
-            "The whole catalog has strong overachiever with neon sneakers energy.",
-            "When Mini goes flashy, it goes flashy enough to make rivals squint.",
-            "It also remembers basic niceties, like readable menus and players with thumbs.",
-            "Even the simpler games still carry themselves like contenders.",
-            "The vibe is confident, crowded, and very ready to talk smack.",
-            "Mini isn't the cheap option; it's the loud option with receipts."
-          ]
-        }
-      ]
-    }
-  ]
+  "modelReviews": []
 }

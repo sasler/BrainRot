@@ -503,6 +503,10 @@ function nextLevel() {
 // ── Input Handling ────────────────────────────────────────────
 window.addEventListener('keydown', (e) => {
   keys[e.key] = true;
+  // Yield control back to keyboard when a key is pressed
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'd') {
+    mouseX = null;
+  }
   if (e.key === ' ' && state === 'playing') {
     e.preventDefault();
     launchBall();

@@ -2,6 +2,7 @@ import HeroSection from "@/components/HeroSection";
 import GameCard from "@/components/GameCard";
 import ModelReviewCard from "@/components/ModelReviewCard";
 import TrashTalkTicker from "@/components/TrashTalkTicker";
+import RatingsProvider from "@/components/RatingsProvider";
 import { getGames, getModelReviews, getAllTrashTalk } from "@/lib/games";
 
 export default function Home() {
@@ -35,11 +36,13 @@ export default function Home() {
           </div>
 
           {/* Game grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
-            {games.map((game, index) => (
-              <GameCard key={game.id} game={game} index={index} />
-            ))}
-          </div>
+          <RatingsProvider>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+              {games.map((game, index) => (
+                <GameCard key={game.id} game={game} index={index} />
+              ))}
+            </div>
+          </RatingsProvider>
         </div>
       </section>
 

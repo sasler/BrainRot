@@ -35,6 +35,7 @@ const ctx = canvas.getContext('2d');
 // ── Layout ──────────────────────────────────────────────────────
 const GRID = 8;
 let CELL = 60, BX = 0, BY = 0;
+let grid = []; // forward declaration — prevents TDZ error when layout() runs
 
 function layout() {
   const W = window.innerWidth, H = window.innerHeight;
@@ -409,7 +410,6 @@ class Gem {
 }
 
 // ── Grid Logic ───────────────────────────────────────────────────
-let grid = []; // grid[y][x]
 
 function mkGem(gx, gy, exclude=[]) {
   let t; do { t=Math.floor(Math.random()*GN); } while(exclude.includes(t));

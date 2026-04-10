@@ -204,7 +204,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // ══════════════════════════════════════════════════════
 const BALL_R      = 0.22;
 const GRAVITY     = 26;
-const FRICTION    = 0.93;       // velocity multiplier per second on ground
+const FRICTION    = 0.55;       // velocity multiplier per second on ground
 const WALL_REST   = 0.52;
 const FLOOR_REST  = 0.22;
 const MAX_POWER   = 22;
@@ -879,7 +879,7 @@ function physicsUpdate(dt) {
 
   // ── FRICTION ───────────────────────────────────────
   if (ballGround) {
-    const fr = Math.pow(FRICTION, dt * 60);
+    const fr = Math.pow(FRICTION, dt);
     ballVel.x *= fr; ballVel.z *= fr;
     if (Math.abs(ballVel.x) < 0.001) ballVel.x = 0;
     if (Math.abs(ballVel.z) < 0.001) ballVel.z = 0;

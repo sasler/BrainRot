@@ -961,8 +961,8 @@
     function collideObstacle(entity) {
       const lane = entity.lane;
       if (lane !== player.lane) return false;
-      const dz = Math.abs(entity.group.position.z);
-      if (dz > 1.08) return false;
+      const dz = entity.group.position.z;
+      if (dz < -0.25 || dz > 1.08) return false;
       if (entity.type === 'barrier') return player.y < 0.88;
       if (entity.type === 'overhead') return player.sliding <= 0 && player.y < 0.96;
       return true;

@@ -1016,8 +1016,8 @@
       const ball = balls[i];
       if (ballStuck && i === 0) continue;
 
-      ball.x += ball.vx * timeMult;
-      ball.y += ball.vy * timeMult;
+      ball.x += ball.vx * dt * 60 * timeMult;
+      ball.y += ball.vy * dt * 60 * timeMult;
 
       // Trail
       ball.trail.push({ x: ball.x, y: ball.y, life: 1 });

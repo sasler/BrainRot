@@ -413,6 +413,7 @@ window.addEventListener('keydown', e => {
   initAudio();
   keys[e.key] = true;
   if (e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'd') mouseX = null;
   if (state === 'start' && (e.key === ' ' || e.key === 'Enter')) startGame();
   if (state === 'playing' && e.key === ' ') launchBall();
   if (state === 'playing' && e.key === 'p') togglePause();

@@ -1021,6 +1021,7 @@
       const h = sampleHeight(pos.x, pos.z);
       game.currentHeight = h;
       pos.y = h + ballRadius;
+      setBallPosition(pos);
       ball.rotation.x += vel.z * dt * 1.3;
       ball.rotation.z -= vel.x * dt * 1.3;
 

@@ -632,6 +632,10 @@ function checkBulletsVsAliens() {
   bullets.forEach(b => {
     if (!b.alive) return;
     const br = {x:b.x-2, y:b.y-6, w:4, h:12};
+    // vs shields
+    for (const sh of shields) {
+      if (hitShield(sh, b.x-2, b.y-6, 4, 12)) { b.alive=false; SFX.shieldHit(); return; }
+    }
     // vs boss
     if (boss && boss.alive && !boss.entering) {
       if (overlap(br, boss.bounds())) {

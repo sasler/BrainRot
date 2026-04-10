@@ -11,12 +11,14 @@ Automates the end-of-task PR lifecycle for the BrainRot Games repository. Invoke
 
 1. Ensure you have uncommitted changes — if not, abort.
 2. Create a new branch from `main` with a descriptive name (e.g., `fix/paddle-collision`, `feat/add-leaderboard`).
-3. Stage all changes and commit with a clear, conventional message. Always include the Co-authored-by trailer:
+3. Stage all changes and commit with a clear message. **The commit message MUST start with a [Gitmoji](https://gitmoji.dev) emoji** (e.g., `✨ Add new feature`, `🐛 Fix bug`, `🔧 Update config`). Always include the Co-authored-by trailer:
    ```
+   ✨ Add star rating system
+
    Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
    ```
 4. Push the branch to origin.
-5. Open a PR via `gh pr create --fill` (or provide an explicit `--title` and `--body` summarizing the changes).
+5. Open a PR via `gh pr create --fill` (or provide an explicit `--title` and `--body` summarizing the changes). **The PR title MUST start with a Gitmoji emoji** matching the primary change type.
 
 ## Step 2: Wait for Copilot Code Review
 
@@ -77,8 +79,10 @@ After each fix is implemented, reply to the corresponding inline PR review comme
 
 ## Step 6: Push & Finalize
 
-1. Stage and commit all fixes with a clear message and the Co-authored-by trailer:
+1. Stage and commit all fixes with a Gitmoji-prefixed message and the Co-authored-by trailer:
    ```
+   🐛 Fix review feedback on breakout collision
+
    Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
    ```
 2. Push to the PR branch.

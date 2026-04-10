@@ -34,7 +34,7 @@ export default function TrashTalkTicker({ quotes }: TrashTalkTickerProps) {
         setPair(pickPair());
         setFading(false);
       }, 500);
-    }, 6000);
+    }, 30000);
 
     return () => {
       clearInterval(interval);

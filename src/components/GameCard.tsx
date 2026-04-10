@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/games";
+import RatingSummary from "./RatingSummary";
+import { useBestRating } from "./RatingsProvider";
 
 interface GameCardProps {
   game: Game;
@@ -11,6 +13,10 @@ interface GameCardProps {
 
 export default function GameCard({ game, index }: GameCardProps) {
   const versionCount = game.versions.length;
+  const bestRating = useBestRating(
+    game.id,
+    game.versions.map((v) => v.modelId),
+  );
   const [quote, setQuote] = useState<{
     text: string;
     from: string;
@@ -70,6 +76,17 @@ export default function GameCard({ game, index }: GameCardProps) {
           &ldquo;{quote.text}&rdquo;{" "}
           <span style={{ color: game.accentColor }}>— {quote.from}</span>
         </p>
+      )}
+
+      {/* Rating */}
+      {bestRating && (
+        <div className="mb-3">
+          <RatingSummary
+            rating={bestRating}
+            size="sm"
+            accentColor={game.accentColor}
+          />
+        </div>
       )}
 
       {/* Footer */}

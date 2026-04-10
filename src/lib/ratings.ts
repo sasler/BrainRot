@@ -1,12 +1,9 @@
+import type { RatingsStorageState } from "./ratings-types";
+
+export type { RatingsStorageState } from "./ratings-types";
+
 type RedisModule = typeof import("redis");
 type NodeRedisClient = ReturnType<RedisModule["createClient"]>;
-
-export interface RatingsStorageState {
-  available: boolean;
-  writable: boolean;
-  reason: string | null;
-  missingEnvVars: string[];
-}
 
 interface RatingsRedisClient {
   get(key: string): Promise<number | null>;
@@ -32,13 +29,23 @@ function normalizeValue(value: number | string | null | undefined) {
 }
 
 function normalizeHash<T extends Record<string, unknown>>(
-  data: Record<string, number | string> | null | undefined,
+  data: unknown,
 ): T | null {
-  if (!data || Object.keys(data).length === 0) return null;
+  if (!data) return null;
+
+  const entries =
+    data instanceof Map
+      ? Array.from(data.entries())
+      : typeof data === "object"
+        ? Object.entries(data as Record<string, unknown>)
+        : [];
+  if (entries.length === 0) return null;
 
   const normalized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(data)) {
-    normalized[key] = normalizeValue(value);
+  for (const [key, value] of entries) {
+    normalized[key] = normalizeValue(
+      value as number | string | null | undefined,
+    );
   }
 
   return normalized as T;
@@ -106,9 +113,28 @@ export function getRatingsStorageState(): RatingsStorageState {
   return getKvRestStorageState();
 }
 
+export function withRatingsStorageFailure(
+  storage: RatingsStorageState,
+  reason: string,
+): RatingsStorageState {
+  if (!storage.available || !storage.writable || storage.reason) {
+    return {
+      ...storage,
+      reason: storage.reason ?? reason,
+    };
+  }
+
+  return {
+    ...storage,
+    available: false,
+    writable: false,
+    reason,
+  };
+}
+
 const globalForRedis = globalThis as typeof globalThis & {
   ratingsRedisClient?: NodeRedisClient;
-  ratingsRedisClientPromise?: Promise<NodeRedisClient>;
+  ratingsRedisClientPromise?: Promise<NodeRedisClient | null>;
 };
 
 async function getNodeRedisClient() {
@@ -120,17 +146,27 @@ async function getNodeRedisClient() {
 
   if (!globalForRedis.ratingsRedisClientPromise) {
     globalForRedis.ratingsRedisClientPromise = (async () => {
-      const { createClient } = await import("redis");
-      const client = createClient({ url: process.env.REDIS_URL });
-      client.on("error", (error) => {
+      try {
+        const { createClient } = await import("redis");
+        const client = createClient({ url: process.env.REDIS_URL });
+        client.on("error", (error) => {
+          console.error(
+            "Ratings Redis error:",
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+        await client.connect();
+        globalForRedis.ratingsRedisClient = client;
+        return client;
+      } catch (error) {
+        globalForRedis.ratingsRedisClient = undefined;
+        globalForRedis.ratingsRedisClientPromise = undefined;
         console.error(
-          "Ratings Redis error:",
+          "Failed to connect ratings Redis:",
           error instanceof Error ? error.message : String(error),
         );
-      });
-      await client.connect();
-      globalForRedis.ratingsRedisClient = client;
-      return client;
+        return null;
+      }
     })();
   }
 
@@ -161,9 +197,21 @@ async function getRedisUrlClient(): Promise<RatingsRedisClient | null> {
     set,
     hincrby,
     hgetall,
-    getMany: async (keys: string[]) => Promise.all(keys.map((key) => get(key))),
-    hgetallMany: async <T extends Record<string, unknown>>(keys: string[]) =>
-      Promise.all(keys.map((key) => hgetall<T>(key))),
+    getMany: async (keys: string[]) => {
+      const values = await client.mGet(keys);
+      return values.map((value) => {
+        const normalized = normalizeValue(value);
+        return typeof normalized === "number" ? normalized : null;
+      });
+    },
+    hgetallMany: async <T extends Record<string, unknown>>(keys: string[]) => {
+      const pipeline = client.multi();
+      for (const key of keys) {
+        pipeline.hGetAll(key);
+      }
+      const results = (await pipeline.exec()) ?? [];
+      return results.map((value) => normalizeHash<T>(value));
+    },
   };
 }
 
@@ -225,11 +273,7 @@ async function getKvRestClient(mode: "read" | "write"): Promise<RatingsRedisClie
         pipeline.hgetall(key);
       }
       const results = await pipeline.exec();
-      return results.map((value) =>
-        normalizeHash<T>(
-          value as Record<string, number | string> | null | undefined,
-        ),
-      );
+      return results.map((value) => normalizeHash<T>(value));
     },
   };
 }

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getGame, getGames } from "@/lib/games";
-import { getRatingsRedisClient, getRatingsStorageState } from "@/lib/ratings";
+import {
+  getRatingsRedisClient,
+  getRatingsStorageState,
+  withRatingsStorageFailure,
+} from "@/lib/ratings";
+import type { RatingsStorageState } from "@/lib/ratings-types";
 
 async function getOrCreateVoterId(): Promise<string> {
   const cookieStore = await cookies();
@@ -20,9 +25,17 @@ async function getOrCreateVoterId(): Promise<string> {
 }
 
 export async function GET(request: NextRequest) {
-  const storage = getRatingsStorageState();
+  const storage: RatingsStorageState = getRatingsStorageState();
   const redis = await getRatingsRedisClient("read");
-  if (!redis) return NextResponse.json({ ratings: {}, storage });
+  if (!redis) {
+    return NextResponse.json({
+      ratings: {},
+      storage: withRatingsStorageFailure(
+        storage,
+        "Ratings storage is temporarily unavailable.",
+      ),
+    });
+  }
 
   try {
     const { searchParams } = request.nextUrl;
@@ -44,7 +57,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (keys.length === 0) return NextResponse.json({ ratings: {} });
+    if (keys.length === 0) return NextResponse.json({ ratings: {}, storage });
 
     const results = await redis.hgetallMany<{
       totalStars?: number;
@@ -68,10 +81,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         ratings: {},
-        storage: {
-          ...storage,
-          reason: storage.reason ?? "Failed to load ratings from storage.",
-        },
+        storage: withRatingsStorageFailure(
+          storage,
+          "Failed to load ratings from storage.",
+        ),
       },
       { status: 500 },
     );
@@ -79,13 +92,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const storage = getRatingsStorageState();
+  const storage: RatingsStorageState = getRatingsStorageState();
   const redis = await getRatingsRedisClient("write");
   if (!redis) {
     return NextResponse.json(
       {
-        error: storage.reason ?? "Ratings not configured",
-        storage,
+        error:
+          storage.reason ?? "Ratings storage is temporarily unavailable.",
+        storage: withRatingsStorageFailure(
+          storage,
+          "Ratings storage is temporarily unavailable.",
+        ),
       },
       { status: 503 },
     );
@@ -96,11 +113,14 @@ export async function POST(request: NextRequest) {
     const { gameId, modelId, stars } = body;
 
     if (!gameId || !modelId || stars === undefined) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing fields", storage },
+        { status: 400 },
+      );
     }
     if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
       return NextResponse.json(
-        { error: "Stars must be integer 1-5" },
+        { error: "Stars must be integer 1-5", storage },
         { status: 400 },
       );
     }
@@ -108,7 +128,7 @@ export async function POST(request: NextRequest) {
     const game = getGame(gameId);
     if (!game || !game.versions.find((v) => v.modelId === modelId)) {
       return NextResponse.json(
-        { error: "Invalid game or model" },
+        { error: "Invalid game or model", storage },
         { status: 400 },
       );
     }
@@ -149,7 +169,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to submit rating",
-        storage,
+        storage: withRatingsStorageFailure(storage, "Failed to submit rating."),
       },
       { status: 500 },
     );

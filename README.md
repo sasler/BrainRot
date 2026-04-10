@@ -69,7 +69,7 @@ If you only provide `KV_REST_API_READ_ONLY_TOKEN`, the site can show rating summ
 - **Framework:** Next.js 16 (App Router) + React 19
 - **Styling:** Tailwind CSS 4
 - **Fonts:** Geist Sans & Mono (local)
-- **Ratings:** Vercel KV / Redis via Upstash REST
+- **Ratings:** Direct Redis via `REDIS_URL` or Vercel KV via Upstash REST
 - **Games:** Standalone HTML/JS in sandboxed iframes
 - **Testing:** Playwright
 - **Theme:** Dark with neon accents

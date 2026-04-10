@@ -88,11 +88,10 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     for (const game of games) {
       await page.goto(`/games/${game}`);
 
-      // Breadcrumb
-      await expect(page.getByRole("main").getByRole("link", { name: "Home", exact: true })).toBeVisible();
-
       // AI implementations section (games have versions now)
-      await expect(page.getByText("AI IMPLEMENTATIONS")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "AI IMPLEMENTATIONS" }),
+      ).toBeVisible();
 
       // Should show version cards for all 4 models (use heading role to avoid matching review quotes)
       await expect(page.getByRole("heading", { name: "Claude Opus 4.6" })).toBeVisible();

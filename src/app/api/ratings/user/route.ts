@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getGame, getGames } from "@/lib/games";
-import { getRatingsRedisClient, getRatingsStorageState } from "@/lib/ratings";
+import {
+  getRatingsRedisClient,
+  getRatingsStorageState,
+  withRatingsStorageFailure,
+} from "@/lib/ratings";
+import type { RatingsStorageState } from "@/lib/ratings-types";
 
 export async function GET(request: NextRequest) {
-  const storage = getRatingsStorageState();
+  const storage: RatingsStorageState = getRatingsStorageState();
   const redis = await getRatingsRedisClient("read");
-  if (!redis) return NextResponse.json({ votes: {}, storage });
+  if (!redis) {
+    return NextResponse.json({
+      votes: {},
+      storage: withRatingsStorageFailure(
+        storage,
+        "Ratings storage is temporarily unavailable.",
+      ),
+    });
+  }
 
   try {
     const cookieStore = await cookies();
     const voterCookie = cookieStore.get("brainrot_voter");
-    if (!voterCookie) return NextResponse.json({ votes: {} });
+    if (!voterCookie) return NextResponse.json({ votes: {}, storage });
 
     const voterId = voterCookie.value;
     const { searchParams } = request.nextUrl;
@@ -33,7 +46,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (keys.length === 0) return NextResponse.json({ votes: {} });
+    if (keys.length === 0) return NextResponse.json({ votes: {}, storage });
 
     const results = await redis.getMany(keys);
 
@@ -50,10 +63,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         votes: {},
-        storage: {
-          ...storage,
-          reason: storage.reason ?? "Failed to load user votes from storage.",
-        },
+        storage: withRatingsStorageFailure(
+          storage,
+          "Failed to load user votes from storage.",
+        ),
       },
       { status: 500 },
     );

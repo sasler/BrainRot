@@ -8,18 +8,19 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import type { RatingsStorageState } from "@/lib/ratings-types";
 
 export interface RatingData {
   average: number;
   count: number;
 }
 
-export interface RatingsStorageState {
-  available: boolean;
-  writable: boolean;
-  reason: string | null;
-  missingEnvVars: string[];
-}
+const unavailableStorage: RatingsStorageState = {
+  available: false,
+  writable: false,
+  reason: "Ratings API is unavailable right now.",
+  missingEnvVars: [],
+};
 
 interface RatingsContextValue {
   ratings: Record<string, RatingData>;
@@ -91,49 +92,57 @@ export default function RatingsProvider({
   const loading = loadedScope !== scopeKey;
 
   useEffect(() => {
-    const qs = gameId ? `?gameId=${gameId}` : "";
-    Promise.all([
-      fetch(`/api/ratings${qs}`)
+    const controller = new AbortController();
+    let ignore = false;
+    const qs = gameId ? `?gameId=${encodeURIComponent(gameId)}` : "";
+
+    void Promise.all([
+      fetch(`/api/ratings${qs}`, { signal: controller.signal })
         .then((r) => r.json())
-        .catch(
-          () =>
-            ({
-              ratings: {},
-              storage: {
-                available: false,
-                writable: false,
-                reason: "Ratings API is unavailable right now.",
-                missingEnvVars: [],
-              },
-            }) as {
-              ratings: Record<string, RatingData>;
-              storage: RatingsStorageState;
-            },
-        ),
-      fetch(`/api/ratings/user${qs}`)
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return null;
+          }
+
+          return {
+            ratings: {},
+            storage: unavailableStorage,
+          } as {
+            ratings: Record<string, RatingData>;
+            storage: RatingsStorageState;
+          };
+        }),
+      fetch(`/api/ratings/user${qs}`, { signal: controller.signal })
         .then((r) => r.json())
-        .catch(
-          () =>
-            ({
-              votes: {},
-              storage: {
-                available: false,
-                writable: false,
-                reason: "Ratings API is unavailable right now.",
-                missingEnvVars: [],
-              },
-            }) as {
-              votes: Record<string, number>;
-              storage: RatingsStorageState;
-            },
-        ),
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return null;
+          }
+
+          return {
+            votes: {},
+            storage: unavailableStorage,
+          } as {
+            votes: Record<string, number>;
+            storage: RatingsStorageState;
+          };
+        }),
     ]).then(([ratingsRes, votesRes]) => {
+      if (ignore || !ratingsRes || !votesRes) {
+        return;
+      }
+
       setRatings(ratingsRes.ratings ?? {});
       setUserVotes(votesRes.votes ?? {});
       setStorage(ratingsRes.storage ?? votesRes.storage ?? null);
       setSubmitError(null);
       setLoadedScope(scopeKey);
     });
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
   }, [gameId, scopeKey]);
 
   const submitRating = useCallback(

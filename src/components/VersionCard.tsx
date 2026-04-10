@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MODEL_COLORS } from "@/lib/modelColors";
 import type { Game, GameVersion } from "@/lib/games";
+import RatingSummary from "./RatingSummary";
+import { useVersionRating } from "./RatingsProvider";
 
 interface VersionCardProps {
   game: Game;
@@ -29,6 +31,7 @@ const FEATURE_COLORS: Record<string, string> = {
 
 export default function VersionCard({ game, version, index }: VersionCardProps) {
   const modelColor = MODEL_COLORS[version.modelId] || game.accentColor;
+  const { rating } = useVersionRating(game.id, version.modelId);
   const [review, setReview] = useState<{ from: string; comment: string } | null>(null);
 
   useEffect(() => {
@@ -111,6 +114,13 @@ export default function VersionCard({ game, version, index }: VersionCardProps) 
               — {review.from}
             </span>
           </p>
+        </div>
+      )}
+
+      {/* Rating */}
+      {rating && (
+        <div className="mb-3">
+          <RatingSummary rating={rating} size="sm" accentColor={modelColor} />
         </div>
       )}
 

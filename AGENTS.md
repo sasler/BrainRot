@@ -89,6 +89,27 @@ This version has breaking changes — APIs, conventions, and file structure may 
   | `gpt-5-4-mini` | `gpt-5.4-mini` |
   | `gemini-3-1-pro` | *(not currently used for new games)* |
 
+## Commit & PR Convention (CRITICAL)
+
+- **Every commit message and PR title MUST start with a [Gitmoji](https://gitmoji.dev) emoji.**
+- Use the actual Unicode emoji character, not the `:shortcode:` format.
+- Common mappings:
+  | Emoji | Code | Meaning |
+  |-------|------|---------|
+  | ✨ | `:sparkles:` | New feature |
+  | 🐛 | `:bug:` | Bug fix |
+  | 🔧 | `:wrench:` | Configuration / tooling |
+  | ♻️ | `:recycle:` | Refactor |
+  | 🎨 | `:art:` | Style / UI improvement |
+  | 📝 | `:memo:` | Documentation |
+  | ✅ | `:white_check_mark:` | Tests |
+  | 🚀 | `:rocket:` | Deploy / performance |
+  | 🔥 | `:fire:` | Remove code / files |
+  | 🏗️ | `:building_construction:` | Architecture changes |
+- Example commit: `✨ Add star rating system for game versions`
+- Example PR title: `🐛 Fix breakout keyboard controls and mini golf physics`
+- The Co-authored-by trailer is still required on all commits.
+
 ## Metadata Maintenance
 
 - `games-metadata.json` is the **single source of truth** for games and versions.

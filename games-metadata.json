@@ -1247,7 +1247,7 @@
           "model": "Claude Opus 4.6",
           "modelId": "opus-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 1132,
+          "linesOfCode": 1133,
           "path": "/games/breakout/opus-4-6/index.html",
           "features": [
             "sound",
@@ -1306,7 +1306,7 @@
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-03-30",
-          "linesOfCode": 896,
+          "linesOfCode": 900,
           "path": "/games/breakout/sonnet-4-6/index.html",
           "features": [
             "sound",
@@ -2924,7 +2924,7 @@
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-03-31",
-          "linesOfCode": 2305,
+          "linesOfCode": 2401,
           "path": "/games/mini-golf/gpt-5-4/index.html",
           "features": [
             "3d",
@@ -2982,7 +2982,7 @@
           "model": "GPT 5.4 Mini",
           "modelId": "gpt-5-4-mini",
           "date": "2026-03-31",
-          "linesOfCode": 1344,
+          "linesOfCode": 1345,
           "path": "/games/mini-golf/gpt-5-4-mini/index.html",
           "features": [
             "3d",
@@ -3107,7 +3107,7 @@
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-04-09",
-          "linesOfCode": 1236,
+          "linesOfCode": 1239,
           "path": "/games/tile-matching/sonnet-4-6/index.html",
           "features": [
             "sound",
@@ -3349,7 +3349,7 @@
           "model": "Claude Sonnet 4.6",
           "modelId": "sonnet-4-6",
           "date": "2026-04-09",
-          "linesOfCode": 1199,
+          "linesOfCode": 1203,
           "path": "/games/space-invaders/sonnet-4-6/index.html",
           "features": [
             "sound",
@@ -3408,7 +3408,7 @@
           "model": "GPT 5.4",
           "modelId": "gpt-5-4",
           "date": "2026-04-09",
-          "linesOfCode": 2919,
+          "linesOfCode": 3116,
           "path": "/games/space-invaders/gpt-5-4/index.html",
           "features": [
             "sound",

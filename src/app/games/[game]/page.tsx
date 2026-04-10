@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGame, getGames } from "@/lib/games";
 import VersionCard from "@/components/VersionCard";
+import RatingsProvider from "@/components/RatingsProvider";
 import type { Metadata } from "next";
 
 interface GamePageProps {
@@ -79,16 +80,18 @@ export default async function GamePage({ params }: GamePageProps) {
               </h2>
               <div className="h-px w-8 bg-gradient-to-l from-transparent to-neon-cyan/50" />
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {game.versions.map((version, index) => (
-                <VersionCard
-                  key={version.modelId}
-                  game={game}
-                  version={version}
-                  index={index}
-                />
-              ))}
-            </div>
+            <RatingsProvider gameId={game.id}>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {game.versions.map((version, index) => (
+                  <VersionCard
+                    key={version.modelId}
+                    game={game}
+                    version={version}
+                    index={index}
+                  />
+                ))}
+              </div>
+            </RatingsProvider>
           </>
         ) : (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-border py-20">

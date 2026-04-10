@@ -666,12 +666,17 @@
     const pointerNdc = new THREE.Vector2();
 
     const BALL_RADIUS = 0.34;
-    const MAX_SHOT_SPEED = 18.5;
+    const MIN_SHOT_SPEED = 5.2;
+    const MAX_SHOT_SPEED = 29.5;
+    const SHOT_LIFT_BASE = 0.28;
+    const SHOT_LIFT_SCALE = 0.62;
+    const ROLL_DAMPING = 0.7;
+    const RESET_SPOT_CLEARANCE = BALL_RADIUS + 0.06;
     const GRAVITY = 28;
-    const AIR_DRAG = 0.08;
+    const AIR_DRAG = 0.05;
     const WALL_RESTITUTION = 0.78;
     const BUMPER_RESTITUTION = 0.9;
-    const SAFE_SPEED = 0.12;
+    const SAFE_SPEED = 0.07;
 
     const tempVecA = new THREE.Vector3();
     const tempVecB = new THREE.Vector3();
@@ -1047,7 +1052,7 @@
       {
         name: "Glow Run",
         par: 2,
-        spawn: { x: -11.5, z: 0 },
+        spawn: { x: -10.9, z: 0.25 },
         cup: { x: 11.7, z: 0, radius: 0.46, depth: 0.72 },
         accents: [
           { x: -2, y: 0.14, z: -5.2, sx: 1.2, sz: 0.15 },
@@ -1554,13 +1559,99 @@
       );
     }
 
+    function overlapsBallPlacementBox(x, z, collider, radius = BALL_RADIUS) {
+      const local = worldToLocalXZ(collider, x, z);
+      const hx = (collider.length || 1) * 0.5;
+      const hz = (collider.thickness || 1) * 0.5;
+      const cx = clamp(local.x, -hx, hx);
+      const cz = clamp(local.z, -hz, hz);
+      const dx = local.x - cx;
+      const dz = local.z - cz;
+      return dx * dx + dz * dz < radius * radius;
+    }
+
+    function overlapsBallPlacementCylinder(x, z, collider, radius = BALL_RADIUS) {
+      const dx = x - collider.x;
+      const dz = z - collider.z;
+      const hitRadius = radius + collider.radius;
+      return dx * dx + dz * dz < hitRadius * hitRadius;
+    }
+
+    function isBallPlacementSafe(x, z, hole = game.course, clearance = RESET_SPOT_CLEARANCE) {
+      if (!hole || !sampleSurface(x, z, hole) || isPointInWater(x, z, hole)) return false;
+
+      for (const wall of hole.walls) {
+        if (overlapsBallPlacementBox(x, z, wall, clearance)) return false;
+      }
+
+      for (const obstacle of hole.obstacles) {
+        const collider = obstacle.collider || obstacle;
+        if (overlapsBallPlacementBox(x, z, collider, clearance)) return false;
+      }
+
+      for (const bumper of hole.bumpers) {
+        if (overlapsBallPlacementCylinder(x, z, bumper, clearance)) return false;
+      }
+
+      return true;
+    }
+
+    function findResetSpot(origin, hole = game.course) {
+      if (!hole) return null;
+
+      const trySpot = (x, z) => {
+        if (!isBallPlacementSafe(x, z, hole)) return null;
+        const surface = sampleSurface(x, z, hole);
+        return surface ? { x, y: surface.y + BALL_RADIUS, z, normal: surface.normal } : null;
+      };
+
+      const direct = trySpot(origin.x, origin.z);
+      if (direct) return direct;
+
+      const towardCup = tempVec2.set(hole.cup.x - origin.x, hole.cup.z - origin.z);
+      if (towardCup.lengthSq() < 0.0001) {
+        towardCup.set(1, 0);
+      } else {
+        towardCup.normalize();
+      }
+
+      for (let offset = 0.18; offset <= 1.5; offset += 0.18) {
+        const forward = trySpot(
+          origin.x + towardCup.x * offset,
+          origin.z + towardCup.y * offset
+        );
+        if (forward) return forward;
+      }
+
+      const step = 0.22;
+      for (let ring = 1; ring <= 14; ring++) {
+        const radius = ring * step;
+        const count = 10 + ring * 4;
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2;
+          const spot = trySpot(
+            origin.x + Math.cos(angle) * radius,
+            origin.z + Math.sin(angle) * radius
+          );
+          if (spot) return spot;
+        }
+      }
+
+      const surface = sampleSurface(origin.x, origin.z, hole);
+      return {
+        x: origin.x,
+        y: (surface ? surface.y : 0.2) + BALL_RADIUS,
+        z: origin.z,
+        normal: surface?.normal || new THREE.Vector3(0, 1, 0)
+      };
+    }
+
     function resetBall(freshHole = false) {
       const spawn = game.course.spawn;
-      const surface = sampleSurface(spawn.x, spawn.z);
-      const y = surface ? surface.y + BALL_RADIUS : BALL_RADIUS + 0.2;
-      ball.position.set(spawn.x, y, spawn.z);
+      const spot = findResetSpot(spawn, game.course);
+      ball.position.set(spot.x, spot.y, spot.z);
       ball.velocity.set(0, 0, 0);
-      ball.normal.copy(surface?.normal || new THREE.Vector3(0, 1, 0));
+      ball.normal.copy(spot.normal || new THREE.Vector3(0, 1, 0));
       ball.grounded = true;
       ball.lastSafe.copy(ball.position);
       ball.sinking = false;
@@ -1753,8 +1844,13 @@
     function commitStroke(direction, power) {
       game.strokesThisHole += 1;
       game.totalStrokes += 1;
-      const shotSpeed = 4.2 + power * (MAX_SHOT_SPEED - 4.2);
-      ball.velocity.set(direction.x * shotSpeed, 0.7 + power * 1.4, direction.z * shotSpeed);
+      const easedPower = 1 - Math.pow(1 - power, 0.88);
+      const shotSpeed = MIN_SHOT_SPEED + easedPower * (MAX_SHOT_SPEED - MIN_SHOT_SPEED);
+      ball.velocity.set(
+        direction.x * shotSpeed,
+        SHOT_LIFT_BASE + easedPower * SHOT_LIFT_SCALE,
+        direction.z * shotSpeed
+      );
       ball.grounded = false;
       ball.strokeCommitted = true;
       setStatus(`Stroke ${game.strokesThisHole}: ${power < 0.35 ? "soft touch" : power < 0.68 ? "solid roll" : "full send"}.`, 1.9);
@@ -1806,7 +1902,7 @@
       if (length > 0.001) {
         input.aimDirection.copy(drag).multiplyScalar(-1).normalize();
       }
-      input.power = clamp(length / 4.2, 0, 1);
+      input.power = clamp(length / 3.35, 0, 1);
       updateAimPreview();
     }
 
@@ -2077,7 +2173,7 @@
 
           const normalComponent = tempVecC.copy(surface.normal).multiplyScalar(ball.velocity.dot(surface.normal));
           const tangentVelocity = ball.velocity.clone().sub(normalComponent);
-          tangentVelocity.multiplyScalar(Math.exp(-2.35 * dt));
+          tangentVelocity.multiplyScalar(Math.exp(-ROLL_DAMPING * dt));
           if (tangentVelocity.lengthSq() < SAFE_SPEED * SAFE_SPEED) {
             tangentVelocity.set(0, 0, 0);
           }

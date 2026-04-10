@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGame, getGames, getGameVersion } from "@/lib/games";
+import RatingsProvider from "@/components/RatingsProvider";
+import RatingInput from "@/components/RatingInput";
 import type { Metadata } from "next";
 
 interface PlayPageProps {
@@ -92,6 +94,17 @@ export default async function PlayPage({ params }: PlayPageProps) {
           className="absolute inset-0 h-full w-full border-0"
         />
       </div>
+
+      {/* Rating bar */}
+      <RatingsProvider gameId={gameId}>
+        <div className="flex shrink-0 items-center justify-center border-t border-border bg-surface/80 px-4 py-2">
+          <RatingInput
+            gameId={gameId}
+            modelId={modelId}
+            accentColor={game.accentColor}
+          />
+        </div>
+      </RatingsProvider>
     </div>
   );
 }

@@ -96,23 +96,27 @@
     .hud {
       position: fixed;
       inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
       pointer-events: none;
-      padding:
-        max(12px, env(safe-area-inset-top))
-        max(12px, env(safe-area-inset-right))
-        max(12px, env(safe-area-inset-bottom))
-        max(12px, env(safe-area-inset-left));
       z-index: 3;
     }
 
-    .hud-top {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+    .hud-rail {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: max(8px, env(safe-area-inset-left));
+      right: max(8px, env(safe-area-inset-right));
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .hud-primary {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
       align-items: stretch;
+      max-width: min(68vw, 560px);
     }
 
     .hud-card,
@@ -120,7 +124,8 @@
     .touch-pad,
     .touch-fire,
     .screen-panel,
-    .hud-bottom-card {
+    .hud-panel,
+    .hud-drawer {
       border: 1px solid var(--border);
       background: linear-gradient(180deg, rgba(16, 23, 54, 0.88), rgba(8, 11, 28, 0.78));
       box-shadow: var(--shadow);
@@ -134,7 +139,8 @@
     .touch-pad::before,
     .touch-fire::before,
     .screen-panel::before,
-    .hud-bottom-card::before {
+    .hud-panel::before,
+    .hud-drawer::before {
       content: "";
       position: absolute;
       inset: 0;
@@ -146,83 +152,143 @@
     }
 
     .hud-card {
-      padding: 10px 12px;
-      min-height: 72px;
-      border-radius: 18px;
+      flex: 0 1 102px;
+      min-width: 90px;
+      max-width: 118px;
+      padding: 6px 8px;
+      min-height: 0;
+      border-radius: 12px;
     }
 
     .hud-label {
       display: block;
       color: rgba(207, 231, 255, 0.72);
-      font-size: 10px;
-      letter-spacing: 0.28em;
+      font-size: 8px;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 3px;
     }
 
     .hud-value {
       display: block;
       font-family: "Consolas", "Lucida Console", monospace;
-      font-size: 26px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--cyan);
       text-shadow: 0 0 16px rgba(0, 246, 255, 0.42);
-      line-height: 1.1;
+      line-height: 1;
     }
 
     .hud-subvalue {
       display: flex;
       justify-content: space-between;
-      gap: 8px;
-      margin-top: 8px;
+      gap: 6px;
+      margin-top: 3px;
       color: rgba(224, 243, 255, 0.7);
-      font-size: 12px;
-      letter-spacing: 0.08em;
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+
+    .hud-drawer {
+      width: min(220px, 24vw);
+      max-width: calc(100vw - 16px);
+      border-radius: 999px;
+      pointer-events: auto;
+    }
+
+    .hud-drawer[open] {
+      border-radius: 16px;
+    }
+
+    .hud-drawer summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hud-drawer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .hud-drawer-title {
+      display: grid;
+      gap: 1px;
+    }
+
+    .hud-drawer-title strong,
+    .hud-panel h3 {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: rgba(226, 238, 255, 0.72);
+    }
+
+    .hud-meta {
+      font-size: 9px;
+      color: rgba(224, 243, 255, 0.72);
+      letter-spacing: 0.04em;
+      text-align: right;
+    }
+
+    .hud-drawer-toggle {
+      font-size: 13px;
+      line-height: 1;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 246, 255, 0.32);
+    }
+
+    .hud-drawer[open] .hud-drawer-toggle {
+      transform: rotate(45deg);
+    }
+
+    .hud-drawer-body {
+      display: grid;
+      gap: 6px;
+      padding: 0 10px 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hud-panel {
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    .hud-panel h3 {
+      margin-bottom: 5px;
     }
 
     .status-ribbon {
-      align-self: center;
-      padding: 10px 18px;
+      position: absolute;
+      left: 50%;
+      bottom: calc(max(8px, env(safe-area-inset-bottom)) + var(--status-offset, 0px));
+      transform: translateX(-50%);
+      padding: 5px 11px;
       border-radius: 999px;
-      margin-top: 10px;
-      max-width: min(92vw, 720px);
-      min-height: 48px;
+      max-width: min(48vw, 380px);
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       text-align: center;
-      font-size: 12px;
+      font-size: 9px;
       text-transform: uppercase;
-      letter-spacing: 0.34em;
-      color: rgba(228, 251, 255, 0.96);
-      text-shadow: 0 0 12px rgba(108, 248, 255, 0.35);
-    }
-
-    .hud-bottom {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 14px;
-    }
-
-    .hud-bottom-card {
-      border-radius: 18px;
-      padding: 10px 14px;
-      max-width: min(48vw, 380px);
-    }
-
-    .hud-bottom-card h3 {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.26em;
-      color: rgba(226, 238, 255, 0.62);
-      margin-bottom: 8px;
+      letter-spacing: 0.12em;
+      color: rgba(228, 251, 255, 0.92);
+      text-shadow: 0 0 10px rgba(108, 248, 255, 0.28);
+      line-height: 1.25;
     }
 
     .ticker-line {
-      min-height: 1.3em;
-      font-size: 13px;
-      line-height: 1.45;
+      min-height: 1.2em;
+      font-size: 11px;
+      line-height: 1.35;
       color: rgba(236, 250, 255, 0.9);
       text-shadow: 0 0 10px rgba(108, 248, 255, 0.18);
     }
@@ -230,17 +296,17 @@
     .power-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      min-height: 26px;
+      gap: 6px;
+      min-height: 20px;
     }
 
     .power-chip {
       border-radius: 999px;
-      padding: 5px 10px;
+      padding: 3px 8px;
       background: rgba(10, 18, 42, 0.78);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      font-size: 11px;
-      letter-spacing: 0.12em;
+      font-size: 9px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--white);
       box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05), 0 0 12px rgba(108, 248, 255, 0.08);
@@ -458,12 +524,12 @@
 
     .touch-ui {
       position: fixed;
-      inset: auto 0 max(14px, env(safe-area-inset-bottom)) 0;
+      inset: auto 0 max(10px, env(safe-area-inset-bottom)) 0;
       display: none;
       justify-content: space-between;
       align-items: end;
-      gap: 14px;
-      padding: 0 16px;
+      gap: 10px;
+      padding: 0 12px;
       z-index: 5;
       pointer-events: none;
     }
@@ -475,18 +541,18 @@
     .touch-pad,
     .touch-fire {
       pointer-events: auto;
-      border-radius: 24px;
-      min-height: 132px;
+      border-radius: 20px;
+      min-height: 0;
     }
 
     .touch-pad {
-      flex: 1 1 auto;
-      max-width: 56vw;
-      padding: 14px;
+      flex: 0 1 min(44vw, 220px);
+      max-width: min(44vw, 220px);
+      padding: 10px 12px;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      gap: 10px;
+      gap: 8px;
     }
 
     .touch-pad h4,
@@ -499,7 +565,7 @@
 
     .touch-track {
       position: relative;
-      height: 64px;
+      height: 48px;
       border-radius: 999px;
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.08)),
@@ -522,8 +588,8 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 56px;
-      height: 56px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       background:
@@ -533,11 +599,11 @@
     }
 
     .touch-fire {
-      width: min(30vw, 150px);
+      width: clamp(96px, 24vw, 122px);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 14px;
+      padding: 10px;
       text-align: center;
       background:
         radial-gradient(circle at top left, rgba(255, 79, 216, 0.22), transparent 34%),
@@ -547,13 +613,13 @@
     }
 
     .touch-fire .button-core {
-      width: 92px;
-      height: 92px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       display: grid;
       place-items: center;
       font-family: "Impact", "Arial Black", sans-serif;
-      font-size: 28px;
+      font-size: 18px;
       letter-spacing: 0.12em;
       color: var(--white);
       border: 1px solid rgba(255, 255, 255, 0.22);
@@ -575,36 +641,80 @@
 
     @media (max-width: 900px) {
       .screen-grid,
-      .stats-grid,
-      .hud-top {
+      .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .hud-primary {
+        max-width: min(70vw, 500px);
+      }
+
+      .hud-card {
+        min-width: 84px;
+        max-width: 108px;
+      }
+
       .hud-value {
-        font-size: 22px;
+        font-size: 16px;
+      }
+
+      .hud-drawer {
+        width: min(200px, 26vw);
       }
     }
 
     @media (max-width: 720px) {
-      .hud {
-        padding-left: 10px;
-        padding-right: 10px;
-        gap: 8px;
+      .hud-rail {
+        gap: 6px;
       }
 
-      .hud-bottom {
-        flex-direction: column;
-        align-items: stretch;
+      .hud-primary {
+        gap: 4px;
+        max-width: calc(100vw - 68px);
       }
 
-      .hud-bottom-card {
-        max-width: 100%;
+      .hud-card {
+        flex: 0 1 86px;
+        min-width: 72px;
+        max-width: 88px;
+        padding: 5px 7px;
+        border-radius: 10px;
+      }
+
+      .hud-drawer {
+        position: fixed;
+        top: max(8px, env(safe-area-inset-top));
+        right: max(8px, env(safe-area-inset-right));
+        width: auto;
+        max-height: min(40vh, 260px);
+        z-index: 6;
+      }
+
+      .hud-drawer[open] {
+        width: min(210px, calc(100vw - 16px));
+      }
+
+      .hud-drawer-title {
+        gap: 0;
+      }
+
+      .hud-drawer-body {
+        max-height: calc(min(40vh, 260px) - 42px);
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+
+      .hud-subvalue,
+      .hud-card.optional,
+      .hud-meta {
+        display: none;
       }
 
       .status-ribbon {
-        margin-top: 8px;
-        font-size: 10px;
-        letter-spacing: 0.24em;
+        max-width: min(86vw, 320px);
+        padding: 4px 10px;
+        font-size: 8px;
+        letter-spacing: 0.09em;
       }
 
       .screen-grid {
@@ -617,17 +727,72 @@
     }
 
     @media (max-width: 520px) {
+      .hud-rail {
+        top: max(6px, env(safe-area-inset-top));
+        left: max(6px, env(safe-area-inset-left));
+        right: max(6px, env(safe-area-inset-right));
+      }
+
+      .hud-primary {
+        max-width: calc(100vw - 54px);
+        gap: 3px;
+      }
+
       .hud-card {
-        min-height: 64px;
-        padding: 8px 10px;
+        min-width: 0;
+        max-width: none;
+        flex: 1 1 0;
+        padding: 4px 6px;
+        border-radius: 9px;
+      }
+
+      .hud-label,
+      .hud-subvalue,
+      .status-ribbon {
+        display: none;
       }
 
       .hud-value {
-        font-size: 19px;
+        font-size: 13px;
       }
 
-      .hud-subvalue {
-        font-size: 10px;
+      .hud-card.optional {
+        display: none;
+      }
+
+      .hud-drawer {
+        top: max(6px, env(safe-area-inset-top));
+        right: max(6px, env(safe-area-inset-right));
+        border-radius: 999px;
+      }
+
+      .hud-drawer[open] {
+        width: min(168px, calc(100vw - 12px));
+        border-radius: 14px;
+      }
+
+      .hud-drawer summary {
+        gap: 0;
+        padding: 5px 8px;
+        min-width: 34px;
+        justify-content: center;
+      }
+
+      .hud-drawer-title {
+        display: none;
+      }
+
+      .hud-drawer-body {
+        gap: 5px;
+        padding: 0 8px 8px;
+      }
+
+      .hud-panel {
+        padding: 7px 8px;
+      }
+
+      .hud-panel h3 {
+        display: none;
       }
 
       .stats-grid {
@@ -644,11 +809,29 @@
       }
 
       .touch-pad {
-        max-width: 100%;
+        flex-basis: min(48vw, 170px);
+        max-width: min(48vw, 170px);
       }
 
       .touch-fire {
-        width: 128px;
+        width: 96px;
+      }
+
+      .touch-fire .button-core {
+        width: 62px;
+        height: 62px;
+        font-size: 16px;
+      }
+    }
+
+    @media (pointer: coarse) {
+      .hud-drawer {
+        top: max(8px, env(safe-area-inset-top));
+      }
+
+      .status-ribbon {
+        --status-offset: 90px;
+        max-width: min(82vw, 420px);
       }
     }
 
@@ -663,8 +846,8 @@
     <canvas id="gameCanvas" aria-label="Space Invaders game canvas"></canvas>
 
     <div class="hud">
-      <div>
-        <div class="hud-top">
+      <div class="hud-rail">
+        <div class="hud-primary">
           <div class="hud-card">
             <span class="hud-label">Score</span>
             <span class="hud-value" id="scoreValue">0</span>
@@ -680,25 +863,35 @@
             <span class="hud-value" id="livesValue">3</span>
             <div class="hud-subvalue"><span>Shield</span><span id="shieldValue">Offline</span></div>
           </div>
-          <div class="hud-card">
+          <div class="hud-card optional">
             <span class="hud-label">Combo</span>
             <span class="hud-value" id="comboValue">x1</span>
             <div class="hud-subvalue"><span>Chain</span><span id="chainValue">0</span></div>
           </div>
         </div>
-        <div class="status-ribbon" id="statusRibbon">Press Start and erase the invasion fleet.</div>
+
+        <details class="hud-drawer">
+          <summary>
+            <div class="hud-drawer-title">
+              <strong>Intel</strong>
+              <span class="hud-meta" id="intelMeta">Feed + upgrades</span>
+            </div>
+            <span class="hud-drawer-toggle">+</span>
+          </summary>
+          <div class="hud-drawer-body">
+            <div class="hud-panel">
+              <h3>Event Feed</h3>
+              <div class="ticker-line" id="tickerLine">Stand by for orbital contact.</div>
+            </div>
+            <div class="hud-panel">
+              <h3>Active Upgrades</h3>
+              <div class="power-list" id="powerList"></div>
+            </div>
+          </div>
+        </details>
       </div>
 
-      <div class="hud-bottom">
-        <div class="hud-bottom-card">
-          <h3>Event Feed</h3>
-          <div class="ticker-line" id="tickerLine">Stand by for orbital contact.</div>
-        </div>
-        <div class="hud-bottom-card">
-          <h3>Active Upgrades</h3>
-          <div class="power-list" id="powerList"></div>
-        </div>
-      </div>
+      <div class="status-ribbon" id="statusRibbon">Press Start and erase the invasion fleet.</div>
     </div>
 
     <div class="screen visible" id="titleScreen">
@@ -786,6 +979,7 @@
       const returnButton = document.getElementById("returnButton");
       const statusRibbon = document.getElementById("statusRibbon");
       const tickerLine = document.getElementById("tickerLine");
+      const intelMeta = document.getElementById("intelMeta");
       const scoreValue = document.getElementById("scoreValue");
       const bestValue = document.getElementById("bestValue");
       const waveValue = document.getElementById("waveValue");
@@ -1819,6 +2013,7 @@
         chainValue.textContent = String(game.combo);
         const player = game.player;
         shieldValue.textContent = player && player.shieldTimer > 0 ? (player.shieldTimer.toFixed(1) + "s") : "Offline";
+        let activeCount = 0;
         powerList.innerHTML = "";
         if (player) {
           const active = [
@@ -1827,6 +2022,7 @@
             player.shieldTimer > 0 ? { type: "shield", time: player.shieldTimer } : null,
             player.speedTimer > 0 ? { type: "speed", time: player.speedTimer } : null
           ].filter(Boolean);
+          activeCount = active.length;
           if (!active.length) {
             const chip = document.createElement("div");
             chip.className = "power-chip";
@@ -1844,6 +2040,7 @@
             });
           }
         }
+        intelMeta.textContent = activeCount ? (activeCount + " boosts live") : "Feed + no boosts";
       }
 
       function updatePlayer(dt) {

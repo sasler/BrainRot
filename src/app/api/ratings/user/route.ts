@@ -6,14 +6,17 @@ function kvAvailable() {
   return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
-async function getKV() {
+async function getRedis() {
   if (!kvAvailable()) return null;
-  const { kv } = await import("@vercel/kv");
-  return kv;
+  const { Redis } = await import("@upstash/redis");
+  return new Redis({
+    url: process.env.KV_REST_API_URL!,
+    token: process.env.KV_REST_API_TOKEN!,
+  });
 }
 
 export async function GET(request: NextRequest) {
-  const redis = await getKV();
+  const redis = await getRedis();
   if (!redis) return NextResponse.json({ votes: {} });
 
   try {

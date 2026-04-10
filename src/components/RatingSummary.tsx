@@ -60,9 +60,15 @@ export default function RatingSummary({
 
   const starSize = size === "sm" ? 12 : 16;
   const stars = [];
+  const fullStars = Math.floor(rating.average);
+  const fractionalPart = rating.average % 1;
+  const nextStarIsFull = fractionalPart >= 0.75;
+  const nextStarIsHalf = fractionalPart >= 0.25 && fractionalPart < 0.75;
+
   for (let i = 1; i <= 5; i++) {
-    const filled = i <= Math.floor(rating.average);
-    const half = !filled && i === Math.ceil(rating.average) && rating.average % 1 >= 0.3;
+    const isNextStar = i === fullStars + 1;
+    const filled = i <= fullStars || (isNextStar && nextStarIsFull);
+    const half = !filled && isNextStar && nextStarIsHalf;
     stars.push(
       <StarIcon
         key={i}

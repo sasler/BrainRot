@@ -149,7 +149,7 @@ export default function RatingsProvider({
           }
         }
       } catch {
-        // Revert on network failure and refetch
+        // Revert on network failure
         setUserVotes((prev) => {
           const next = { ...prev };
           if (prevVote !== undefined) next[key] = prevVote;

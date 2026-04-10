@@ -10,8 +10,8 @@
     "update-metadata": "node scripts/update-metadata.js"
   },
   "dependencies": {
+    "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/kv": "^3.0.0",
     "geist": "^1.7.0",
     "next": "16.2.1",
     "react": "19.2.4",

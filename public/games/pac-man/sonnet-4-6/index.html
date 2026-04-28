@@ -348,8 +348,15 @@ function initLevel(){
   PARTS.length=0;FLOATS.length=0;
   stopSiren();
 }
+function resetAfterDeath(){
+  // Respawn without resetting map (dots remain eaten)
+  resetPac();initGhosts();
+  modeIdx=0;modeTimer=0;ghostCombo=0;
+  PARTS.length=0;FLOATS.length=0;
+  stopSiren();
+}
 function startGame(){
-  score=0;lives=3;level=1;
+  score=0;lives=3;level=1;nextExtraLife=10000;
   initLevel();
   gs='playing';
   updateHUD();
@@ -360,6 +367,17 @@ function updateHUD(){
   document.getElementById('hi').textContent=hi;
   document.getElementById('lv').textContent=level;
   document.getElementById('lf').textContent='●'.repeat(Math.max(0,lives));
+}
+let nextExtraLife=10000;
+function checkExtraLife(){
+  if(score>=nextExtraLife){
+    lives++;nextExtraLife+=10000;
+    sfxExtraLife();
+    const p=cellCenter(pac.c,pac.r);
+    spawnParts(p.x,p.y,'#ffdd00',20,5,60,5);
+    addFloat(p.x,p.y,'+ LIFE!','#ffdd00');
+    updateHUD();
+  }
 }
 
 // ── Input ─────────────────────────────────────────────────────────
@@ -437,6 +455,7 @@ function tickGame(){
     if(cell===D1){
       map[pac.r][pac.c]=E3;dotsLeft--;
       score+=10;if(score>hi)hi=score;
+      checkExtraLife();
       sfxEatDot(eatAlt);eatAlt=!eatAlt;
       const p=cellCenter(pac.c,pac.r);
       spawnParts(p.x,p.y,'#ffff99',3,1.2,12);
@@ -445,6 +464,7 @@ function tickGame(){
     }else if(cell===P2){
       map[pac.r][pac.c]=E3;dotsLeft--;
       score+=50;if(score>hi)hi=score;
+      checkExtraLife();
       sfxPowerUp();ghostCombo=0;
       const p=cellCenter(pac.c,pac.r);
       spawnParts(p.x,p.y,'#00ffff',14,3.5,30,4);
@@ -698,9 +718,9 @@ function drawGhost(g){
   // Wavy skirt (5 bumps)
   const bw=rad*2/5;
   for(let k=0;k<=5;k++){
-    const bx=px-rad+k*bw;
-    const by=bot-(k%2===0?rad*0.3:0);
-    k===0?CX.lineTo(bx,by):CX.lineTo(bx,by);
+    const bx=px+rad-k*bw;
+    const by=k%2===0?bot:bot-rad*0.35;
+    CX.lineTo(bx,by);
   }
   CX.closePath();CX.fill();
 
@@ -884,7 +904,7 @@ function loop(ts){
       if(lives<=0){gs='gameover';}
       else{
         gs='playing';
-        initLevel();// reset level state, keep score/lives
+        resetAfterDeath();// reset positions only, keep dots/score
         updateHUD();
         setTimeout(startSiren,500);
       }

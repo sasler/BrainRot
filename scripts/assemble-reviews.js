@@ -121,9 +121,22 @@ if (Object.keys(allModelReviews).length > 0) {
   metadata.modelReviews = modelReviewEntries;
 }
 
+const displayedModelComments = (metadata.modelReviews || []).reduce(
+  (sum, modelReview) =>
+    sum +
+    (modelReview.reviews || []).reduce(
+      (reviewSum, review) => reviewSum + ((review.comments || []).length),
+      0
+    ),
+  0
+);
+
 // Write updated metadata
 fs.writeFileSync(METADATA_PATH, JSON.stringify(metadata, null, 2) + "\n");
 console.log(`\n✅ Assembled reviews into games-metadata.json:`);
 console.log(`   📝 ${totalGameComments} game review comments`);
-console.log(`   🎤 ${totalModelComments} model review comments`);
+console.log(`   🎤 ${displayedModelComments} model review comments`);
+if (displayedModelComments !== totalModelComments) {
+  console.log(`   📥 ${totalModelComments} model review comments loaded this run`);
+}
 console.log(`   🎯 ${(metadata.modelReviews || []).length} models with trash talk`);

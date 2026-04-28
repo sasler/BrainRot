@@ -11,14 +11,17 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     // Tagline
     await expect(page.getByText("100% AI-generated")).toBeVisible();
 
-    // Arena section with 12 game cards
+    // Arena section with 14 game cards
     const arena = page.locator("#arena");
     const gameCards = arena.locator('a[href^="/games/"]');
-    await expect(gameCards).toHaveCount(12);
+    await expect(gameCards).toHaveCount(14);
 
     // Game card titles present in arena section
     await expect(
       arena.locator('a[href="/games/snake"]').getByRole("heading", { name: "Snake" }),
+    ).toBeVisible();
+    await expect(
+      arena.locator('a[href="/games/pac-man"]').getByRole("heading", { name: "Pac-Man" }),
     ).toBeVisible();
     await expect(
       arena
@@ -65,6 +68,9 @@ test.describe("BrainRot Games — Smoke Tests", () => {
         .locator('a[href="/games/space-invaders"]')
         .getByRole("heading", { name: "Space Invaders" }),
     ).toBeVisible();
+    await expect(
+      arena.locator('a[href="/games/sudoku"]').getByRole("heading", { name: "Sudoku" }),
+    ).toBeVisible();
   });
 
   test("navbar has correct links", async ({ page }) => {
@@ -83,7 +89,22 @@ test.describe("BrainRot Games — Smoke Tests", () => {
   });
 
   test("game detail page loads for each game with versions", async ({ page }) => {
-    const games = ["snake", "minesweeper", "tetris", "reversi", "breakout", "2048", "endless-runner", "marble-madness", "maze-3d", "mini-golf", "tile-matching", "space-invaders"];
+    const games = [
+      "snake",
+      "pac-man",
+      "minesweeper",
+      "tetris",
+      "reversi",
+      "breakout",
+      "2048",
+      "endless-runner",
+      "marble-madness",
+      "maze-3d",
+      "mini-golf",
+      "tile-matching",
+      "space-invaders",
+      "sudoku",
+    ];
 
     for (const game of games) {
       await page.goto(`/games/${game}`);
@@ -93,11 +114,13 @@ test.describe("BrainRot Games — Smoke Tests", () => {
         page.getByRole("heading", { name: "AI IMPLEMENTATIONS" }),
       ).toBeVisible();
 
-      // Should show version cards for all 4 models (use heading role to avoid matching review quotes)
-      await expect(page.getByRole("heading", { name: "Claude Opus 4.6" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Claude Sonnet 4.6" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "GPT 5.4", exact: true })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "GPT 5.4 Mini" })).toBeVisible();
+
+      if (!["pac-man", "sudoku"].includes(game)) {
+        await expect(page.getByRole("heading", { name: "Claude Opus 4.6" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "GPT 5.4 Mini" })).toBeVisible();
+      }
     }
   });
 
@@ -123,7 +146,7 @@ test.describe("BrainRot Games — Smoke Tests", () => {
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
-    expect(data.games).toHaveLength(12);
+    expect(data.games).toHaveLength(14);
     expect(data.games.map((g: { id: string }) => g.id)).toEqual([
       "snake",
       "minesweeper",
@@ -137,6 +160,8 @@ test.describe("BrainRot Games — Smoke Tests", () => {
       "mini-golf",
       "tile-matching",
       "space-invaders",
+      "pac-man",
+      "sudoku",
     ]);
   });
 

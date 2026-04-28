@@ -1,0 +1,2971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Neon Rift Sudoku</title>
+  <style>
+    :root {
+      --bg: #04030b;
+      --panel: rgba(10, 12, 26, 0.88);
+      --panel-strong: rgba(17, 19, 37, 0.96);
+      --panel-soft: rgba(22, 26, 49, 0.65);
+      --line: rgba(102, 234, 255, 0.16);
+      --line-strong: rgba(118, 246, 255, 0.7);
+      --cyan: #6ff7ff;
+      --cyan-soft: rgba(111, 247, 255, 0.24);
+      --blue: #77a8ff;
+      --violet: #b478ff;
+      --pink: #ff68c2;
+      --gold: #ffd766;
+      --red: #ff557c;
+      --green: #59ffb4;
+      --text: #ecf5ff;
+      --muted: #8ba2c9;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+      --radius: 28px;
+      --cell-size: min(9.6vw, 60px);
+      --board-size: calc(var(--cell-size) * 9);
+      --font-display: "Impact", "Arial Black", "Segoe UI", sans-serif;
+      --font-body: "Trebuchet MS", "Lucida Sans Unicode", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 15% 18%, rgba(0, 255, 255, 0.12), transparent 28%),
+        radial-gradient(circle at 85% 12%, rgba(180, 120, 255, 0.14), transparent 30%),
+        radial-gradient(circle at 50% 100%, rgba(255, 104, 194, 0.12), transparent 34%),
+        linear-gradient(180deg, #020208 0%, #050613 42%, #090b19 100%);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background:
+        linear-gradient(115deg, rgba(111, 247, 255, 0.07), transparent 35%),
+        linear-gradient(300deg, rgba(255, 104, 194, 0.06), transparent 35%);
+      mix-blend-mode: screen;
+      animation: hueSweep 14s linear infinite;
+    }
+
+    body::after {
+      opacity: 0.12;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+      background-size: 120px 120px;
+      mask-image: radial-gradient(circle at center, black 20%, transparent 92%);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: clamp(14px, 2.8vw, 28px);
+      overflow: hidden;
+    }
+
+    .shell {
+      width: min(1440px, 100%);
+      min-height: min(900px, 100vh - 28px);
+      display: grid;
+      grid-template-columns: minmax(290px, 380px) minmax(320px, 1fr) minmax(250px, 320px);
+      gap: clamp(12px, 1.6vw, 22px);
+      align-items: stretch;
+    }
+
+    .panel {
+      position: relative;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
+        linear-gradient(180deg, rgba(12, 15, 31, 0.96), rgba(6, 8, 21, 0.95));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(111, 247, 255, 0.12), transparent 30%),
+        linear-gradient(315deg, rgba(180, 120, 255, 0.1), transparent 35%);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .panel-inner {
+      position: relative;
+      z-index: 1;
+      padding: clamp(18px, 2vw, 26px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+    }
+
+    .brand-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-size: 11px;
+      color: var(--cyan);
+      opacity: 0.86;
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: clamp(24px, 3vw, 34px);
+      text-shadow:
+        0 0 12px rgba(111, 247, 255, 0.6),
+        0 0 24px rgba(180, 120, 255, 0.36);
+    }
+
+    .brand-logo .pulse-dot {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 35%, white, rgba(255, 255, 255, 0.4) 24%, rgba(111, 247, 255, 0.2) 44%, transparent 62%),
+        radial-gradient(circle at center, var(--cyan-soft), transparent 70%);
+      box-shadow:
+        0 0 14px rgba(111, 247, 255, 0.8),
+        0 0 28px rgba(111, 247, 255, 0.3);
+      animation: pulseCore 3s ease-in-out infinite;
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .hero-copy h1 {
+      margin: 0;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: clamp(42px, 6vw, 78px);
+      line-height: 0.92;
+    }
+
+    .title-accent {
+      display: block;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, 0.24);
+      text-shadow:
+        0 0 18px rgba(111, 247, 255, 0.28),
+        0 0 36px rgba(255, 104, 194, 0.18);
+    }
+
+    .hero-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 26rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition:
+        transform 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.22s ease,
+        background 0.22s ease;
+      user-select: none;
+    }
+
+    .chip:hover,
+    .chip:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(111, 247, 255, 0.42);
+      box-shadow: 0 0 0 1px rgba(111, 247, 255, 0.24), 0 12px 30px rgba(0, 0, 0, 0.26);
+      outline: none;
+    }
+
+    .chip.active {
+      background:
+        linear-gradient(135deg, rgba(111, 247, 255, 0.22), rgba(180, 120, 255, 0.14)),
+        rgba(255, 255, 255, 0.06);
+      border-color: rgba(111, 247, 255, 0.72);
+      box-shadow:
+        0 0 0 1px rgba(111, 247, 255, 0.24),
+        0 0 20px rgba(111, 247, 255, 0.22);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 14px 15px 15px;
+      overflow: hidden;
+    }
+
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -30% -50% -10%;
+      height: 80px;
+      background: radial-gradient(circle, rgba(111, 247, 255, 0.16), transparent 70%);
+      pointer-events: none;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 700;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .metric-value small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .subgrid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .assist-row,
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.038);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .assist-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .assist-meta strong,
+    .control-row strong {
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    .assist-meta span,
+    .control-row span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .toggle {
+      position: relative;
+      width: 56px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: background 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+      flex-shrink: 0;
+    }
+
+    .toggle::before {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #ffffff, #a5b4d8);
+      transition: transform 0.24s ease;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.24);
+    }
+
+    .toggle.active {
+      background: linear-gradient(135deg, rgba(111, 247, 255, 0.5), rgba(180, 120, 255, 0.4));
+      border-color: rgba(111, 247, 255, 0.7);
+      box-shadow: 0 0 20px rgba(111, 247, 255, 0.18);
+    }
+
+    .toggle.active::before {
+      transform: translateX(24px);
+    }
+
+    .center-panel {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.8vw, 18px);
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px clamp(14px, 2vw, 20px);
+      border-radius: 24px;
+      background: rgba(7, 10, 24, 0.84);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .top-bar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(111, 247, 255, 0.12), transparent 32%),
+        linear-gradient(300deg, rgba(255, 104, 194, 0.09), transparent 40%);
+      pointer-events: none;
+    }
+
+    .top-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      backdrop-filter: blur(10px);
+    }
+
+    .status-pill strong {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .status-pill span {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .mistake-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mistake-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .mistake-dot.lost {
+      background: var(--red);
+      box-shadow:
+        0 0 12px rgba(255, 85, 124, 0.8),
+        0 0 22px rgba(255, 85, 124, 0.28);
+    }
+
+    .board-frame {
+      position: relative;
+      padding: clamp(16px, 2vw, 22px);
+      border-radius: 34px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+        linear-gradient(180deg, rgba(7, 9, 22, 0.98), rgba(4, 6, 18, 0.94));
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow:
+        var(--shadow),
+        inset 0 0 0 1px rgba(111, 247, 255, 0.08);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .board-frame::before {
+      content: "";
+      position: absolute;
+      inset: -30% -10%;
+      background:
+        radial-gradient(circle at 10% 30%, rgba(111, 247, 255, 0.14), transparent 20%),
+        radial-gradient(circle at 80% 70%, rgba(255, 104, 194, 0.12), transparent 20%),
+        radial-gradient(circle at 50% 50%, rgba(180, 120, 255, 0.08), transparent 30%);
+      filter: blur(30px);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .board-wrap {
+      position: relative;
+      width: min(100%, 100%);
+      display: grid;
+      place-items: center;
+      gap: 16px;
+    }
+
+    .board {
+      position: relative;
+      width: min(100%, var(--board-size));
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(10, 12, 28, 0.95), rgba(14, 17, 38, 0.96));
+      border: 2px solid rgba(111, 247, 255, 0.22);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 0 24px rgba(111, 247, 255, 0.12),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      touch-action: none;
+      user-select: none;
+    }
+
+    .cell {
+      position: relative;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      min-width: 0;
+      min-height: 0;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.01);
+      transition:
+        background 0.16s ease,
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+      overflow: hidden;
+    }
+
+    .cell:nth-child(9n) {
+      border-right: none;
+    }
+
+    .cell.subgrid-right {
+      box-shadow: inset -2px 0 0 rgba(111, 247, 255, 0.18);
+    }
+
+    .cell.subgrid-bottom {
+      box-shadow: inset 0 -2px 0 rgba(111, 247, 255, 0.18);
+    }
+
+    .cell.subgrid-right.subgrid-bottom {
+      box-shadow:
+        inset -2px 0 0 rgba(111, 247, 255, 0.18),
+        inset 0 -2px 0 rgba(111, 247, 255, 0.18);
+    }
+
+    .cell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(111, 247, 255, 0.16), transparent 72%);
+      pointer-events: none;
+    }
+
+    .cell:hover::before,
+    .cell.selected::before,
+    .cell.related::before {
+      opacity: 1;
+    }
+
+    .cell.given {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.03);
+    }
+
+    .cell.selected {
+      background:
+        linear-gradient(180deg, rgba(111, 247, 255, 0.12), rgba(111, 247, 255, 0.08)),
+        rgba(255, 255, 255, 0.06);
+      box-shadow:
+        inset 0 0 0 2px rgba(111, 247, 255, 0.82),
+        0 0 22px rgba(111, 247, 255, 0.18);
+      z-index: 2;
+    }
+
+    .cell.related {
+      background: rgba(111, 247, 255, 0.06);
+    }
+
+    .cell.same-number {
+      background: rgba(255, 215, 102, 0.12);
+    }
+
+    .cell.conflict {
+      background:
+        linear-gradient(180deg, rgba(255, 85, 124, 0.2), rgba(255, 85, 124, 0.08)),
+        rgba(255, 255, 255, 0.02);
+      box-shadow:
+        inset 0 0 0 2px rgba(255, 85, 124, 0.7),
+        0 0 22px rgba(255, 85, 124, 0.16);
+    }
+
+    .cell.hint-flash {
+      animation: hintPulse 0.8s ease;
+    }
+
+    .cell.invalid-shake {
+      animation: shake 0.36s ease;
+    }
+
+    .cell .value {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 800;
+      text-shadow: 0 0 20px rgba(111, 247, 255, 0.08);
+    }
+
+    .cell.given .value {
+      color: #ffffff;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.16),
+        0 0 24px rgba(111, 247, 255, 0.12);
+    }
+
+    .cell.user-filled .value {
+      color: var(--cyan);
+      text-shadow:
+        0 0 16px rgba(111, 247, 255, 0.35),
+        0 0 28px rgba(111, 247, 255, 0.16);
+    }
+
+    .notes-grid {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      align-items: center;
+      justify-items: center;
+      padding: 4px;
+      font-size: clamp(8px, 1vw, 11px);
+      color: rgba(225, 236, 255, 0.82);
+      line-height: 1;
+    }
+
+    .note {
+      opacity: 0.15;
+      transition: opacity 0.14s ease, color 0.14s ease, transform 0.14s ease;
+      transform: scale(0.96);
+    }
+
+    .note.active {
+      opacity: 1;
+      transform: scale(1);
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 0 10px rgba(111, 247, 255, 0.24);
+    }
+
+    .board-legend {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: min(100%, var(--board-size));
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .board-legend strong {
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+    }
+
+    .action-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .action-btn,
+    .number-btn,
+    .hero-btn {
+      position: relative;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+      transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .action-btn,
+    .hero-btn {
+      min-height: 54px;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.03);
+      padding: 12px 14px;
+      text-align: left;
+    }
+
+    .action-btn::before,
+    .number-btn::before,
+    .hero-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(111, 247, 255, 0.22), transparent 45%, rgba(255, 104, 194, 0.16));
+      opacity: 0;
+      transition: opacity 0.18s ease;
+      pointer-events: none;
+    }
+
+    .action-btn:hover,
+    .action-btn:focus-visible,
+    .number-btn:hover,
+    .number-btn:focus-visible,
+    .hero-btn:hover,
+    .hero-btn:focus-visible,
+    .cell:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(111, 247, 255, 0.5);
+      box-shadow:
+        0 0 0 1px rgba(111, 247, 255, 0.16),
+        0 16px 40px rgba(0, 0, 0, 0.32);
+      outline: none;
+    }
+
+    .action-btn:hover::before,
+    .number-btn:hover::before,
+    .hero-btn:hover::before,
+    .action-btn:focus-visible::before,
+    .number-btn:focus-visible::before,
+    .hero-btn:focus-visible::before {
+      opacity: 1;
+    }
+
+    .action-btn.active {
+      background:
+        linear-gradient(135deg, rgba(111, 247, 255, 0.18), rgba(180, 120, 255, 0.14)),
+        rgba(255, 255, 255, 0.05);
+      border-color: rgba(111, 247, 255, 0.64);
+      box-shadow:
+        0 0 0 1px rgba(111, 247, 255, 0.18),
+        0 0 22px rgba(111, 247, 255, 0.18);
+    }
+
+    .action-btn strong,
+    .hero-btn strong {
+      display: block;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      margin-bottom: 5px;
+    }
+
+    .action-btn span,
+    .hero-btn span {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .numpad-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .number-pad {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .number-btn {
+      min-height: clamp(58px, 8vw, 74px);
+      border-radius: 20px;
+      font-size: clamp(22px, 2.8vw, 30px);
+      font-weight: 800;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.035);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .number-btn.active {
+      border-color: rgba(255, 215, 102, 0.8);
+      box-shadow:
+        0 0 0 1px rgba(255, 215, 102, 0.18),
+        0 0 20px rgba(255, 215, 102, 0.18);
+      color: var(--gold);
+    }
+
+    .mini-panel {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .mini-panel h3 {
+      margin: 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .mini-panel p {
+      margin: 0;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .hotkeys {
+      display: grid;
+      gap: 10px;
+    }
+
+    .hotkey-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .kbd {
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .message-bar {
+      min-height: 56px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+        rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      color: var(--text);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .message-bar::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--cyan), var(--pink));
+    }
+
+    .message-bar.warning::before {
+      background: linear-gradient(180deg, var(--gold), var(--red));
+    }
+
+    .message-bar.error::before {
+      background: linear-gradient(180deg, var(--red), #ff1d55);
+    }
+
+    .message-text {
+      position: relative;
+      z-index: 1;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .overlay-root {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      z-index: 20;
+      padding: 18px;
+    }
+
+    .overlay {
+      width: min(980px, calc(100vw - 24px));
+      min-height: min(92vh, 720px);
+      border-radius: 36px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%),
+        linear-gradient(180deg, rgba(8, 10, 24, 0.98), rgba(5, 7, 18, 0.97));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow:
+        0 36px 120px rgba(0, 0, 0, 0.56),
+        0 0 0 1px rgba(111, 247, 255, 0.1);
+      opacity: 0;
+      transform: scale(0.96) translateY(16px);
+      transition:
+        opacity 0.34s ease,
+        transform 0.34s ease;
+      position: relative;
+      overflow: hidden;
+      display: none;
+      pointer-events: auto;
+    }
+
+    .overlay.visible {
+      display: block;
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .overlay::before,
+    .overlay::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(26px);
+      pointer-events: none;
+    }
+
+    .overlay::before {
+      width: 320px;
+      height: 320px;
+      right: -80px;
+      top: -100px;
+      background: rgba(111, 247, 255, 0.2);
+    }
+
+    .overlay::after {
+      width: 280px;
+      height: 280px;
+      left: -70px;
+      bottom: -100px;
+      background: rgba(255, 104, 194, 0.18);
+    }
+
+    .overlay-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: clamp(24px, 4vw, 44px);
+      display: grid;
+      gap: 22px;
+      align-content: center;
+    }
+
+    .overlay-head {
+      display: grid;
+      gap: 12px;
+      max-width: 40rem;
+    }
+
+    .overlay-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-size: 11px;
+      color: var(--cyan);
+    }
+
+    .overlay-title {
+      margin: 0;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: clamp(42px, 7vw, 92px);
+      line-height: 0.9;
+    }
+
+    .overlay-description {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+      max-width: 34rem;
+    }
+
+    .overlay-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .overlay-card {
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .overlay-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 8px;
+    }
+
+    .overlay-card strong {
+      font-size: clamp(22px, 3vw, 30px);
+    }
+
+    .overlay-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .hero-btn {
+      min-width: 170px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(111, 247, 255, 0.18), rgba(180, 120, 255, 0.16)),
+        rgba(255, 255, 255, 0.05);
+    }
+
+    .hero-btn.primary {
+      border-color: rgba(111, 247, 255, 0.7);
+      box-shadow:
+        0 0 0 1px rgba(111, 247, 255, 0.16),
+        0 0 28px rgba(111, 247, 255, 0.18);
+    }
+
+    .hero-btn.secondary {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+        rgba(255, 255, 255, 0.02);
+    }
+
+    .scanline {
+      position: absolute;
+      inset: -20% 0 auto 0;
+      height: 140px;
+      background: linear-gradient(180deg, transparent, rgba(111, 247, 255, 0.08), transparent);
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    canvas#fx {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .shell {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "left"
+          "center"
+          "right";
+      }
+
+      .left-panel {
+        grid-area: left;
+      }
+
+      .center-panel {
+        grid-area: center;
+      }
+
+      .right-panel {
+        grid-area: right;
+      }
+
+      .board-legend {
+        font-size: 11px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --cell-size: min(10vw, 44px);
+      }
+
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        display: block;
+        min-height: auto;
+        padding: 12px;
+      }
+
+      .shell {
+        min-height: auto;
+        gap: 12px;
+      }
+
+      .panel-inner {
+        padding: 16px;
+      }
+
+      .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .top-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .overlay-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy h1,
+      .overlay-title {
+        font-size: clamp(34px, 12vw, 64px);
+      }
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --cell-size: min(10vw, 38px);
+      }
+
+      .metrics {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .number-pad {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .brand-logo {
+        font-size: 22px;
+      }
+
+      .hero-btn {
+        width: 100%;
+      }
+
+      .overlay {
+        min-height: auto;
+      }
+    }
+
+    @keyframes pulseCore {
+      0%,
+      100% {
+        transform: scale(0.94);
+      }
+
+      50% {
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes hueSweep {
+      0% {
+        filter: hue-rotate(0deg);
+      }
+
+      100% {
+        filter: hue-rotate(360deg);
+      }
+    }
+
+    @keyframes hintPulse {
+      0% {
+        box-shadow: inset 0 0 0 2px rgba(255, 215, 102, 0.28), 0 0 0 rgba(255, 215, 102, 0.12);
+      }
+
+      50% {
+        box-shadow: inset 0 0 0 2px rgba(255, 215, 102, 0.86), 0 0 26px rgba(255, 215, 102, 0.4);
+      }
+
+      100% {
+        box-shadow: inset 0 0 0 2px rgba(255, 215, 102, 0.28), 0 0 0 rgba(255, 215, 102, 0.12);
+      }
+    }
+
+    @keyframes shake {
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      20% {
+        transform: translateX(-5px);
+      }
+
+      40% {
+        transform: translateX(5px);
+      }
+
+      60% {
+        transform: translateX(-4px);
+      }
+
+      80% {
+        transform: translateX(4px);
+      }
+    }
+
+    @keyframes scan {
+      0% {
+        transform: translateY(-20%);
+      }
+
+      100% {
+        transform: translateY(900%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div class="app">
+    <div class="shell">
+      <section class="panel left-panel" aria-label="Mission control panel">
+        <div class="panel-inner">
+          <div class="brand-line">
+            <div class="eyebrow">BrainRot // Logic Arena</div>
+            <div class="brand-logo"><span class="pulse-dot"></span> Rift</div>
+          </div>
+
+          <div class="hero-copy">
+            <h1>
+              Neon
+              <span class="title-accent">Sudoku</span>
+            </h1>
+            <p>
+              Slip into a luminous logic chamber where every move hums, every mistake scars the neon,
+              and perfect grids detonate into sparks. Precision, rhythm, and nerves decide the run.
+            </p>
+          </div>
+
+          <div class="chips" id="difficultyChips" aria-label="Difficulty selector">
+            <button class="chip active" data-difficulty="easy">Easy Drift</button>
+            <button class="chip" data-difficulty="medium">Medium Surge</button>
+            <button class="chip" data-difficulty="hard">Hard Static</button>
+            <button class="chip" data-difficulty="expert">Expert Void</button>
+          </div>
+
+          <div class="metrics">
+            <div class="metric-card">
+              <div class="metric-label">Timer</div>
+              <div class="metric-value" id="timerValue">00:00</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Score</div>
+              <div class="metric-value" id="scoreValue">0 <small>pts</small></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Streak</div>
+              <div class="metric-value" id="streakValue">0 <small>x</small></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Hints</div>
+              <div class="metric-value" id="hintsValue">3 <small>left</small></div>
+            </div>
+          </div>
+
+          <div class="subgrid" id="assistList">
+            <div class="assist-row">
+              <div class="assist-meta">
+                <strong>Conflict Vision</strong>
+                <span>Flag rule clashes instantly when a row, column, or box breaks.</span>
+              </div>
+              <button class="toggle active" data-toggle="showConflicts" aria-pressed="true"></button>
+            </div>
+            <div class="assist-row">
+              <div class="assist-meta">
+                <strong>Peer Glow</strong>
+                <span>Illuminate row, column, and box relationships for the active cell.</span>
+              </div>
+              <button class="toggle active" data-toggle="highlightPeers" aria-pressed="true"></button>
+            </div>
+            <div class="assist-row">
+              <div class="assist-meta">
+                <strong>Echo Numbers</strong>
+                <span>Highlight every matching digit to accelerate scans and patterns.</span>
+              </div>
+              <button class="toggle active" data-toggle="highlightMatches" aria-pressed="true"></button>
+            </div>
+            <div class="assist-row">
+              <div class="assist-meta">
+                <strong>Auto-Clean Notes</strong>
+                <span>Strip pencil marks from peers when a confirmed digit lands.</span>
+              </div>
+              <button class="toggle active" data-toggle="autoCleanNotes" aria-pressed="true"></button>
+            </div>
+            <div class="assist-row">
+              <div class="assist-meta">
+                <strong>Ambient Audio</strong>
+                <span>Low procedural pulses, UI chirps, mistake stabs, and win arpeggios.</span>
+              </div>
+              <button class="toggle active" data-toggle="audioEnabled" aria-pressed="true"></button>
+            </div>
+          </div>
+
+          <div class="message-bar" id="messageBar">
+            <div class="message-text" id="messageText">
+              Lock onto a cell, punch digits from the pad or keyboard, and keep the fault count under five.
+            </div>
+          </div>
+
+          <div class="footer-note">
+            Touch-ready, keyboard-fast, fully standalone. Built for sandboxed iframes with nothing but scripts and audacity.
+          </div>
+        </div>
+      </section>
+
+      <main class="center-panel" aria-label="Sudoku board and main controls">
+        <div class="top-bar">
+          <div class="top-group">
+            <div class="status-pill">
+              <div>
+                <span>Difficulty</span>
+                <strong id="difficultyValue">Easy Drift</strong>
+              </div>
+            </div>
+            <div class="status-pill">
+              <div>
+                <span>Mode</span>
+                <strong id="modeValue">Digit</strong>
+              </div>
+            </div>
+          </div>
+          <div class="top-group">
+            <div class="status-pill">
+              <div>
+                <span>Mistakes</span>
+                <strong><span id="mistakeValue">0</span> / 5</strong>
+              </div>
+              <div class="mistake-dots" id="mistakeDots"></div>
+            </div>
+            <div class="status-pill">
+              <div>
+                <span>Completion</span>
+                <strong><span id="filledValue">0</span> / 81</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="board-frame panel" aria-label="Sudoku board frame">
+          <div class="board-wrap">
+            <div class="board-legend">
+              <strong id="selectionSummary">No cell selected</strong>
+              <div id="candidateSummary">Select a cell to inspect candidates and pencil marks.</div>
+            </div>
+            <div class="board" id="board" role="grid" aria-label="Sudoku board"></div>
+            <div class="board-legend">
+              <div>Tap / click cells or use arrows / WASD</div>
+              <div>Numbers 1-9 place digits • N toggles notes • H spends a hint</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Action controls">
+          <div class="panel-inner">
+            <div class="action-grid">
+              <button class="action-btn" id="newRunBtn">
+                <strong>New Run</strong>
+                <span>Spin a fresh puzzle in the currently armed difficulty.</span>
+              </button>
+              <button class="action-btn" id="notesBtn">
+                <strong>Notes Mode</strong>
+                <span>Layer pencil marks instead of placing committed digits.</span>
+              </button>
+              <button class="action-btn" id="eraseBtn">
+                <strong>Erase</strong>
+                <span>Clear a selected non-given cell and reset its streak pressure.</span>
+              </button>
+              <button class="action-btn" id="hintBtn">
+                <strong>Hint</strong>
+                <span>Reveal one correct digit and flash its cell with golden guidance.</span>
+              </button>
+              <button class="action-btn" id="validateBtn">
+                <strong>Scan Grid</strong>
+                <span>Audit current placement health and surface unresolved collisions.</span>
+              </button>
+              <button class="action-btn" id="revealPeersBtn">
+                <strong>Reveal Peers</strong>
+                <span>Force a temporary relationship glow on the active row, column, and box.</span>
+              </button>
+            </div>
+
+            <div class="numpad-panel">
+              <div class="number-pad" id="numberPad" aria-label="Number pad"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="panel right-panel" aria-label="Intel panel">
+        <div class="panel-inner">
+          <div class="mini-panel">
+            <h3>Run Intel</h3>
+            <p id="intelText">
+              The chamber is dormant. Start the run, pick clean lines, and the grid will reward momentum.
+            </p>
+          </div>
+
+          <div class="mini-panel">
+            <h3>Selected Cell</h3>
+            <p id="selectedMeta">
+              No lock. Tap any editable tile to inspect coordinates, candidate count, and stored notes.
+            </p>
+          </div>
+
+          <div class="mini-panel">
+            <h3>Hotkeys</h3>
+            <div class="hotkeys">
+              <div class="hotkey-row"><span>Move selection</span><span class="kbd">Arrows / WASD</span></div>
+              <div class="hotkey-row"><span>Place digit</span><span class="kbd">1 - 9</span></div>
+              <div class="hotkey-row"><span>Erase selected</span><span class="kbd">0 / Del / Backspace</span></div>
+              <div class="hotkey-row"><span>Toggle notes</span><span class="kbd">N</span></div>
+              <div class="hotkey-row"><span>Use hint</span><span class="kbd">H</span></div>
+              <div class="hotkey-row"><span>Start / restart</span><span class="kbd">Space</span></div>
+            </div>
+          </div>
+
+          <div class="mini-panel">
+            <h3>Scoring Matrix</h3>
+            <p>
+              Correct digit: +100 plus streak bonus. Notes: +4. Hint: -90. Wrong digit: -40 and streak reset.
+              Finish fast, finish clean, and the neon crowns you properly.
+            </p>
+          </div>
+
+          <div class="mini-panel">
+            <h3>Mobile Ops</h3>
+            <p>
+              Every control uses explicit pointer events. Tap cells, use the giant number pad, and long glances at your notes
+              without leaving the frame.
+            </p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="overlay-root" aria-live="polite">
+    <section class="overlay visible" id="startOverlay" aria-label="Start screen">
+      <div class="scanline"></div>
+      <div class="overlay-content">
+        <div class="overlay-head">
+          <div class="overlay-eyebrow">Neon Rift // Launch Briefing</div>
+          <h2 class="overlay-title">
+            Sudoku
+            <span class="title-accent">Overdrive</span>
+          </h2>
+          <p class="overlay-description">
+            This is not a sleepy newspaper grid. It is a pulse-driven logic sprint: curated valid boards, precision notes,
+            escalating streak score, five-strike failure state, haptic-feeling pointer controls, and a full celebration when you clear the chamber.
+          </p>
+        </div>
+
+        <div class="overlay-grid">
+          <div class="overlay-card">
+            <span>Core</span>
+            <strong>Real Sudoku</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Assist Stack</span>
+            <strong>Notes + Hints</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Atmosphere</span>
+            <strong>Audio + Sparks</strong>
+          </div>
+        </div>
+
+        <div class="overlay-actions">
+          <button class="hero-btn primary" id="startBtn">
+            <strong>Start Run</strong>
+            <span>Launch the current difficulty and arm audio. Space key also begins.</span>
+          </button>
+          <button class="hero-btn secondary" id="cycleDifficultyBtn">
+            <strong>Cycle Difficulty</strong>
+            <span>Flip difficulty without leaving the start screen.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay" id="winOverlay" aria-label="Win screen">
+      <div class="scanline"></div>
+      <div class="overlay-content">
+        <div class="overlay-head">
+          <div class="overlay-eyebrow">Run Cleared // Logic Crowned</div>
+          <h2 class="overlay-title">Grid Purged</h2>
+          <p class="overlay-description" id="winDescription">
+            You threaded the neon perfectly. The chamber recognizes crisp lines, clean logic, and a refusal to panic.
+          </p>
+        </div>
+
+        <div class="overlay-grid">
+          <div class="overlay-card">
+            <span>Time</span>
+            <strong id="winTime">00:00</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Score</span>
+            <strong id="winScore">0</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Mistakes</span>
+            <strong id="winMistakes">0</strong>
+          </div>
+        </div>
+
+        <div class="overlay-actions">
+          <button class="hero-btn primary" id="playAgainBtn">
+            <strong>Play Again</strong>
+            <span>Queue another puzzle in the same difficulty and keep the streak alive.</span>
+          </button>
+          <button class="hero-btn secondary" id="raiseDifficultyBtn">
+            <strong>Raise Threat Level</strong>
+            <span>Bump the difficulty one tier and chase the next clean clear.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay" id="failOverlay" aria-label="Failure screen">
+      <div class="scanline"></div>
+      <div class="overlay-content">
+        <div class="overlay-head">
+          <div class="overlay-eyebrow">Run Failed // Chamber Collapse</div>
+          <h2 class="overlay-title">System Breach</h2>
+          <p class="overlay-description" id="failDescription">
+            Five faults. The grid dimmed, the pulse snapped, and the chamber dumped you back into the void.
+          </p>
+        </div>
+
+        <div class="overlay-grid">
+          <div class="overlay-card">
+            <span>Faults</span>
+            <strong id="failMistakes">5</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Filled Cells</span>
+            <strong id="failProgress">0</strong>
+          </div>
+          <div class="overlay-card">
+            <span>Score</span>
+            <strong id="failScore">0</strong>
+          </div>
+        </div>
+
+        <div class="overlay-actions">
+          <button class="hero-btn primary" id="retryBtn">
+            <strong>Retry Run</strong>
+            <span>Reload another puzzle and prove the chamber flinched first.</span>
+          </button>
+          <button class="hero-btn secondary" id="fallBackBtn">
+            <strong>Drop Difficulty</strong>
+            <span>Step down one tier, regroup, and rebuild your composure.</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const PUZZLES = {
+        easy: [
+          {
+            puzzle: "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+            solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+          },
+          {
+            puzzle: "200080300060070084030500209000105408000000000402706000301007040720040060004010003",
+            solution: "245986371169273584837514269673125498918364725452796138391657842726843915584219673"
+          },
+          {
+            puzzle: "000260701680070090190004500820100040004602900050003028009300074040050036703018000",
+            solution: "435269781682571493197834562826195347374682915951743628519326874248957136763418259"
+          }
+        ],
+        medium: [
+          {
+            puzzle: "000000907000420180000705026100904000050000040000507009920108000034059000507000000",
+            solution: "483651927659423187271795326168934752795812643342567819926178534834259671517346298"
+          },
+          {
+            puzzle: "030050040008010500460000012070502080000603000040109030250000098001020600080060020",
+            solution: "137256849928314576465897312673542981819673254542189637256431798391728465784965123"
+          },
+          {
+            puzzle: "020810740700003100090002805009040087400208003160030200302700060005600008076051090",
+            solution: "523819746784563129691472835239145687457268913168937254312794568945686371876351492"
+          }
+        ],
+        hard: [
+          {
+            puzzle: "000900002050123400030000160908000000070000090000000205091000050007439020400007000",
+            solution: "416958732859123476732674168948215367275346891163897245391782654687439521524561983"
+          },
+          {
+            puzzle: "300200000000107000706030500070009080900020004010800050009040301000702000000008006",
+            solution: "351286497492157638786934512274569183935421764618873259869645321143792856527318946"
+          },
+          {
+            puzzle: "000125400008400000420800000030000095060902010510000060000003049000007200001298000",
+            solution: "976125438158436927423879651237614895864952713519783264782563149345791286691298375"
+          }
+        ],
+        expert: [
+          {
+            puzzle: "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
+            solution: "162857493534129768789643521475312986913586472628794135356478219241935687897261354"
+          },
+          {
+            puzzle: "000000012006000000000801040080000000000030700040000000000005030900040000700000000",
+            solution: "874563912126497385395821647583176294269438751741952863412685739938247156657319428"
+          },
+          {
+            puzzle: "005300000800000020070010500400005300010070006003200080060500009004000030000009700",
+            solution: "145327698839654127672918543486195372217873456953246981761532849594781236328469715"
+          }
+        ]
+      };
+
+      const DIFFICULTY_ORDER = ["easy", "medium", "hard", "expert"];
+      const DIFFICULTY_LABELS = {
+        easy: "Easy Drift",
+        medium: "Medium Surge",
+        hard: "Hard Static",
+        expert: "Expert Void"
+      };
+
+      const state = {
+        difficulty: "easy",
+        puzzleId: 0,
+        puzzle: null,
+        board: Array(81).fill(0),
+        solution: Array(81).fill(0),
+        givens: Array(81).fill(false),
+        notes: Array.from({ length: 81 }, () => new Set()),
+        selected: -1,
+        running: false,
+        started: false,
+        solved: false,
+        failed: false,
+        notesMode: false,
+        assists: {
+          showConflicts: true,
+          highlightPeers: true,
+          highlightMatches: true,
+          autoCleanNotes: true,
+          audioEnabled: true
+        },
+        hintsRemaining: 3,
+        mistakes: 0,
+        maxMistakes: 5,
+        score: 0,
+        streak: 0,
+        timerSeconds: 0,
+        intervalId: null,
+        temporaryPeerReveal: 0,
+        audioReady: false
+      };
+
+      const dom = {
+        board: document.getElementById("board"),
+        numberPad: document.getElementById("numberPad"),
+        difficultyChips: document.getElementById("difficultyChips"),
+        timerValue: document.getElementById("timerValue"),
+        scoreValue: document.getElementById("scoreValue"),
+        streakValue: document.getElementById("streakValue"),
+        hintsValue: document.getElementById("hintsValue"),
+        difficultyValue: document.getElementById("difficultyValue"),
+        modeValue: document.getElementById("modeValue"),
+        mistakeValue: document.getElementById("mistakeValue"),
+        filledValue: document.getElementById("filledValue"),
+        mistakeDots: document.getElementById("mistakeDots"),
+        selectionSummary: document.getElementById("selectionSummary"),
+        candidateSummary: document.getElementById("candidateSummary"),
+        selectedMeta: document.getElementById("selectedMeta"),
+        messageBar: document.getElementById("messageBar"),
+        messageText: document.getElementById("messageText"),
+        intelText: document.getElementById("intelText"),
+        assistList: document.getElementById("assistList"),
+        newRunBtn: document.getElementById("newRunBtn"),
+        notesBtn: document.getElementById("notesBtn"),
+        eraseBtn: document.getElementById("eraseBtn"),
+        hintBtn: document.getElementById("hintBtn"),
+        validateBtn: document.getElementById("validateBtn"),
+        revealPeersBtn: document.getElementById("revealPeersBtn"),
+        startOverlay: document.getElementById("startOverlay"),
+        startBtn: document.getElementById("startBtn"),
+        cycleDifficultyBtn: document.getElementById("cycleDifficultyBtn"),
+        winOverlay: document.getElementById("winOverlay"),
+        playAgainBtn: document.getElementById("playAgainBtn"),
+        raiseDifficultyBtn: document.getElementById("raiseDifficultyBtn"),
+        winTime: document.getElementById("winTime"),
+        winScore: document.getElementById("winScore"),
+        winMistakes: document.getElementById("winMistakes"),
+        winDescription: document.getElementById("winDescription"),
+        failOverlay: document.getElementById("failOverlay"),
+        retryBtn: document.getElementById("retryBtn"),
+        fallBackBtn: document.getElementById("fallBackBtn"),
+        failMistakes: document.getElementById("failMistakes"),
+        failProgress: document.getElementById("failProgress"),
+        failScore: document.getElementById("failScore"),
+        failDescription: document.getElementById("failDescription"),
+        fx: document.getElementById("fx")
+      };
+
+      const visual = {
+        cells: [],
+        noteNodes: [],
+        numberButtons: [],
+        particles: [],
+        glows: [],
+        stars: [],
+        fxCtx: null,
+        fxWidth: 0,
+        fxHeight: 0,
+        rafId: 0,
+        ambientLast: 0
+      };
+
+      const audio = {
+        ctx: null,
+        master: null,
+        ambientTimer: 0
+      };
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function formatTime(totalSeconds) {
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+      }
+
+      function indexToCoord(index) {
+        return {
+          row: Math.floor(index / 9),
+          col: index % 9
+        };
+      }
+
+      function getBoxIndex(row, col) {
+        return Math.floor(row / 3) * 3 + Math.floor(col / 3);
+      }
+
+      function getPeers(index) {
+        const { row, col } = indexToCoord(index);
+        const peers = new Set();
+
+        for (let c = 0; c < 9; c += 1) {
+          peers.add(row * 9 + c);
+        }
+
+        for (let r = 0; r < 9; r += 1) {
+          peers.add(r * 9 + col);
+        }
+
+        const boxRow = Math.floor(row / 3) * 3;
+        const boxCol = Math.floor(col / 3) * 3;
+
+        for (let r = boxRow; r < boxRow + 3; r += 1) {
+          for (let c = boxCol; c < boxCol + 3; c += 1) {
+            peers.add(r * 9 + c);
+          }
+        }
+
+        peers.delete(index);
+        return peers;
+      }
+
+      function rowValues(board, row) {
+        const values = [];
+        for (let col = 0; col < 9; col += 1) {
+          values.push(board[row * 9 + col]);
+        }
+        return values;
+      }
+
+      function colValues(board, col) {
+        const values = [];
+        for (let row = 0; row < 9; row += 1) {
+          values.push(board[row * 9 + col]);
+        }
+        return values;
+      }
+
+      function boxValues(board, box) {
+        const startRow = Math.floor(box / 3) * 3;
+        const startCol = (box % 3) * 3;
+        const values = [];
+        for (let row = startRow; row < startRow + 3; row += 1) {
+          for (let col = startCol; col < startCol + 3; col += 1) {
+            values.push(board[row * 9 + col]);
+          }
+        }
+        return values;
+      }
+
+      function candidateSet(index) {
+        if (state.board[index] !== 0) {
+          return [];
+        }
+
+        const { row, col } = indexToCoord(index);
+        const used = new Set([
+          ...rowValues(state.board, row),
+          ...colValues(state.board, col),
+          ...boxValues(state.board, getBoxIndex(row, col))
+        ]);
+
+        const candidates = [];
+        for (let value = 1; value <= 9; value += 1) {
+          if (!used.has(value)) {
+            candidates.push(value);
+          }
+        }
+        return candidates;
+      }
+
+      function findConflicts(board = state.board) {
+        const conflictSet = new Set();
+
+        function scan(indices) {
+          const counts = new Map();
+          indices.forEach((index) => {
+            const value = board[index];
+            if (!value) {
+              return;
+            }
+            if (!counts.has(value)) {
+              counts.set(value, []);
+            }
+            counts.get(value).push(index);
+          });
+          counts.forEach((list) => {
+            if (list.length > 1) {
+              list.forEach((idx) => conflictSet.add(idx));
+            }
+          });
+        }
+
+        for (let row = 0; row < 9; row += 1) {
+          const indices = [];
+          for (let col = 0; col < 9; col += 1) {
+            indices.push(row * 9 + col);
+          }
+          scan(indices);
+        }
+
+        for (let col = 0; col < 9; col += 1) {
+          const indices = [];
+          for (let row = 0; row < 9; row += 1) {
+            indices.push(row * 9 + col);
+          }
+          scan(indices);
+        }
+
+        for (let box = 0; box < 9; box += 1) {
+          const indices = [];
+          const startRow = Math.floor(box / 3) * 3;
+          const startCol = (box % 3) * 3;
+          for (let row = startRow; row < startRow + 3; row += 1) {
+            for (let col = startCol; col < startCol + 3; col += 1) {
+              indices.push(row * 9 + col);
+            }
+          }
+          scan(indices);
+        }
+
+        return conflictSet;
+      }
+
+      function pickPuzzle(difficulty) {
+        const pool = PUZZLES[difficulty] || PUZZLES.easy;
+        state.puzzleId = (state.puzzleId + 1) % pool.length;
+        const puzzle = pool[state.puzzleId];
+        return {
+          puzzle: puzzle.puzzle.split("").map((char) => Number(char)),
+          solution: puzzle.solution.split("").map((char) => Number(char))
+        };
+      }
+
+      function resetStateForPuzzle() {
+        state.notes = Array.from({ length: 81 }, () => new Set());
+        state.selected = -1;
+        state.running = true;
+        state.started = true;
+        state.solved = false;
+        state.failed = false;
+        state.notesMode = false;
+        state.hintsRemaining = 3;
+        state.mistakes = 0;
+        state.score = 0;
+        state.streak = 0;
+        state.timerSeconds = 0;
+        state.temporaryPeerReveal = 0;
+        clearTimer();
+        startTimer();
+      }
+
+      function loadPuzzle(difficulty = state.difficulty) {
+        state.difficulty = difficulty;
+        const nextPuzzle = pickPuzzle(difficulty);
+        state.puzzle = nextPuzzle.puzzle.slice();
+        state.board = nextPuzzle.puzzle.slice();
+        state.solution = nextPuzzle.solution.slice();
+        state.givens = nextPuzzle.puzzle.map((value) => value !== 0);
+        resetStateForPuzzle();
+        hideOverlay(dom.startOverlay);
+        hideOverlay(dom.winOverlay);
+        hideOverlay(dom.failOverlay);
+        setMessage(`Run initialized: ${DIFFICULTY_LABELS[state.difficulty]}. Keep it clean and avoid the five-fault lockout.`);
+        updateIntel();
+        drawBoard();
+        updateHud();
+        if (state.selected === -1) {
+          const firstOpen = state.board.findIndex((value) => value === 0);
+          if (firstOpen >= 0) {
+            selectCell(firstOpen, false);
+          }
+        }
+        spawnBurst(window.innerWidth * 0.5, window.innerHeight * 0.34, 20, "#6ff7ff");
+        playUiTone("start");
+      }
+
+      function clearTimer() {
+        if (state.intervalId) {
+          window.clearInterval(state.intervalId);
+          state.intervalId = null;
+        }
+      }
+
+      function startTimer() {
+        state.intervalId = window.setInterval(() => {
+          if (!state.running) {
+            return;
+          }
+          state.timerSeconds += 1;
+          updateHud();
+        }, 1000);
+      }
+
+      function buildBoard() {
+        dom.board.innerHTML = "";
+        visual.cells = [];
+        visual.noteNodes = [];
+
+        for (let index = 0; index < 81; index += 1) {
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.className = "cell";
+          cell.setAttribute("role", "gridcell");
+          cell.setAttribute("aria-label", `Cell ${index + 1}`);
+          cell.dataset.index = String(index);
+
+          const { row, col } = indexToCoord(index);
+          if ((col + 1) % 3 === 0 && col !== 8) {
+            cell.classList.add("subgrid-right");
+          }
+          if ((row + 1) % 3 === 0 && row !== 8) {
+            cell.classList.add("subgrid-bottom");
+          }
+
+          const value = document.createElement("div");
+          value.className = "value";
+          cell.appendChild(value);
+
+          const notesGrid = document.createElement("div");
+          notesGrid.className = "notes-grid";
+          const noteRefs = [];
+          for (let noteValue = 1; noteValue <= 9; noteValue += 1) {
+            const note = document.createElement("span");
+            note.className = "note";
+            note.textContent = String(noteValue);
+            notesGrid.appendChild(note);
+            noteRefs.push(note);
+          }
+          cell.appendChild(notesGrid);
+
+          cell.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            unlockAudio();
+            selectCell(index, true);
+          });
+
+          cell.addEventListener("focus", () => {
+            selectCell(index, false);
+          });
+
+          visual.cells.push(cell);
+          visual.noteNodes.push(noteRefs);
+          dom.board.appendChild(cell);
+        }
+      }
+
+      function buildNumpad() {
+        dom.numberPad.innerHTML = "";
+        visual.numberButtons = [];
+
+        const values = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        values.forEach((value) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "number-btn";
+          button.textContent = String(value);
+          button.dataset.value = String(value);
+          button.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            unlockAudio();
+            handleNumberInput(value);
+          });
+          dom.numberPad.appendChild(button);
+          visual.numberButtons.push(button);
+        });
+      }
+
+      function buildMistakeDots() {
+        dom.mistakeDots.innerHTML = "";
+        for (let i = 0; i < state.maxMistakes; i += 1) {
+          const dot = document.createElement("span");
+          dot.className = "mistake-dot";
+          dom.mistakeDots.appendChild(dot);
+        }
+      }
+
+      function selectCell(index, fromPointer) {
+        if (!state.started || state.failed || state.solved) {
+          return;
+        }
+        state.selected = clamp(index, 0, 80);
+        drawBoard();
+        updateHud();
+        updateIntel();
+
+        if (fromPointer) {
+          playUiTone("select");
+        }
+      }
+
+      function updateHud() {
+        dom.timerValue.textContent = formatTime(state.timerSeconds);
+        dom.scoreValue.innerHTML = `${state.score} <small>pts</small>`;
+        dom.streakValue.innerHTML = `${state.streak} <small>x</small>`;
+        dom.hintsValue.innerHTML = `${state.hintsRemaining} <small>left</small>`;
+        dom.difficultyValue.textContent = DIFFICULTY_LABELS[state.difficulty];
+        dom.modeValue.textContent = state.notesMode ? "Notes" : "Digit";
+        dom.mistakeValue.textContent = String(state.mistakes);
+        dom.filledValue.textContent = String(state.board.filter(Boolean).length);
+        dom.notesBtn.classList.toggle("active", state.notesMode);
+        visual.numberButtons.forEach((button) => {
+          const value = Number(button.dataset.value);
+          const isMatch = state.selected >= 0 && state.board[state.selected] === value;
+          button.classList.toggle("active", isMatch);
+        });
+
+        const dots = Array.from(dom.mistakeDots.children);
+        dots.forEach((dot, index) => {
+          dot.classList.toggle("lost", index < state.mistakes);
+        });
+
+        dom.selectionSummary.textContent = selectionLabel();
+        dom.candidateSummary.textContent = candidateLabel();
+
+        Array.from(dom.difficultyChips.querySelectorAll(".chip")).forEach((chip) => {
+          chip.classList.toggle("active", chip.dataset.difficulty === state.difficulty);
+        });
+      }
+
+      function selectionLabel() {
+        if (state.selected < 0) {
+          return "No cell selected";
+        }
+        const { row, col } = indexToCoord(state.selected);
+        const lock = state.givens[state.selected] ? "Locked" : "Editable";
+        return `${lock} cell // R${row + 1} C${col + 1}`;
+      }
+
+      function candidateLabel() {
+        if (state.selected < 0) {
+          return "Select a cell to inspect candidates and pencil marks.";
+        }
+
+        const value = state.board[state.selected];
+        if (value) {
+          return `Digit ${value} engaged. Matching digits and peers are ready for scanning.`;
+        }
+
+        const candidates = candidateSet(state.selected);
+        const notes = Array.from(state.notes[state.selected]).sort((a, b) => a - b);
+        if (!candidates.length) {
+          return "No legal candidates remain here. Either the puzzle is complete or a conflict has poisoned this line.";
+        }
+
+        return `Candidates ${candidates.join(", ")} • Notes ${notes.length ? notes.join(", ") : "empty"}`;
+      }
+
+      function updateIntel() {
+        if (!state.started) {
+          dom.intelText.textContent = "The chamber is dormant. Start the run, pick clean lines, and the grid will reward momentum.";
+          dom.selectedMeta.textContent = "No lock. Tap any editable tile to inspect coordinates, candidate count, and stored notes.";
+          return;
+        }
+
+        const filled = state.board.filter(Boolean).length;
+        const open = 81 - filled;
+        dom.intelText.textContent = `${DIFFICULTY_LABELS[state.difficulty]} is live. ${open} cells remain open, ${state.hintsRemaining} hints remain, and your best move is the one that keeps the streak breathing.`;
+
+        if (state.selected < 0) {
+          dom.selectedMeta.textContent = "No active tile. Choose a cell to inspect legal candidates, notes, and peer structure.";
+          return;
+        }
+
+        const { row, col } = indexToCoord(state.selected);
+        const value = state.board[state.selected];
+        const candidates = candidateSet(state.selected);
+        const notes = Array.from(state.notes[state.selected]).sort((a, b) => a - b);
+        const box = getBoxIndex(row, col) + 1;
+        if (value) {
+          dom.selectedMeta.textContent = `R${row + 1} C${col + 1} in box ${box}. Current digit ${value}. ${state.givens[state.selected] ? "Given cell." : "User-filled."} Matching digits glow when Echo Numbers is active.`;
+        } else {
+          dom.selectedMeta.textContent = `R${row + 1} C${col + 1} in box ${box}. Candidates: ${candidates.join(", ") || "none"}. Notes: ${notes.join(", ") || "none"}. ${state.notesMode ? "Notes mode is armed." : "Direct digit placement is armed."}`;
+        }
+      }
+
+      function setMessage(text, tone = "info") {
+        dom.messageText.textContent = text;
+        dom.messageBar.classList.toggle("warning", tone === "warning");
+        dom.messageBar.classList.toggle("error", tone === "error");
+      }
+
+      function handleNumberInput(value) {
+        if (!state.running || state.selected < 0 || state.failed || state.solved) {
+          return;
+        }
+
+        const index = state.selected;
+        if (state.givens[index]) {
+          setMessage("That tile is hard-locked by the puzzle. Aim at an editable cell.", "warning");
+          pulseCell(index, "invalid-shake");
+          playUiTone("blocked");
+          return;
+        }
+
+        if (state.notesMode) {
+          toggleNote(index, value);
+          return;
+        }
+
+        placeDigit(index, value);
+      }
+
+      function toggleNote(index, value) {
+        const noteSet = state.notes[index];
+        if (noteSet.has(value)) {
+          noteSet.delete(value);
+          state.score = Math.max(0, state.score - 2);
+          setMessage(`Note ${value} removed from ${selectionLabel()}.`);
+        } else {
+          if (!candidateSet(index).includes(value) && state.assists.showConflicts) {
+            setMessage(`Note ${value} technically clashes here, but the pencil still obeys your hand.`, "warning");
+          } else {
+            setMessage(`Note ${value} etched into ${selectionLabel()}.`);
+          }
+          noteSet.add(value);
+          state.score += 4;
+        }
+        playUiTone("note");
+        spawnBurstFromCell(index, 5, "#77a8ff");
+        drawBoard();
+        updateHud();
+        updateIntel();
+      }
+
+      function placeDigit(index, value) {
+        if (state.board[index] === value) {
+          clearCell(index, false);
+          return;
+        }
+
+        const candidates = candidateSet(index);
+        const correctValue = state.solution[index];
+
+        if (value !== correctValue || (!candidates.includes(value) && state.assists.showConflicts)) {
+          state.mistakes += 1;
+          state.streak = 0;
+          state.score = Math.max(0, state.score - 40);
+          setMessage(`Fault registered. ${value} does not survive the chamber at ${selectionLabel()}.`, "error");
+          pulseCell(index, "invalid-shake");
+          spawnBurstFromCell(index, 12, "#ff557c");
+          playUiTone("invalid");
+          updateHud();
+          updateIntel();
+          drawBoard();
+
+          if (state.mistakes >= state.maxMistakes) {
+            triggerFailure();
+          }
+          return;
+        }
+
+        state.board[index] = value;
+        state.notes[index].clear();
+        state.streak += 1;
+        state.score += 100 + Math.min(90, state.streak * 12);
+        if (state.assists.autoCleanNotes) {
+          clearPeerNotes(index, value);
+        }
+        setMessage(`Digit ${value} locked in. Streak x${state.streak}.`);
+        playUiTone("place");
+        spawnBurstFromCell(index, 10 + state.streak, "#6ff7ff");
+        drawBoard();
+        updateHud();
+        updateIntel();
+        maybeAdvanceSelection(index);
+        checkSolved();
+      }
+
+      function clearCell(index, withPenalty = true) {
+        if (index < 0 || state.givens[index] || state.board[index] === 0) {
+          return;
+        }
+        const oldValue = state.board[index];
+        state.board[index] = 0;
+        if (withPenalty) {
+          state.streak = 0;
+          state.score = Math.max(0, state.score - 12);
+        }
+        setMessage(`Digit ${oldValue} erased from ${selectionLabel()}.`);
+        playUiTone("erase");
+        drawBoard();
+        updateHud();
+        updateIntel();
+      }
+
+      function clearPeerNotes(index, value) {
+        getPeers(index).forEach((peer) => {
+          state.notes[peer].delete(value);
+        });
+      }
+
+      function maybeAdvanceSelection(index) {
+        for (let offset = 1; offset < 81; offset += 1) {
+          const next = (index + offset) % 81;
+          if (!state.givens[next] && state.board[next] === 0) {
+            state.selected = next;
+            return;
+          }
+        }
+      }
+
+      function checkSolved() {
+        const complete = state.board.every((value, index) => value === state.solution[index]);
+        if (!complete) {
+          return;
+        }
+        state.running = false;
+        state.solved = true;
+        clearTimer();
+        state.score += Math.max(0, 1800 - state.timerSeconds * 3) + state.hintsRemaining * 140;
+        updateHud();
+        updateIntel();
+        setMessage("Puzzle solved. Chamber cleared. Neon pressure released.");
+        triggerWin();
+      }
+
+      function useHint() {
+        if (!state.running || state.hintsRemaining <= 0) {
+          setMessage("No hints remain in the chamber reserve.", "warning");
+          playUiTone("blocked");
+          return;
+        }
+
+        let target = state.selected;
+        if (target < 0 || state.board[target] === state.solution[target]) {
+          target = state.board.findIndex((value, index) => value !== state.solution[index]);
+        }
+
+        if (target < 0) {
+          setMessage("No unresolved cells remain. Finish the run clean.", "warning");
+          return;
+        }
+
+        state.hintsRemaining -= 1;
+        state.score = Math.max(0, state.score - 90);
+        state.board[target] = state.solution[target];
+        state.notes[target].clear();
+        if (state.assists.autoCleanNotes) {
+          clearPeerNotes(target, state.solution[target]);
+        }
+        state.selected = target;
+        pulseCell(target, "hint-flash");
+        spawnBurstFromCell(target, 18, "#ffd766");
+        playUiTone("hint");
+        setMessage(`Hint deployed. Digit ${state.solution[target]} revealed at R${Math.floor(target / 9) + 1} C${(target % 9) + 1}.`, "warning");
+        drawBoard();
+        updateHud();
+        updateIntel();
+        checkSolved();
+      }
+
+      function validateBoard() {
+        const conflicts = findConflicts();
+        drawBoard();
+
+        if (!conflicts.size) {
+          const unresolved = state.board.filter((value) => value === 0).length;
+          if (unresolved) {
+            setMessage(`No active clashes detected. ${unresolved} cells still need clean digits.`);
+            playUiTone("validate");
+          } else {
+            setMessage("Grid scan found no clashes. If every digit is right, victory is close.");
+            playUiTone("validate");
+          }
+          return;
+        }
+
+        setMessage(`${conflicts.size} cells are colliding across rows, columns, or boxes.`, "error");
+        playUiTone("invalid");
+        conflicts.forEach((index) => spawnBurstFromCell(index, 6, "#ff557c"));
+      }
+
+      function revealPeers() {
+        if (state.selected < 0) {
+          setMessage("Select a cell first. The chamber does not highlight random ghosts.", "warning");
+          return;
+        }
+        state.temporaryPeerReveal = window.performance.now() + 1800;
+        drawBoard();
+        setMessage(`Peer glow forced for ${selectionLabel()}. Use the lane lighting while it lasts.`);
+        playUiTone("ui");
+      }
+
+      function triggerWin() {
+        dom.winTime.textContent = formatTime(state.timerSeconds);
+        dom.winScore.textContent = String(state.score);
+        dom.winMistakes.textContent = String(state.mistakes);
+        dom.winDescription.textContent = `Cleared ${DIFFICULTY_LABELS[state.difficulty]} in ${formatTime(state.timerSeconds)} with ${state.mistakes} mistake${state.mistakes === 1 ? "" : "s"} and ${state.hintsRemaining} hint${state.hintsRemaining === 1 ? "" : "s"} left.`;
+        showOverlay(dom.winOverlay);
+        spawnCelebration();
+        playUiTone("win");
+      }
+
+      function triggerFailure() {
+        state.running = false;
+        state.failed = true;
+        clearTimer();
+        dom.failMistakes.textContent = String(state.mistakes);
+        dom.failProgress.textContent = `${state.board.filter(Boolean).length} / 81`;
+        dom.failScore.textContent = String(state.score);
+        dom.failDescription.textContent = `Five faults hit before the puzzle was stable. ${DIFFICULTY_LABELS[state.difficulty]} was still ${81 - state.board.filter(Boolean).length} cells away from surrender.`;
+        showOverlay(dom.failOverlay);
+        setMessage("Run failed. The chamber cut the power after your fifth fault.", "error");
+        spawnFailureStorm();
+        playUiTone("fail");
+      }
+
+      function showOverlay(overlay) {
+        overlay.classList.add("visible");
+      }
+
+      function hideOverlay(overlay) {
+        overlay.classList.remove("visible");
+      }
+
+      function cycleDifficulty(direction) {
+        const currentIndex = DIFFICULTY_ORDER.indexOf(state.difficulty);
+        const nextIndex = (currentIndex + direction + DIFFICULTY_ORDER.length) % DIFFICULTY_ORDER.length;
+        state.difficulty = DIFFICULTY_ORDER[nextIndex];
+        updateHud();
+        setMessage(`Difficulty armed: ${DIFFICULTY_LABELS[state.difficulty]}.`);
+        playUiTone("ui");
+      }
+
+      function drawBoard() {
+        const conflicts = state.assists.showConflicts ? findConflicts() : new Set();
+        const selectedValue = state.selected >= 0 ? state.board[state.selected] : 0;
+        const now = window.performance.now();
+
+        visual.cells.forEach((cell, index) => {
+          const valueNode = cell.querySelector(".value");
+          const notesNode = cell.querySelector(".notes-grid");
+          const value = state.board[index];
+          const isSelected = index === state.selected;
+          const isGiven = state.givens[index];
+          const peers = state.selected >= 0 ? getPeers(state.selected) : new Set();
+          const sameNumber = selectedValue && value === selectedValue && index !== state.selected;
+          const revealPeersActive = state.temporaryPeerReveal > now;
+          const shouldHighlightPeer = state.selected >= 0 && peers.has(index) && (state.assists.highlightPeers || revealPeersActive);
+
+          cell.classList.toggle("selected", isSelected);
+          cell.classList.toggle("given", isGiven);
+          cell.classList.toggle("user-filled", !isGiven && value !== 0);
+          cell.classList.toggle("related", shouldHighlightPeer);
+          cell.classList.toggle("same-number", Boolean(sameNumber) && state.assists.highlightMatches);
+          cell.classList.toggle("conflict", conflicts.has(index));
+
+          valueNode.textContent = value ? String(value) : "";
+          notesNode.style.display = value ? "none" : "grid";
+
+          const noteValues = state.notes[index];
+          visual.noteNodes[index].forEach((node, noteIndex) => {
+            node.classList.toggle("active", noteValues.has(noteIndex + 1));
+          });
+        });
+      }
+
+      function pulseCell(index, className) {
+        const cell = visual.cells[index];
+        if (!cell) {
+          return;
+        }
+        cell.classList.remove(className);
+        void cell.offsetWidth;
+        cell.classList.add(className);
+        window.setTimeout(() => cell.classList.remove(className), 900);
+      }
+
+      function handleKeydown(event) {
+        const key = event.key;
+
+        if (key === " " || key === "Spacebar") {
+          event.preventDefault();
+          unlockAudio();
+          if (!state.started || state.solved || state.failed) {
+            loadPuzzle(state.difficulty);
+          }
+          return;
+        }
+
+        if (dom.startOverlay.classList.contains("visible") && !["Tab"].includes(key)) {
+          unlockAudio();
+        }
+
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"].includes(key)) {
+          event.preventDefault();
+          moveSelectionByKey(key);
+          return;
+        }
+
+        if (/^[1-9]$/.test(key)) {
+          event.preventDefault();
+          unlockAudio();
+          handleNumberInput(Number(key));
+          return;
+        }
+
+        if (key === "0" || key === "Delete" || key === "Backspace") {
+          event.preventDefault();
+          clearCell(state.selected);
+          return;
+        }
+
+        if (key === "n" || key === "N") {
+          event.preventDefault();
+          toggleNotesMode();
+          return;
+        }
+
+        if (key === "h" || key === "H") {
+          event.preventDefault();
+          useHint();
+          return;
+        }
+
+        if (key === "m" || key === "M") {
+          event.preventDefault();
+          toggleAssist("audioEnabled");
+        }
+      }
+
+      function moveSelectionByKey(key) {
+        if (!state.started || state.failed || state.solved) {
+          return;
+        }
+
+        let index = state.selected >= 0 ? state.selected : 0;
+        const { row, col } = indexToCoord(index);
+        let nextRow = row;
+        let nextCol = col;
+
+        if (key === "ArrowUp" || key === "w" || key === "W") {
+          nextRow = (row + 8) % 9;
+        } else if (key === "ArrowDown" || key === "s" || key === "S") {
+          nextRow = (row + 1) % 9;
+        } else if (key === "ArrowLeft" || key === "a" || key === "A") {
+          nextCol = (col + 8) % 9;
+        } else if (key === "ArrowRight" || key === "d" || key === "D") {
+          nextCol = (col + 1) % 9;
+        }
+
+        selectCell(nextRow * 9 + nextCol, false);
+        playUiTone("move");
+      }
+
+      function toggleNotesMode() {
+        state.notesMode = !state.notesMode;
+        updateHud();
+        updateIntel();
+        setMessage(state.notesMode ? "Notes mode armed. Pencil marks only." : "Digit mode armed. Placements are live.");
+        playUiTone("ui");
+      }
+
+      function toggleAssist(key) {
+        state.assists[key] = !state.assists[key];
+        const button = dom.assistList.querySelector(`[data-toggle="${key}"]`);
+        if (button) {
+          button.classList.toggle("active", state.assists[key]);
+          button.setAttribute("aria-pressed", String(state.assists[key]));
+        }
+        if (key === "audioEnabled") {
+          if (state.assists.audioEnabled) {
+            unlockAudio();
+            setMessage("Audio engaged. The chamber hum returns.");
+            playUiTone("ui");
+          } else {
+            setMessage("Audio muted. Cold logic only.");
+          }
+        } else {
+          drawBoard();
+          updateIntel();
+          setMessage(`${button?.previousElementSibling?.querySelector("strong")?.textContent || "Assist"} ${state.assists[key] ? "enabled" : "disabled"}.`);
+          playUiTone("ui");
+        }
+      }
+
+      function unlockAudio() {
+        if (!state.assists.audioEnabled || state.audioReady) {
+          return;
+        }
+
+        try {
+          const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextCtor) {
+            state.audioReady = false;
+            return;
+          }
+
+          audio.ctx = new AudioContextCtor();
+          audio.master = audio.ctx.createGain();
+          audio.master.gain.value = 0.12;
+          audio.master.connect(audio.ctx.destination);
+          state.audioReady = true;
+          if (audio.ctx.state === "suspended") {
+            audio.ctx.resume().catch(() => {});
+          }
+          scheduleAmbientPulse();
+        } catch (error) {
+          state.audioReady = false;
+        }
+      }
+
+      function scheduleAmbientPulse() {
+        if (!state.audioReady || !state.assists.audioEnabled || audio.ambientTimer) {
+          return;
+        }
+
+        audio.ambientTimer = window.setInterval(() => {
+          if (!state.running || !state.audioReady || !state.assists.audioEnabled) {
+            return;
+          }
+          synthTone({
+            frequency: 110 + Math.random() * 30,
+            duration: 0.8,
+            type: "sine",
+            gain: 0.035,
+            attack: 0.05,
+            release: 0.4,
+            glide: 0.9
+          });
+          synthTone({
+            frequency: 220 + Math.random() * 12,
+            duration: 0.24,
+            type: "triangle",
+            gain: 0.015,
+            attack: 0.01,
+            release: 0.12,
+            delay: 0.14
+          });
+        }, 4200);
+      }
+
+      function synthTone(options) {
+        if (!state.audioReady || !audio.ctx || !audio.master || !state.assists.audioEnabled) {
+          return;
+        }
+
+        const now = audio.ctx.currentTime + (options.delay || 0);
+        const oscillator = audio.ctx.createOscillator();
+        const gainNode = audio.ctx.createGain();
+        const filter = audio.ctx.createBiquadFilter();
+
+        oscillator.type = options.type || "sine";
+        oscillator.frequency.setValueAtTime(options.frequency || 220, now);
+        if (options.glide) {
+          oscillator.frequency.exponentialRampToValueAtTime((options.frequency || 220) * options.glide, now + (options.duration || 0.2));
+        }
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(1800, now);
+        gainNode.gain.setValueAtTime(0.0001, now);
+        gainNode.gain.exponentialRampToValueAtTime(options.gain || 0.08, now + (options.attack || 0.01));
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + (options.duration || 0.2) + (options.release || 0.08));
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audio.master);
+
+        oscillator.start(now);
+        oscillator.stop(now + (options.duration || 0.2) + (options.release || 0.08) + 0.04);
+      }
+
+      function playUiTone(type) {
+        if (!state.audioReady || !state.assists.audioEnabled) {
+          return;
+        }
+
+        const patterns = {
+          start: [
+            { frequency: 220, duration: 0.12, type: "triangle", gain: 0.06 },
+            { frequency: 330, duration: 0.14, type: "triangle", gain: 0.05, delay: 0.08 },
+            { frequency: 494, duration: 0.18, type: "sine", gain: 0.045, delay: 0.18 }
+          ],
+          select: [
+            { frequency: 340, duration: 0.06, type: "sine", gain: 0.03 }
+          ],
+          move: [
+            { frequency: 280, duration: 0.06, type: "triangle", gain: 0.02 }
+          ],
+          note: [
+            { frequency: 520, duration: 0.08, type: "square", gain: 0.03 },
+            { frequency: 690, duration: 0.08, type: "triangle", gain: 0.018, delay: 0.04 }
+          ],
+          place: [
+            { frequency: 380, duration: 0.09, type: "triangle", gain: 0.035 },
+            { frequency: 570, duration: 0.12, type: "triangle", gain: 0.045, delay: 0.04 },
+            { frequency: 760, duration: 0.15, type: "sine", gain: 0.025, delay: 0.08 }
+          ],
+          invalid: [
+            { frequency: 170, duration: 0.18, type: "sawtooth", gain: 0.06, glide: 0.7 },
+            { frequency: 110, duration: 0.16, type: "square", gain: 0.03, delay: 0.03, glide: 0.8 }
+          ],
+          blocked: [
+            { frequency: 210, duration: 0.12, type: "square", gain: 0.025, glide: 0.8 }
+          ],
+          erase: [
+            { frequency: 300, duration: 0.08, type: "triangle", gain: 0.02, glide: 0.75 }
+          ],
+          hint: [
+            { frequency: 480, duration: 0.12, type: "sine", gain: 0.04 },
+            { frequency: 720, duration: 0.18, type: "triangle", gain: 0.03, delay: 0.06 },
+            { frequency: 960, duration: 0.2, type: "sine", gain: 0.025, delay: 0.12 }
+          ],
+          validate: [
+            { frequency: 300, duration: 0.08, type: "triangle", gain: 0.025 },
+            { frequency: 360, duration: 0.08, type: "triangle", gain: 0.02, delay: 0.05 }
+          ],
+          ui: [
+            { frequency: 430, duration: 0.08, type: "triangle", gain: 0.025 }
+          ],
+          fail: [
+            { frequency: 220, duration: 0.3, type: "sawtooth", gain: 0.06, glide: 0.55 },
+            { frequency: 160, duration: 0.4, type: "triangle", gain: 0.03, delay: 0.12, glide: 0.7 }
+          ],
+          win: [
+            { frequency: 392, duration: 0.14, type: "triangle", gain: 0.05 },
+            { frequency: 523, duration: 0.14, type: "triangle", gain: 0.04, delay: 0.1 },
+            { frequency: 659, duration: 0.18, type: "triangle", gain: 0.04, delay: 0.2 },
+            { frequency: 784, duration: 0.22, type: "sine", gain: 0.032, delay: 0.32 }
+          ]
+        };
+
+        (patterns[type] || []).forEach((note) => synthTone(note));
+      }
+
+      function resizeFx() {
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        visual.fxWidth = window.innerWidth;
+        visual.fxHeight = window.innerHeight;
+        dom.fx.width = Math.floor(visual.fxWidth * ratio);
+        dom.fx.height = Math.floor(visual.fxHeight * ratio);
+        dom.fx.style.width = `${visual.fxWidth}px`;
+        dom.fx.style.height = `${visual.fxHeight}px`;
+        visual.fxCtx = dom.fx.getContext("2d");
+        if (visual.fxCtx) {
+          visual.fxCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+        buildStars();
+      }
+
+      function buildStars() {
+        visual.stars = [];
+        const count = Math.max(48, Math.floor((visual.fxWidth * visual.fxHeight) / 22000));
+        for (let i = 0; i < count; i += 1) {
+          visual.stars.push({
+            x: Math.random() * visual.fxWidth,
+            y: Math.random() * visual.fxHeight,
+            r: Math.random() * 1.8 + 0.2,
+            alpha: Math.random() * 0.4 + 0.1,
+            twinkle: Math.random() * Math.PI * 2,
+            drift: (Math.random() - 0.5) * 0.15
+          });
+        }
+      }
+
+      function spawnBurst(x, y, count, color) {
+        for (let i = 0; i < count; i += 1) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 2.8 + 0.6;
+          visual.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: Math.random() * 36 + 26,
+            maxLife: Math.random() * 36 + 26,
+            size: Math.random() * 2.8 + 1,
+            color,
+            glow: Math.random() * 22 + 8
+          });
+        }
+      }
+
+      function spawnBurstFromCell(index, count, color) {
+        const cell = visual.cells[index];
+        if (!cell) {
+          return;
+        }
+        const rect = cell.getBoundingClientRect();
+        spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, count, color);
+      }
+
+      function spawnCelebration() {
+        for (let i = 0; i < 14; i += 1) {
+          window.setTimeout(() => {
+            const x = Math.random() * visual.fxWidth;
+            const y = Math.random() * visual.fxHeight * 0.6 + 60;
+            const palette = ["#6ff7ff", "#ff68c2", "#ffd766", "#77a8ff", "#59ffb4"];
+            spawnBurst(x, y, 34, palette[i % palette.length]);
+          }, i * 90);
+        }
+      }
+
+      function spawnFailureStorm() {
+        for (let i = 0; i < 18; i += 1) {
+          window.setTimeout(() => {
+            const x = Math.random() * visual.fxWidth;
+            const y = Math.random() * visual.fxHeight;
+            spawnBurst(x, y, 18, i % 2 === 0 ? "#ff557c" : "#ff9b55");
+          }, i * 70);
+        }
+      }
+
+      function animateFx(timestamp) {
+        if (!visual.fxCtx) {
+          visual.rafId = window.requestAnimationFrame(animateFx);
+          return;
+        }
+
+        const ctx = visual.fxCtx;
+        ctx.clearRect(0, 0, visual.fxWidth, visual.fxHeight);
+
+        visual.stars.forEach((star) => {
+          star.twinkle += 0.01;
+          star.y += star.drift;
+          if (star.y < -5) {
+            star.y = visual.fxHeight + 5;
+          }
+          if (star.y > visual.fxHeight + 5) {
+            star.y = -5;
+          }
+          const alpha = star.alpha + Math.sin(star.twinkle) * 0.1;
+          ctx.fillStyle = `rgba(140, 220, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        const shimmerX = ((timestamp * 0.03) % (visual.fxWidth + 300)) - 150;
+        const gradient = ctx.createLinearGradient(shimmerX, 0, shimmerX + 180, visual.fxHeight);
+        gradient.addColorStop(0, "rgba(111,247,255,0)");
+        gradient.addColorStop(0.5, "rgba(111,247,255,0.035)");
+        gradient.addColorStop(1, "rgba(255,104,194,0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, visual.fxWidth, visual.fxHeight);
+
+        visual.particles = visual.particles.filter((particle) => particle.life > 0);
+        visual.particles.forEach((particle) => {
+          particle.life -= 1;
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+          particle.vx *= 0.99;
+          particle.vy *= 0.99;
+          particle.vy += 0.015;
+          const alpha = particle.life / particle.maxLife;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.shadowBlur = particle.glow;
+          ctx.shadowColor = particle.color;
+          ctx.fillStyle = particle.color;
+          ctx.beginPath();
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        visual.rafId = window.requestAnimationFrame(animateFx);
+      }
+
+      function attachEvents() {
+        dom.difficultyChips.addEventListener("pointerdown", (event) => {
+          const chip = event.target.closest(".chip");
+          if (!chip) {
+            return;
+          }
+          event.preventDefault();
+          unlockAudio();
+          state.difficulty = chip.dataset.difficulty;
+          updateHud();
+          setMessage(`Difficulty armed: ${DIFFICULTY_LABELS[state.difficulty]}.`);
+          playUiTone("ui");
+        });
+
+        dom.assistList.addEventListener("pointerdown", (event) => {
+          const toggle = event.target.closest(".toggle");
+          if (!toggle) {
+            return;
+          }
+          event.preventDefault();
+          unlockAudio();
+          toggleAssist(toggle.dataset.toggle);
+        });
+
+        dom.newRunBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          loadPuzzle(state.difficulty);
+        });
+
+        dom.notesBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          toggleNotesMode();
+        });
+
+        dom.eraseBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          clearCell(state.selected);
+        });
+
+        dom.hintBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          useHint();
+        });
+
+        dom.validateBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          validateBoard();
+        });
+
+        dom.revealPeersBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          revealPeers();
+        });
+
+        dom.startBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          loadPuzzle(state.difficulty);
+        });
+
+        dom.cycleDifficultyBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          cycleDifficulty(1);
+        });
+
+        dom.playAgainBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          loadPuzzle(state.difficulty);
+        });
+
+        dom.raiseDifficultyBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          cycleDifficulty(1);
+          loadPuzzle(state.difficulty);
+        });
+
+        dom.retryBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          loadPuzzle(state.difficulty);
+        });
+
+        dom.fallBackBtn.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          unlockAudio();
+          cycleDifficulty(-1);
+          loadPuzzle(state.difficulty);
+        });
+
+        window.addEventListener("keydown", handleKeydown);
+        window.addEventListener("resize", resizeFx);
+      }
+
+      function boot() {
+        buildBoard();
+        buildNumpad();
+        buildMistakeDots();
+        resizeFx();
+        attachEvents();
+        drawBoard();
+        updateHud();
+        updateIntel();
+        animateFx(0);
+        setMessage("Neon Rift Sudoku is armed. Choose your threat level and hit Start Run.");
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

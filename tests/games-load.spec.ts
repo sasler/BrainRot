@@ -13,6 +13,8 @@ const ALL_GAMES = [
   { id: "mini-golf", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
   { id: "tile-matching", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
   { id: "space-invaders", models: ["opus-4-6", "sonnet-4-6", "gpt-5-4", "gpt-5-4-mini"] },
+  { id: "pac-man", models: ["sonnet-4-6", "gpt-5-4"] },
+  { id: "sudoku", models: ["sonnet-4-6", "gpt-5-4"] },
 ];
 
 test.describe("Game HTML Files — Load Tests", () => {
@@ -32,14 +34,6 @@ test.describe("Game HTML Files — Load Tests", () => {
         const src = await iframe.getAttribute("src");
         expect(src).toContain(`/games/${game.id}/${model}/index.html`);
 
-        // Wait for the iframe to finish loading (sandboxed frames block contentFrame access)
-        await page.waitForFunction(
-          (sel) => {
-            const el = document.querySelector(sel) as HTMLIFrameElement | null;
-            return el?.src ? true : false;
-          },
-          "iframe",
-        );
         await page.waitForTimeout(500);
 
         // Check no page-level errors occurred

@@ -103,23 +103,40 @@ const MODEL_NAMES = {
   "gemini-3-1-pro": "Gemini 3.1 Pro",
 };
 
-// Build modelReviews array for top-level metadata
-const modelReviewEntries = [];
-for (const [modelId, reviews] of Object.entries(allModelReviews)) {
-  modelReviewEntries.push({
-    model: MODEL_NAMES[modelId] || modelId,
-    modelId: modelId,
-    reviews: reviews,
-  });
+// Build modelReviews array for top-level metadata.
+// If the incoming reviewer files don't include model-vs-model trash talk for this batch,
+// preserve the existing metadata.modelReviews instead of wiping it.
+if (Object.keys(allModelReviews).length > 0) {
+  const modelReviewEntries = [];
+  for (const [modelId, reviews] of Object.entries(allModelReviews)) {
+    modelReviewEntries.push({
+      model: MODEL_NAMES[modelId] || modelId,
+      modelId: modelId,
+      reviews: reviews,
+    });
+  }
+
+  // Sort by model name for consistency
+  modelReviewEntries.sort((a, b) => a.model.localeCompare(b.model));
+  metadata.modelReviews = modelReviewEntries;
 }
 
-// Sort by model name for consistency
-modelReviewEntries.sort((a, b) => a.model.localeCompare(b.model));
-metadata.modelReviews = modelReviewEntries;
+const displayedModelComments = (metadata.modelReviews || []).reduce(
+  (sum, modelReview) =>
+    sum +
+    (modelReview.reviews || []).reduce(
+      (reviewSum, review) => reviewSum + ((review.comments || []).length),
+      0
+    ),
+  0
+);
 
 // Write updated metadata
 fs.writeFileSync(METADATA_PATH, JSON.stringify(metadata, null, 2) + "\n");
 console.log(`\n✅ Assembled reviews into games-metadata.json:`);
 console.log(`   📝 ${totalGameComments} game review comments`);
-console.log(`   🎤 ${totalModelComments} model review comments`);
-console.log(`   🎯 ${modelReviewEntries.length} models with trash talk`);
+console.log(`   🎤 ${displayedModelComments} model review comments`);
+if (displayedModelComments !== totalModelComments) {
+  console.log(`   📥 ${totalModelComments} model review comments loaded this run`);
+}
+console.log(`   🎯 ${(metadata.modelReviews || []).length} models with trash talk`);

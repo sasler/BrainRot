@@ -336,7 +336,8 @@ function generateBricks() {
   bricks = [];
   const cols = 10;
   const rows = Math.min(5 + level, 8);
-  const brickW = Math.min(canvas.width - 40, 72);
+  const availableWidth = Math.max(canvas.width - 40, cols);
+  const brickW = Math.min(availableWidth / cols, 72);
   const brickH = 20;
   const padX = (canvas.width - cols * brickW) / 2;
   const padY = 70;
@@ -404,7 +405,7 @@ function initPaddle() {
 function updatePaddle(dt) {
   if (keys['ArrowLeft'] || keys['a']) paddle.x -= 8;
   if (keys['ArrowRight'] || keys['d']) paddle.x += 8;
-  if (touchActive && touchX !== null) {
+  if (touchX !== null) {
     paddle.x = touchX - paddle.w / 2;
   }
   paddle.x = Math.max(0, Math.min(canvas.width - paddle.w, paddle.x));
@@ -429,7 +430,8 @@ function drawPaddle() {
 // ═══════════════════════════════════════════════════════════
 function updateBalls(dt) {
   const speedMult = activePowerups.slow.active ? 0.55 : 1;
-  for (const ball of balls) {
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const ball = balls[i];
     if (ball.stuck) {
       ball.x = paddle.x + paddle.w / 2;
       ball.y = paddle.y - ball.r - 2;
@@ -447,7 +449,7 @@ function updateBalls(dt) {
     if (ball.y - ball.r < 0) { ball.y = ball.r; ball.dy = Math.abs(ball.dy); playWallBounce(); }
 
     if (ball.y - ball.r > canvas.height) {
-      balls.splice(balls.indexOf(ball), 1);
+      balls.splice(i, 1);
       if (balls.length === 0) { loseLife(); }
       continue;
     }
@@ -574,7 +576,7 @@ function updatePowerups(dt) {
     pu.y += pu.vy;
 
     if (pu.y + pu.h > paddle.y && pu.y < paddle.y + paddle.h &&
-        pu.x + pu.w > paddle.x && pu.x < paddle.x + paddle.w) {
+        pu.x + pu.w / 2 > paddle.x && pu.x - pu.w / 2 < paddle.x + paddle.w) {
       applyPowerup(pu.type);
       powerups.splice(i, 1);
       continue;

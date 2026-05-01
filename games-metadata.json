@@ -3354,7 +3354,7 @@
           "model": "GPT 5.5",
           "modelId": "gpt-5-5",
           "date": "2026-05-01",
-          "linesOfCode": 2387,
+          "linesOfCode": 2413,
           "path": "/games/tile-matching/gpt-5-5/index.html",
           "features": [
             "sound",

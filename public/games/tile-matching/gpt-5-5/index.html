@@ -307,6 +307,19 @@ canvas {
     tile.moveDuration = duration;
   }
 
+  function settleMovingTiles() {
+    for (const tile of allTiles()) {
+      if (tile.moveDuration > 0) {
+        tile.x = tile.tx;
+        tile.y = tile.ty;
+        tile.sx = tile.tx;
+        tile.sy = tile.ty;
+        tile.moveTime = 0;
+        tile.moveDuration = 0;
+      }
+    }
+  }
+
   function createAudio() {
     if (audio) {
       return audio;
@@ -524,6 +537,7 @@ canvas {
   };
 
   function createParticle(x, y, options = {}) {
+    const life = options.life ?? rand(0.35, 0.85);
     state.particles.push({
       x,
       y,
@@ -531,8 +545,8 @@ canvas {
       vy: options.vy ?? rand(-120, 80),
       ax: options.ax ?? 0,
       ay: options.ay ?? 210,
-      life: options.life ?? rand(0.35, 0.85),
-      maxLife: options.life ?? rand(0.35, 0.85),
+      life,
+      maxLife: life,
       size: options.size ?? rand(1.5, 4.5),
       color: options.color ?? "#ffffff",
       glow: options.glow ?? options.color ?? "#ffffff",
@@ -720,7 +734,7 @@ canvas {
     }
     let guard = 0;
     while (!findAnyMove() && guard < 80) {
-      shuffleBoard(false);
+      reshuffleTileContents();
       guard++;
     }
   }
@@ -984,7 +998,7 @@ canvas {
     createBeam(pa, pb, "#37f6e7", 4, 0.45);
   }
 
-  function shuffleBoard(chargePenalty = true) {
+  function reshuffleTileContents() {
     const tiles = allTiles();
     let guard = 0;
     do {
@@ -999,7 +1013,11 @@ canvas {
       }
       guard++;
     } while ((findMatches().groups.length > 0 || !findAnyMove()) && guard < 120);
+    return tiles;
+  }
 
+  function shuffleBoard(chargePenalty = true) {
+    const tiles = reshuffleTileContents();
     for (const tile of tiles) {
       const oldX = tile.x;
       const oldY = tile.y;
@@ -1015,13 +1033,16 @@ canvas {
       tile.pop = 0.4;
     }
 
-    if (chargePenalty && state.moves > SHUFFLE_PENALTY) {
-      state.moves -= SHUFFLE_PENALTY;
+    const penaltyApplied = chargePenalty ? Math.min(state.moves, SHUFFLE_PENALTY) : 0;
+    if (penaltyApplied > 0) {
+      state.moves -= penaltyApplied;
     }
     state.hint = null;
     state.selected = null;
     state.shake = 5;
-    state.message = chargePenalty ? "Board shuffled, -2 moves" : "Board reshuffled";
+    state.message = chargePenalty
+      ? (penaltyApplied > 0 ? `Board shuffled, -${penaltyApplied} moves` : "Board shuffled")
+      : "Board reshuffled";
     sound.shuffle();
     createFloater(state.width / 2, state.boardY + state.boardSize / 2, "SHUFFLE", "#ffd241", 22);
   }
@@ -1275,6 +1296,7 @@ canvas {
   }
 
   function collapseBoard() {
+    let longestFall = 0;
     for (let c = 0; c < GRID; c++) {
       let write = GRID - 1;
       for (let r = GRID - 1; r >= 0; r--) {
@@ -1283,7 +1305,9 @@ canvas {
           state.board[write][c] = tile;
           if (write !== r) {
             state.board[r][c] = null;
-            animateTileTo(tile, write, c, 0.24 + Math.abs(write - r) * 0.035);
+            const duration = 0.24 + Math.abs(write - r) * 0.035;
+            longestFall = Math.max(longestFall, duration);
+            animateTileTo(tile, write, c, duration);
           } else {
             setTilePosition(tile, write, c);
           }
@@ -1295,6 +1319,7 @@ canvas {
         const above = state.cell * (write - r + 2 + rand(0, 1.5));
         const tile = makeTile(type, r, c, TILE_NONE, above);
         tile.moveDuration = 0.36 + (write - r) * 0.045 + rand(0, 0.08);
+        longestFall = Math.max(longestFall, tile.moveDuration);
         tile.moveTime = 0;
         state.board[r][c] = tile;
       }
@@ -1305,6 +1330,7 @@ canvas {
       if (runId !== state.runId || state.mode !== "playing") {
         return;
       }
+      settleMovingTiles();
       const next = findMatches();
       if (next.groups.length > 0) {
         state.message = "Cascade x" + (state.combo + 1);
@@ -1312,7 +1338,7 @@ canvas {
       } else {
         finishResolution();
       }
-    }, 440);
+    }, Math.ceil(longestFall * 1000) + 90);
   }
 
   function finishResolution() {

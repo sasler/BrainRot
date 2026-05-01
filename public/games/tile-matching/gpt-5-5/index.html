@@ -729,7 +729,7 @@ canvas {
       state.board[r] = [];
       for (let c = 0; c < GRID; c++) {
         let type = randomTypeFor(r, c);
-        state.board[r][c] = makeTile(type, r, c, TILE_NONE, rand(260, 520));
+        state.board[r][c] = makeTile(type, r, c);
       }
     }
     let guard = 0;

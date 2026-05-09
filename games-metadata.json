@@ -2019,7 +2019,7 @@
           "model": "Qwen3.6-27B",
           "modelId": "qwen-3-6-27b",
           "date": "2026-05-08",
-          "linesOfCode": 1129,
+          "linesOfCode": 1122,
           "path": "/games/2048/qwen-3-6-27b/index.html",
           "features": [
             "sound",

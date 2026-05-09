@@ -466,8 +466,7 @@
     }
 
     update(dt) {
-      // Smooth interpolation for movement
-      const speed = 0.3; // Lower = slower/smooth slide
+      const speed = 0.3;
       this.pixelX += (this.targetPixelX - this.pixelX) * speed;
       this.pixelY += (this.targetPixelY - this.pixelY) * speed;
 
@@ -476,13 +475,11 @@
         if (this.mergeScale > 0.99) { this.merging = false; this.mergeScale = 0; }
       }
 
-      // Spawn animation (pop in)
       if (this.spawnAnim < 1) {
         this.spawnAnim = Math.min(1, this.spawnAnim + 0.15);
         this.scale = 1 - Math.pow(1 - this.spawnAnim, 3);
       } else { this.scale = 1; }
 
-      // Flash timer
       if (this.flashTimer > 0) this.flashTimer -= 16;
     }
 
@@ -587,6 +584,14 @@
       this.mergedTiles = []; this.tileChanges = [];
       this.scoreGained = 0; this.mergeCount = 0;
 
+      // FIX: Reset merged flags so tiles created in previous moves can merge again
+      for (let x = 0; x < this.board.size; x++) {
+        for (let y = 0; y < this.board.size; y++) {
+          const t = this.board.getTileAt(x, y);
+          if (t) t.merged = false;
+        }
+      }
+
       const tiles = this.board.cells;
       const tileMap = [];
       for (let x = 0; x < this.board.size; x++) {
@@ -646,7 +651,7 @@
               this.board.setTileAt(cell.x, cell.y, tile);
               this.board.setTileAt(x, y, null);
               tile.gridX = cell.x; tile.gridY = cell.y;
-              tile.moved = true; // Mark for flash effect
+              tile.moved = true;
               this.tileChanges.push({ tile, moved: true });
               this.audio.playMove();
             }
@@ -807,10 +812,8 @@
         this.board.score += this.movement.scoreGained;
         this.board.updateMaxTile();
 
-        // Add new tile
         const newTile = this.board.addRandomTile();
         
-        // CRITICAL FIX: Update targets immediately so tiles slide smoothly
         this.updateTilePositions();
 
         if (newTile) {
@@ -1032,21 +1035,17 @@
       const innerSize = size - gap * 2;
       const tileRadius = CONFIG.TILE_RADIUS;
 
-      // Glow
       ctx.shadowColor = color.glow;
       ctx.shadowBlur = 15 + Math.sin(this.time * 0.1) * 5;
 
-      // Tile body
       ctx.fillStyle = color.bg;
       this.roundRect(ctx, -innerSize/2, -innerSize/2, innerSize, innerSize, tileRadius);
       ctx.fill();
 
-      // Border
       ctx.strokeStyle = color.fg;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Inner glow
       const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, innerSize/2);
       grad.addColorStop(0, color.fg + '33');
       grad.addColorStop(1, 'transparent');
@@ -1056,25 +1055,21 @@
 
       ctx.shadowBlur = 0;
 
-      // Text with stroke for visibility
       const fontSize = tile.value >= 1000 ? 20 : tile.value >= 100 ? 26 : 32;
       ctx.font = `bold ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Text stroke (outline) for contrast
       ctx.strokeStyle = 'rgba(0,0,0,0.8)';
       ctx.lineWidth = 3;
       ctx.strokeText(tile.value, 0, 1);
 
-      // Text fill
       ctx.fillStyle = color.fg;
       ctx.shadowColor = color.glow;
       ctx.shadowBlur = 8;
       ctx.fillText(tile.value, 0, 1);
       ctx.shadowBlur = 0;
 
-      // Flash effect for movement
       if (tile.flashTimer > 0) {
         ctx.globalAlpha = tile.flashTimer / 200;
         ctx.fillStyle = '#ffffff';
@@ -1110,8 +1105,6 @@
             tile.targetPixelX = px;
             tile.targetPixelY = py;
 
-            // FIX: If tile is new (spawnAnim < 1), snap pixel to target
-            // This prevents new/merged tiles from sliding from 0,0
             if (tile.spawnAnim < 1) {
               tile.pixelX = px;
               tile.pixelY = py;

@@ -35,7 +35,7 @@ A web platform for comparing fun, cool-looking AI-generated games. Play each ver
 | GPT 5.4 Mini | 1,309 lines | 1,223 lines | 1,267 lines | 1,389 lines | 570 lines | 541 lines | 1,309 lines | 1,687 lines | 1,486 lines | 1,345 lines | 2,093 lines | 862 lines | N/A | N/A |
 | Gemini 3.1 Pro | 60 lines | 184 lines | 394 lines | 230 lines | 63 lines | 58 lines | 44 lines | 46 lines | 65 lines | N/A | N/A | N/A | N/A | N/A |
 | Minimax M2.7 | N/A | N/A | N/A | N/A | 1032 lines | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
-| Qwen3.6-27B | N/A | N/A | N/A | N/A | N/A | 1,129 lines | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| Qwen3.6-27B | N/A | N/A | N/A | N/A | N/A | 1,122 lines | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 
 Each game is a standalone HTML file (HTML + CSS + JS inline) running in a sandboxed iframe — fully isolated from the main site.
 

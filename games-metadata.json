@@ -307,6 +307,18 @@
               ]
             }
           ]
+        },
+        {
+          "model": "Qwen3.6-35B-A3B",
+          "modelId": "qwen-3-6-35b-a3b",
+          "date": "2026-05-14",
+          "linesOfCode": 841,
+          "path": "/games/snake/qwen-3-6-35b-a3b/index.html",
+          "features": [
+            "sound",
+            "particles",
+            "powerups"
+          ]
         }
       ]
     },

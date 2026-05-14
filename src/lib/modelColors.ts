@@ -6,4 +6,5 @@ export const MODEL_COLORS: Record<string, string> = {
   "opus-4-6": "#6366f1",
   "gemini-3-1-pro": "#4285f4",
   "qwen-3-6-27b": "#b86cff",
+  "qwen-3-6-35b-a3b": "#d946ef",
 };

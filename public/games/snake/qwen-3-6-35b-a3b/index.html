@@ -13,6 +13,7 @@
             --accent: #39ff14; /* Lime */
             --text: #ffffff;
             --font-main: 'Courier New', Courier, monospace;
+            --hud-height: 44px;
         }
 
         * {
@@ -51,7 +52,7 @@
             background: radial-gradient(circle at center, #0a0a0a 0%, #000000 100%);
             border: 2px solid #222;
             max-width: 95vw;
-            max-height: 95vh;
+            max-height: calc(95vh - var(--hud-height));
         }
 
         /* UI Overlays */
@@ -70,17 +71,16 @@
         }
 
         .hud {
-            position: absolute;
-            top: 10px;
-            left: 0;
             width: 100%;
             display: flex;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 6px 20px;
             font-size: 18px;
             font-weight: bold;
             text-shadow: 0 0 5px var(--primary);
             pointer-events: none;
+            flex-shrink: 0;
+            box-sizing: border-box;
         }
 
         .hud span {
@@ -106,7 +106,10 @@
         }
 
         .screen.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             opacity: 1;
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -156,28 +159,6 @@
             transform: scale(0.95);
         }
 
-        .powerup-indicator {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-        }
-
-        .powerup-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 12px;
-            animation: pulse 1s infinite alternate;
-        }
-
         /* Animations */
         @keyframes glitch {
             0% { transform: translate(0); }
@@ -209,12 +190,12 @@
 <body>
 
 <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    
     <div class="hud">
         <span id="scoreDisplay">SCORE: 0</span>
         <span id="highScoreDisplay">BEST: 0</span>
     </div>
+
+    <canvas id="gameCanvas"></canvas>
 
     <!-- Title Screen -->
     <div id="titleScreen" class="ui-layer screen active">
@@ -253,8 +234,7 @@ const CONFIG = {
         bg: '#050505'
     },
     particles: {
-        count: 15,
-        speed: 0.5
+        count: 15
     }
 };
 
@@ -312,11 +292,6 @@ const AudioSys = {
         [440, 554, 659, 880].forEach((freq, i) => {
             setTimeout(() => this.playTone(freq, 'square', 0.1, 0.2), i * 50);
         });
-    },
-
-    playMove() {
-        // Very subtle click
-        this.playTone(100, 'triangle', 0.05, 0.05);
     }
 };
 
@@ -401,7 +376,8 @@ class SnakeGame {
 
     loadHighScore() {
         try {
-            return parseInt(localStorage.getItem('neonSnakeHighScore') || '0', 10);
+            const val = parseInt(localStorage.getItem('neonSnakeHighScore') || '0', 10);
+            return isNaN(val) ? 0 : val;
         } catch (e) {
             return 0;
         }
@@ -416,9 +392,12 @@ class SnakeGame {
     }
 
     resize() {
-        // Calculate grid size based on screen size
+        // Reserve space for HUD bar (matches --hud-height CSS variable)
+        const hudHeight = parseInt(
+            getComputedStyle(document.documentElement).getPropertyValue('--hud-height') || '44', 10
+        );
         const maxW = Math.min(window.innerWidth * 0.95, 800);
-        const maxH = Math.min(window.innerHeight * 0.95, 600);
+        const maxH = Math.min(window.innerHeight * 0.95 - hudHeight, 600);
         
         // Ensure grid size is a multiple of 20 for clean rendering
         this.gridSize = 20;
@@ -428,10 +407,20 @@ class SnakeGame {
         this.canvas.width = this.tileCountX * this.gridSize;
         this.canvas.height = this.tileCountY * this.gridSize;
         
-        // If game is running, adjust food position if it's out of bounds
-        if (this.food) {
-            this.food.x = Math.min(this.food.x, this.tileCountX - 1);
-            this.food.y = Math.min(this.food.y, this.tileCountY - 1);
+        // If game is active, clamp all positions into the new grid
+        if (this.isRunning || this.isGameOver) {
+            this.snake = this.snake.map(s => ({
+                x: Math.max(0, Math.min(s.x, this.tileCountX - 1)),
+                y: Math.max(0, Math.min(s.y, this.tileCountY - 1))
+            }));
+            if (this.food) {
+                this.food.x = Math.max(0, Math.min(this.food.x, this.tileCountX - 1));
+                this.food.y = Math.max(0, Math.min(this.food.y, this.tileCountY - 1));
+            }
+            // Remove powerups that fell outside the new grid
+            this.powerups = this.powerups.filter(p =>
+                p.x >= 0 && p.x < this.tileCountX && p.y >= 0 && p.y < this.tileCountY
+            );
         }
     }
 
@@ -512,7 +501,9 @@ class SnakeGame {
         this.score = 0;
         this.gameSpeed = CONFIG.baseSpeed;
         this.particles = [];
+        this.powerups = [];
         this.activeEffects = {};
+        this.accumulator = 0;
         this.isGameOver = false;
         this.isRunning = true;
         
@@ -524,13 +515,24 @@ class SnakeGame {
     }
 
     spawnFood() {
+        const totalCells = this.tileCountX * this.tileCountY;
+        const occupied = this.snake.length + this.powerups.length;
+        if (occupied >= totalCells) {
+            // Board is full — player effectively wins; keep food off-screen
+            this.food = { x: -1, y: -1 };
+            return;
+        }
+
         let valid = false;
-        while (!valid) {
+        let attempts = 0;
+        while (!valid && attempts < totalCells * 2) {
             this.food = {
                 x: Math.floor(Math.random() * this.tileCountX),
                 y: Math.floor(Math.random() * this.tileCountY)
             };
-            valid = !this.snake.some(s => s.x === this.food.x && s.y === this.food.y);
+            valid = !this.snake.some(s => s.x === this.food.x && s.y === this.food.y) &&
+                    !this.powerups.some(p => p.x === this.food.x && p.y === this.food.y);
+            attempts++;
         }
         
         // 10% chance for powerup
@@ -540,19 +542,24 @@ class SnakeGame {
     }
     
     spawnPowerup() {
-        let valid = false;
+        const totalCells = this.tileCountX * this.tileCountY;
         let p;
-        while (!valid) {
+        let valid = false;
+        let attempts = 0;
+        while (!valid && attempts < totalCells) {
             p = {
                 x: Math.floor(Math.random() * this.tileCountX),
                 y: Math.floor(Math.random() * this.tileCountY),
                 type: Math.random() > 0.5 ? 'GHOST' : 'SPEED',
-                life: 300 // frames
+                life: 8000 // 8 seconds in ms
             };
             valid = !this.snake.some(s => s.x === p.x && s.y === p.y) && 
                     !(p.x === this.food.x && p.y === this.food.y);
+            attempts++;
         }
-        this.powerups.push(p);
+        if (valid) {
+            this.powerups.push(p);
+        }
     }
 
     createExplosion(x, y, color) {
@@ -564,36 +571,35 @@ class SnakeGame {
     }
 
     update(dt) {
+        // Always update particles and screen shake (even after game over, so death explosion fades)
+        this.particles.forEach(p => p.update());
+        this.particles = this.particles.filter(p => p.life > 0 && p.size > 0.2);
+
+        // Decay shake
+        if (this.shake > 0) this.shake *= 0.9;
+        if (this.shake < 0.5) this.shake = 0;
+
         if (!this.isRunning || this.isGameOver) return;
 
-        // Update effects timers
+        // Update effects timers (ms-based)
         Object.keys(this.activeEffects).forEach(key => {
-            this.activeEffects[key]--;
+            this.activeEffects[key] -= dt;
             if (this.activeEffects[key] <= 0) delete this.activeEffects[key];
         });
         
-        // Update powerups
-        this.powerups.forEach(p => p.life--);
+        // Update powerup lifetimes (ms-based)
+        this.powerups.forEach(p => p.life -= dt);
         this.powerups = this.powerups.filter(p => p.life > 0);
-
-        // Advance and remove particles so eaten food does not leave permanent glows.
-        this.particles.forEach(p => p.update());
-        this.particles = this.particles.filter(p => p.life > 0 && p.size > 0.2);
 
         // Move Snake (Fixed Time Step)
         this.accumulator += dt;
         let currentSpeed = this.gameSpeed;
         if (this.activeEffects['SPEED']) currentSpeed /= 2; // Speed up if speed powerup
-        if (this.activeEffects['SLOW']) currentSpeed *= 1.5; // Slow down if slow powerup
 
         if (this.accumulator > currentSpeed) {
             this.accumulator -= currentSpeed;
             this.moveSnake();
         }
-        
-        // Decay shake
-        if (this.shake > 0) this.shake *= 0.9;
-        if (this.shake < 0.5) this.shake = 0;
         
         // Decay glow
         if (this.glowIntensity > 0) this.glowIntensity *= 0.95;
@@ -603,20 +609,23 @@ class SnakeGame {
         this.direction = this.nextDirection;
         const head = { x: this.snake[0].x + this.direction.x, y: this.snake[0].y + this.direction.y };
         
-        // Check Wall Collision
-        if (head.x < 0 || head.x >= this.tileCountX || head.y < 0 || head.y >= this.tileCountY) {
-            this.gameOver();
-            return;
-        }
-        
-        // Check Self Collision
         if (this.activeEffects['GHOST']) {
-            // Ghost mode allows passing through self (handled in draw)
-            // But we still check head collision for logic? No, ghost mode usually means invincibility.
-            // Let's make Ghost mode invincibility for walls and self for simplicity
+            // Ghost mode: wrap around walls instead of dying
+            head.x = (head.x + this.tileCountX) % this.tileCountX;
+            head.y = (head.y + this.tileCountY) % this.tileCountY;
         } else {
-            if (this.snake.some(s => s.x === head.x && s.y === head.y)) {
-                this.gameOver();
+            // Check Wall Collision
+            if (head.x < 0 || head.x >= this.tileCountX || head.y < 0 || head.y >= this.tileCountY) {
+                this.gameOver(head);
+                return;
+            }
+            
+            // Check Self Collision — exclude tail only if we're NOT eating food this move
+            // (when food is eaten the tail stays, so it remains an occupied cell)
+            const willEat = head.x === this.food.x && head.y === this.food.y;
+            const bodyToCheck = willEat ? this.snake : this.snake.slice(0, -1);
+            if (bodyToCheck.some(s => s.x === head.x && s.y === head.y)) {
+                this.gameOver(head);
                 return;
             }
         }
@@ -647,23 +656,26 @@ class SnakeGame {
         const pIndex = this.powerups.findIndex(p => p.x === head.x && p.y === head.y);
         if (pIndex !== -1) {
             const p = this.powerups[pIndex];
-            this.activeEffects[p.type] = 300; // 5 seconds at 60fps
+            this.activeEffects[p.type] = 5000; // 5 seconds in ms
             AudioSys.playPowerUp();
             this.createExplosion(head.x, head.y, '#ffff00');
             this.powerups.splice(pIndex, 1);
         }
     }
 
-    gameOver() {
+    gameOver(collidePos) {
         this.isGameOver = true;
         this.isRunning = false;
         AudioSys.playDie();
         this.shake = 20;
-        this.createExplosion(this.snake[0].x, this.snake[0].y, '#ff0000');
+        // Explode at the actual collision point, not the previous head position
+        const pos = collidePos || this.snake[0];
+        this.createExplosion(pos.x, pos.y, '#ff0000');
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
             this.saveHighScore();
+            this.highScoreEl.innerText = `BEST: ${this.highScore}`;
             this.highScoreMsgEl.innerText = "NEW HIGH SCORE!";
         } else {
             this.highScoreMsgEl.innerText = `Best: ${this.highScore}`;
@@ -763,8 +775,6 @@ class SnakeGame {
             const sx = segment.x * this.gridSize;
             const sy = segment.y * this.gridSize;
             
-            // Color gradient from head to tail
-            const ratio = index / this.snake.length;
             this.ctx.fillStyle = index === 0 ? CONFIG.colors.snakeHead : 
                                  index === this.snake.length - 1 ? CONFIG.colors.snakeTail : 
                                  CONFIG.colors.snakeBody;
